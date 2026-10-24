@@ -1,0 +1,112 @@
+name: Set up Miyar backend
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miyar-database-migrations
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+      ADMIN_TELEGRAM_IDS: ${{ vars.ADMIN_TELEGRAM_IDS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Check required configuration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          required = ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_DB_PASSWORD', 'SUPABASE_PROJECT_REF', 'TELEGRAM_BOT_TOKEN']
+          missing = [name for name in required if not os.environ.get(name)]
+          if missing:
+              raise SystemExit('Missing settings: ' + ', '.join(missing))
+          if not re.fullmatch(r'[a-z0-9]{20}', os.environ['SUPABASE_PROJECT_REF']):
+              raise SystemExit('SUPABASE_PROJECT_REF must be the project reference, not its URL.')
+          if os.environ.get('ADMIN_TELEGRAM_IDS') and not re.fullmatch(r'[0-9]+(?:,[0-9]+)*', os.environ['ADMIN_TELEGRAM_IDS']):
+              raise SystemExit('ADMIN_TELEGRAM_IDS must contain numeric Telegram user IDs separated by commas.')
+          PY
+      - name: Verify Telegram bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          BOT_USERNAME: ${{ vars.VITE_TELEGRAM_BOT_USERNAME }}
+        run: |
+          python3 - <<'PYCODE'
+          import json, os, urllib.request
+          try:
+              url = 'https://api.telegram.org/bot' + os.environ['TELEGRAM_BOT_TOKEN'] + '/getMe'
+              with urllib.request.urlopen(url, timeout=30) as response:
+                  result = json.load(response)
+          except Exception:
+              raise SystemExit('Telegram verification failed. Check TELEGRAM_BOT_TOKEN and try again.')
+          if not result.get('ok') or not result.get('result', {}).get('is_bot'):
+              raise SystemExit('TELEGRAM_BOT_TOKEN does not identify a bot.')
+          expected = os.environ.get('BOT_USERNAME', '').lstrip('@').lower()
+          if expected and result['result'].get('username', '').lower() != expected:
+              raise SystemExit('VITE_TELEGRAM_BOT_USERNAME does not match TELEGRAM_BOT_TOKEN.')
+          print('Telegram bot verified without sending messages.')
+          PYCODE
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+      - name: Link project and apply migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" --yes
+          supabase db push --linked --yes
+      - name: Configure private backend secrets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          secret_file="$RUNNER_TEMP/miyar-secrets.env"
+          trap 'rm -f "$secret_file"' EXIT
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          values = {
+              'TELEGRAM_BOT_TOKEN': os.environ['TELEGRAM_BOT_TOKEN'],
+              'ADMIN_TELEGRAM_IDS': os.environ['ADMIN_TELEGRAM_IDS'],
+              'ALLOWED_ORIGINS': 'https://barqstudy.github.io',
+          }
+          for value in values.values():
+              if '\n' in value or '\r' in value:
+                  raise SystemExit('A secret value contains an unexpected newline.')
+          target = Path(os.environ['RUNNER_TEMP']) / 'miyar-secrets.env'
+          target.write_text(''.join(f'{key}={value}\n' for key, value in values.items()))
+          target.chmod(0o600)
+          PY
+          supabase secrets set --env-file "$secret_file" --project-ref "$SUPABASE_PROJECT_REF" --yes
+      - name: Deploy Telegram API
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy miyar --project-ref "$SUPABASE_PROJECT_REF" --use-api --yes
+      - name: Verify public catalogue endpoint
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          url = 'https://' + os.environ['SUPABASE_PROJECT_REF'] + '.supabase.co/functions/v1/miyar'
+          request = urllib.request.Request(url, data=b'{"action":"catalogue"}', headers={'Content-Type': 'application/json'})
+          with urllib.request.urlopen(request, timeout=30) as response:
+              data = json.load(response)
+          if not all(isinstance(data.get(key), list) for key in ['colleges', 'majors', 'doctors']):
+              raise SystemExit('Unexpected catalogue response.')
+          print('Backend is reachable. Public catalogue contains', len(data['colleges']), 'colleges.')
+          PY

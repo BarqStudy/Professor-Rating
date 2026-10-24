@@ -1,0 +1,5 @@
+project_id = "miyar"
+
+[functions.miyar]
+# Telegram initData is verified by the function. A Supabase JWT is not used.
+verify_jwt = false

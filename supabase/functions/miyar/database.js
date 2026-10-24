@@ -1,0 +1,58 @@
+import { ApiError } from "./security.js";
+export function createDatabase(url, key, fetcher = fetch) {
+  if (!url || !key) throw new ApiError(503, "لم يكتمل إعداد قاعدة البيانات.");
+  return async function db(
+    path,
+    { method = "GET", body, prefer = "return=representation" } = {},
+  ) {
+    const response = await fetcher(
+      `${url.replace(/\/$/, "")}/rest/v1/${path}`,
+      {
+        method,
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+          Prefer: prefer,
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(15000),
+      },
+    );
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      if (error.code === "23505") {
+        throw new ApiError(
+          409,
+          "هذا السجل موجود؛ يمكنك تقييم الدكتور مرة واحدة لكل مادة.",
+        );
+      }
+      if (error.code === "23503") {
+        throw new ApiError(
+          409,
+          "لا يمكن الحذف لوجود سجلات مرتبطة. احذف السجلات التابعة أولًا.",
+        );
+      }
+      const reasons = {
+        RATE_LIMIT: [429, "الحد الأقصى خمسة تقييمات في اليوم."],
+        ACCOUNT_RESTRICTED: [403, "الحساب محظور أو مقيّد."],
+        INVALID_MAJOR: [400, "التخصص لا يتبع الكلية المحددة."],
+        DOCTOR_UNAVAILABLE: [409, "هذا الدكتور غير متاح للتقييم."],
+        REQUEST_NOT_FOUND: [404, "الطلب غير موجود أو تمت مراجعته."],
+      };
+      const known = Object.entries(reasons).find(([code]) =>
+        String(error.message).includes(code)
+      );
+      if (known) throw new ApiError(...known[1]);
+      throw new ApiError(
+        502,
+        "تعذّر تنفيذ العملية في قاعدة البيانات. حاول مجددًا.",
+      );
+    }
+    if (
+      response.status === 204 || response.headers.get("content-length") === "0"
+    ) return null;
+    const raw = await response.text();
+    return raw ? JSON.parse(raw) : null;
+  };
+}
