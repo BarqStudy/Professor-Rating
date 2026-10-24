@@ -84,6 +84,9 @@ for (
     major_id: 1,
   }]
 ) catalogue.doctors.push({ ...catalogue.doctors[0], ...data });
+for (const [id, score, count] of [[18, 92, 3], [19, 95, 2], [20, 95, 5]]) {
+  Object.assign(catalogue.doctors.find((doctor) => doctor.id === id), { score, count });
+}
 const mime = {
   ".html": "text/html",
   ".js": "text/javascript",
@@ -217,9 +220,16 @@ const server = http.createServer((req, res) => {
         "تجارب حقيقية من زملائك",
       ),
     );
+    assert.equal(await page.locator("[data-college]").count(), 0);
+    assert.equal(await page.locator(".doctor-card").count(), 3);
+    assert.deepEqual(await page.locator(".doctor-card .doctor-name [data-doctor]").evaluateAll((buttons) => buttons.map((button) => Number(button.dataset.doctor))), [20, 19, 18]);
+    assert.equal(await page.locator("footer .icon").count(), 0);
+    const email = page.locator('.university-request a[href^="mailto:"]');
+    assert.match(await email.getAttribute("href"), /^mailto:info@miyar\.website/);
+    await page.locator("[data-page=ratings]").first().click();
     assert.equal(await page.locator("[data-college]").count(), 2);
-    assert.equal(await page.locator("[data-major]").count(), 0);
-    assert.equal(await page.locator(".doctor-card").count(), 5);
+    assert.equal(await page.locator("[data-major]").count(), 3);
+    assert.equal(await page.locator(".doctor-card").count(), 4);
     await page.locator('[data-college="كلية الهندسة"]').click();
     assert.equal(await page.locator(".doctor-card").count(), 4);
     assert.equal(await page.locator('[data-major="الفيزياء"]').count(), 0);
@@ -251,6 +261,7 @@ const server = http.createServer((req, res) => {
     await page.waitForFunction(() =>
       document.querySelector("#doctors-previous").disabled
     );
+    await page.locator("#page-close").click();
     await page.setViewportSize({ width: 390, height: 844 });
     assert.ok(await page.locator(".hero-art").isVisible());
     const art = await page.locator(".hero-art").boundingBox();
@@ -418,6 +429,11 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator(".doctor-card").count(), 0);
     await page.locator("[data-page=developer]").first().click();
     assert.equal(await page.locator(".nav-item.active").innerText(), "من نحن");
+    assert.ok(!(await page.locator(".dev-badges").innerText()).includes("نسخة تجريبية"));
+    await page.locator("[data-university-request]").click();
+    assert.match(await page.locator('.modal a[href^="mailto:"]').getAttribute("href"), /^mailto:info@miyar\.website/);
+    await page.locator(".close-modal").click();
+    await page.locator(".modal-backdrop").waitFor({ state: "detached" });
     await page.locator("#page-close").click();
     for (const height of [900, 768, 600]) {
       await page.setViewportSize({ width: 1440, height });
@@ -477,7 +493,7 @@ const server = http.createServer((req, res) => {
     await page.locator(".connection-banner.live").waitFor();
     assert.equal(
       await page.locator(".doctor-card").count(),
-      catalogue.doctors.length,
+      Math.min(10, catalogue.doctors.filter((doctor) => doctor.count > 0).length),
     );
     await page.goto("about:blank");
     await page.goto(url + "#error=access_denied&error_description=cancelled");

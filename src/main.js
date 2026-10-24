@@ -245,9 +245,7 @@ function render() {
         : page === "admin"
         ? admin()
         : developer()
-    }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span>بُني بشغف لرحلتك الجامعية ${
-      ic("heart")
-    }</span></footer></div><div id="modal-root"></div><div id="toast" role="status"></div>`;
+    }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span>بُني بشغف لرحلتك الجامعية</span></footer></div><div id="modal-root"></div><div id="toast" role="status"></div>`;
   bind();
 }
 function home() {
@@ -281,7 +279,7 @@ function home() {
     ic("book")
   }</span><div><span class="tiny-label">قرار أفضل يبدأ من هنا</span><h2>استكشف التقييمات</h2><p>كليتك، تخصصك، ودكتورك… في مكان واحد</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span></button></section><section class="stats"><div><span class="stat-icon">${
+  }</span></button></section>${universityRequestSection()}<section class="stats"><div><span class="stat-icon">${
     ic("cap")
   }</span><div><b>+${
     configured
@@ -302,11 +300,17 @@ function home() {
     configured ? "كلية في مِعيار" : "طالب يصنعون الأثر"
   }</span></div></div><span class="demo-data">${
     configured ? "تقييمات منشورة فقط" : "إحصاءات توضيحية"
-  }</span></section>${listSection()}<section class="bottom-banner"><div class="banner-symbol">${
+  }</span></section>${topDoctorsSection()}<section class="bottom-banner"><div class="banner-symbol">${
     ic("shield")
   }</div><div><h3>مساحة آمنة. آراء صادقة. أثر حقيقي.</h3><p>نحترم خصوصيتك، ونؤمن أن النقد البنّاء هو بداية التطوير.</p></div><button id="privacy">تعرّف على معاييرنا ${
     ic("arrow")
   }</button></section>`;
+}
+function universityRequestSection() {
+  return `<section class="university-request panel"><div><span class="eyebrow">مِعيار يكبر بكم</span><h2>إضافة جامعة أو كلية جديدة</h2><p>جامعتك أو كليتك غير موجودة؟ أرسل لنا طلب إضافتها إلى مِعيار.</p></div><a class="primary email-request" href="mailto:info@miyar.website?subject=${encodeURIComponent('طلب إضافة جامعة أو كلية إلى معيار')}"><span>راسلنا عبر البريد</span><bdi>info@miyar.website</bdi>${ic("arrow")}</a></section>`;
+}
+function topDoctorsSection() {
+  return `<section class="doctors-section top-doctors"><div class="section-heading"><div><span class="eyebrow">بناءً على تقييمات الطلاب المنشورة</span><h2 id="home-doctors-title">${query ? "نتائج البحث" : "أعلى الدكاترة تقييمًا"} <span class="small-star">✦</span></h2><p>${query ? "اكتشف الدكتور أو المادة التي تبحث عنها." : "الأعلى في متوسط التقييم، وعند التعادل نقدّم الأكثر تقييمات."}</p></div><div class="section-tools"><button class="text-button" data-page="ratings">عرض جميع التقييمات ${ic("arrow")}</button><div class="carousel-controls"><button class="carousel-control previous" id="doctors-previous" aria-label="الدكاترة السابقون" aria-controls="doctor-grid">${ic("arrow")}</button><button class="carousel-control" id="doctors-next" aria-label="الدكاترة التاليون" aria-controls="doctor-grid">${ic("arrow")}</button></div></div></div><div class="doctor-carousel" id="doctor-grid" role="region" aria-label="بطاقات الدكاترة" tabindex="0">${cards()}</div></section>`;
 }
 function listSection() {
   const expanded = collegeSelected || page === "ratings";
@@ -397,12 +401,17 @@ function bindCarousel() {
 }
 function cards() {
   let filtered = doctors.filter((d) =>
-    (page === "saved" || !(collegeSelected || page === "ratings") ||
+    (page === "home" || page === "saved" || !(collegeSelected || page === "ratings") ||
       (d.college || "كلية الهندسة") === activeCollege) &&
-    (page === "saved" || activeMajor === "الكل" || d.major === activeMajor) &&
+    (page === "home" || page === "saved" || activeMajor === "الكل" || d.major === activeMajor) &&
     (!(savedOnly || page === "saved") || saved.includes(d.id)) &&
     (!query || [d.name, ...d.subjects].some((s) => s.includes(query)))
   );
+  if (page === "home" && !query) {
+    filtered = filtered.filter((doctor) => doctor.count > 0)
+      .sort((a, b) => b.score - a.score || b.count - a.count || a.id - b.id)
+      .slice(0, 10);
+  }
   return filtered.length
     ? filtered.map((d) =>
       `<article class="doctor-card"><div class="card-top"><span class="avatar ${d.color}">${
@@ -441,7 +450,7 @@ function cards() {
         ic("arrow")
       }</button></article>`
     ).join("")
-    : `<div class="empty">${page === 'saved' ? 'لم تحفظ أي دكتور بعد. اضغط علامة الحفظ على بطاقة الدكتور ليظهر هنا.' : 'لم نجد نتائج مطابقة. جرّب اسمًا آخر أو أضف الدكتور من نموذج التقييم.'}</div>`;
+    : `<div class="empty">${page === 'saved' ? 'لم تحفظ أي دكتور بعد. اضغط علامة الحفظ على بطاقة الدكتور ليظهر هنا.' : page === 'home' && !query ? 'ستظهر هنا أعلى تقييمات الدكاترة بعد نشر أول تقييمات الطلاب.' : 'لم نجد نتائج مطابقة. جرّب اسمًا آخر أو أضف الدكتور من نموذج التقييم.'}</div>`;
 }
 function ratings() {
   return `${connectionBanner()}${listSection()}`;
@@ -452,15 +461,13 @@ function savedPage() {
 function developer() {
   return `<div class="page-title"><div class="eyebrow">خلف كل تجربة، فكرة</div><h1>مِعيار لاختيارك القادم</h1><p>منصة عربية تجعل تجارب الطلاب دليلًا لاختيارات أفضل.</p></div><section class="developer-card"><div class="brand">${logo}</div><h2>من الطلاب، من أجل الطلاب.</h2><p>مِعيار مساحة لتبادل التجارب الجامعية باحترام وشفافية. نبدأ بكلية الهندسة، ونتطلع لأن نرافق كل طالب في رحلته.</p><div class="dev-badges"><span>${
     ic("shield")
-  } خصوصيتك أولًا</span><span>${ic("heart")} تجربة عربية</span><span>${
-    ic("code")
-  } نسخة تجريبية</span></div><p class="muted">${
+  } خصوصيتك أولًا</span><span>${ic("heart")} تجربة عربية</span></div><p class="muted">${
     configured
       ? "تُحفظ التقييمات والملفات الشخصية في قاعدة بيانات مِعيار. الإرسال متاح بعد تسجيل الدخول باستخدام Google، وتُنشر التعليقات بعد مراجعتها. المحفوظات والمظهر وحجم الخط محفوظة على جهازك."
       : "هذه نسخة عرض تفاعلية. لم يكتمل ربط قاعدة البيانات بعد؛ البيانات والإرسال محليان على هذا الجهاز."
   }</p><button class="primary" id="share-platform">${
     ic("share")
-  } شارك مِعيار</button></section>`;
+  } شارك مِعيار</button><button class="university-request-button secondary" data-university-request>${ic("cap")} أضف جامعتك أو كليتك لمِعيار ${ic("arrow")}</button></section>`;
 }
 function admin() {
   if (configured) return cloudAdmin();
@@ -880,6 +887,8 @@ function bind() {
   );
   document.querySelector("#search")?.addEventListener("input", (e) => {
     query = e.target.value;
+    const title = document.querySelector("#home-doctors-title");
+    if (title) title.textContent = query ? "نتائج البحث" : "أعلى الدكاترة تقييمًا ✦";
     document.querySelector("#doctor-grid").innerHTML = cards();
     bindCards();
     bindCarousel();
@@ -928,6 +937,9 @@ function bind() {
     "click",
     () => share("مِعيار — تجارب حقيقية، لاختيارات أفضل"),
   );
+  document.querySelectorAll("[data-university-request]").forEach((button) => {
+    button.onclick = () => modal("أضف جامعتك أو كليتك لمِعيار", `<div class="university-request-message"><p>أرسل طلب إضافة جامعتك أو كليتك عبر الإيميل:</p><a class="primary email-request" href="mailto:info@miyar.website?subject=${encodeURIComponent('طلب إضافة جامعة أو كلية إلى معيار')}"><bdi>info@miyar.website</bdi>${ic("arrow")}</a><p class="muted">اذكر اسم الجامعة والكلية والتخصصات التي ترغب بإضافتها.</p></div>`);
+  });
   bindAdmin();
   bindBulkDoctors();
 }
