@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/Professor-Rating/',
+  // Resolve assets from the current page on both a custom domain and project Pages.
+  base: './',
 });

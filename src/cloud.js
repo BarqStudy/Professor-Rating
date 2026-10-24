@@ -63,7 +63,7 @@ export async function signInGoogle() {
   if (!settings.external?.google) {
     throw new Error("تسجيل الدخول باستخدام Google لم يُفعّل بعد. جرّب لاحقًا.");
   }
-  const redirectTo = new URL(import.meta.env.BASE_URL, location.origin).href;
+  const redirectTo = new URL(import.meta.env.BASE_URL, location.href).href;
   const { error } = await client.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo, queryParams: { prompt: "select_account" } },

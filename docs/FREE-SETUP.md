@@ -4,6 +4,14 @@
 
 ## مشروعك جاهز للربط
 
+### الدومين المخصص `miyar.website`
+
+- ملفات الموقع تستخدم مسارات نسبية لتعمل على جذر الدومين وعلى مسار GitHub Pages القديم.
+- بعد نجاح DNS، انتظر إصدار شهادة GitHub Pages ثم فعّل **Enforce HTTPS**. لا تستخدم تسجيل الدخول عبر HTTP.
+- في Supabase: **Authentication → URL Configuration**، اجعل **Site URL** هو `https://miyar.website/`، وأضف `https://miyar.website/` و`https://www.miyar.website/` إلى **Redirect URLs** مع الاحتفاظ بالرابط القديم أثناء الانتقال.
+- في Google Cloud، أضف `https://miyar.website` و`https://www.miyar.website` إلى **Authorized JavaScript origins**. اترك رابط إعادة التوجيه الخاص بـSupabase كما هو.
+- شغّل **Set up Miyar backend** مجددًا من GitHub Actions لتطبيق قائمة CORS المحدثة للدومين. لا تغيّر أسرار الدخول أو قاعدة البيانات.
+
 تم وضع رابط مشروعك ومفتاحه العام في `src/config.js`:
 
 - معرّف المشروع: `bbnsorjxgehvoddluvyo`

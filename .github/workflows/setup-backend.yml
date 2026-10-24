@@ -61,7 +61,7 @@ jobs:
           from pathlib import Path
           values = {
               'ADMIN_AUTH_IDS': os.environ['ADMIN_AUTH_IDS'],
-              'ALLOWED_ORIGINS': 'https://barqstudy.github.io',
+              'ALLOWED_ORIGINS': 'https://barqstudy.github.io,https://miyar.website,https://www.miyar.website',
           }
           for value in values.values():
               if '\n' in value or '\r' in value:

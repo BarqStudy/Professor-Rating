@@ -93,7 +93,7 @@ const mime = {
 };
 const server = http.createServer((req, res) => {
   const relative = decodeURIComponent(new URL(req.url, "http://test").pathname)
-    .replace(/^\/Professor-Rating\//, "");
+    .replace(/^\/Professor-Rating\//, "").replace(/^\//, "");
   const target = path.resolve(root, relative || "index.html");
   if (!target.startsWith(root + path.sep)) {
     res.writeHead(403).end();
@@ -113,7 +113,7 @@ const server = http.createServer((req, res) => {
 });
 (async () => {
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const url = `http://127.0.0.1:${server.address().port}/Professor-Rating/`;
+  const url = `http://127.0.0.1:${server.address().port}${process.env.TEST_SITE_PATH || '/Professor-Rating/'}`;
   const executable = process.env.CHROMIUM_PATH ||
     ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"]
       .find((p) => fs.existsSync(p));
