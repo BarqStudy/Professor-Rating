@@ -349,7 +349,7 @@ const server = http.createServer((req, res) => {
     await page.locator(".modal-backdrop").waitFor({ state: "detached" });
     await page.reload();
     await page.getByRole("heading", { level: 1 }).filter({
-      hasText: "سارة محمد",
+      hasText: "أهلًا سارة",
     }).waitFor();
     await page.locator("[data-page=admin]").click();
     await page.getByText("لا توجد طلبات معلّقة.").waitFor();
@@ -369,12 +369,37 @@ const server = http.createServer((req, res) => {
     await page.locator("[data-page=ratings]").first().click();
     assert.equal(new URL(page.url()).hash, "#ratings");
     await page.reload();
-    await page.getByRole("heading", { name: "اكتشف دكتورك القادم" }).waitFor();
+    await page.getByRole("heading", { name: "دليل الدكاترة والتقييمات", exact: false }).waitFor();
     assert.equal(new URL(page.url()).hash, "#ratings");
+    assert.equal(await page.locator(".directory-filters").count(), 0);
+    assert.equal(await page.getByText("اكتشف دكتورك القادم", { exact: true }).count(), 0);
+    assert.equal(await page.locator("#page-close").innerText(), "رجوع");
+    await page.locator('[data-save="17"]').click();
+    await page.locator("[data-page=saved]").click();
+    assert.equal(new URL(page.url()).hash, "#saved");
+    assert.equal(await page.locator(".doctor-card").count(), 1);
+    await page.reload();
+    await page.locator('[data-save="17"]').waitFor();
+    assert.equal(await page.locator(".doctor-card").count(), 1);
+    await page.locator('[data-save="17"]').click();
+    assert.equal(await page.locator(".doctor-card").count(), 0);
     await page.locator("[data-page=developer]").first().click();
     assert.equal(await page.locator(".nav-item.active").innerText(), "من نحن");
     await page.locator("#page-close").click();
+    for (const width of [768, 1024, 1180]) {
+      await page.setViewportSize({ width, height: 1024 });
+      assert.equal(await page.locator(".main-wrap").evaluate((el) => getComputedStyle(el).marginRight), "0px");
+      assert.equal(await page.locator("aside > .brand").isVisible(), false);
+      assert.equal(await page.locator(".mobile-brand").isVisible(), true);
+      assert.equal(await page.locator("aside nav").evaluate((el) => getComputedStyle(el).flexDirection), "row");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      await page.screenshot({ path: `/tmp/miyar-navy-tablet-${width}.png` });
+    }
+    assert.equal(await page.title(), "معيار");
+    const greeting = await page.locator(".welcome h1").innerText();
+    assert.ok(greeting.includes("سارة") && !greeting.includes("محمد"));
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: "/tmp/miyar-navy-mobile.png", fullPage: true });
     assert.equal(
       await page.evaluate(() =>
         document.documentElement.scrollWidth > innerWidth

@@ -124,7 +124,7 @@ function displayName() {
 let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
-const pageNames = ["home", "ratings", "review", "developer", "admin"];
+const pageNames = ["home", "ratings", "review", "saved", "developer", "admin"];
 let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
 const persist = () => {
@@ -154,7 +154,7 @@ if (storage.getItem("athar-theme") === "dark") {
 }
 function nav() {
   return `<nav>${
-    [["home", "home", "الرئيسية"], ["ratings", "star", "التقييمات"], [
+    [["home", "home", "الرئيسية"], ["ratings", "star", "التقييمات"], ["saved", "bookmark", "المحفوظات"], [
       "developer",
       "users",
       "من نحن",
@@ -198,6 +198,7 @@ function render() {
         ratings: "التقييمات",
         developer: "من نحن",
         review: "أضف تقييمًا",
+        saved: "المحفوظات",
         admin: "لوحة الإدارة",
       })[page]
     }</b></div><div class="header-actions">${
@@ -212,15 +213,17 @@ function render() {
       ic("moon")
     }</button></div></header><main>${
       page !== "home"
-        ? `<button class="page-close" id="page-close" aria-label="إغلاق الصفحة">${
-          ic("close")
-        } إغلاق</button>`
+        ? `<button class="page-close" id="page-close" aria-label="رجوع">${
+          ic("arrow")
+        } رجوع</button>`
         : ""
     }${
       page === "home"
         ? home()
         : page === "ratings"
         ? ratings()
+        : page === "saved"
+        ? savedPage()
         : page === "review"
         ? reviewPage()
         : page === "admin"
@@ -233,7 +236,7 @@ function render() {
 }
 function home() {
   return `${connectionBanner()}<section class="welcome"><div><div class="eyebrow"><span></span> معك في كل خطوة جامعية</div><h1>أهلًا ${
-    escapeHtml(displayName())
+    escapeHtml(displayName().trim().split(/\s+/)[0])
   } <span class="wave">✦</span><br>اختيارك اليوم، <em>يبدأ بمِعيار.</em></h1><div class="welcome-tags"><span>${
     ic("shield")
   } هويتك لا تظهر في التقييم</span><span>${
@@ -370,17 +373,18 @@ function bindCarousel() {
         : "smooth",
     });
   };
-  document.querySelector("#doctors-next").onclick = () => move(-1);
-  document.querySelector("#doctors-previous").onclick = () => move(1);
+  const next = document.querySelector("#doctors-next"), previous = document.querySelector("#doctors-previous");
+  if (next) next.onclick = () => move(-1);
+  if (previous) previous.onclick = () => move(1);
   track.addEventListener("scroll", updateCarouselControls, { passive: true });
   requestAnimationFrame(updateCarouselControls);
 }
 function cards() {
   let filtered = doctors.filter((d) =>
-    (!(collegeSelected || page === "ratings") ||
+    (page === "saved" || !(collegeSelected || page === "ratings") ||
       (d.college || "كلية الهندسة") === activeCollege) &&
-    (activeMajor === "الكل" || d.major === activeMajor) &&
-    (!savedOnly || saved.includes(d.id)) &&
+    (page === "saved" || activeMajor === "الكل" || d.major === activeMajor) &&
+    (!(savedOnly || page === "saved") || saved.includes(d.id)) &&
     (!query || [d.name, ...d.subjects].some((s) => s.includes(query)))
   );
   return filtered.length
@@ -421,24 +425,13 @@ function cards() {
         ic("arrow")
       }</button></article>`
     ).join("")
-    : '<div class="empty">لم نجد نتائج مطابقة. جرّب اسمًا آخر أو أضف الدكتور من نموذج التقييم.</div>';
+    : `<div class="empty">${page === 'saved' ? 'لم تحفظ أي دكتور بعد. اضغط علامة الحفظ على بطاقة الدكتور ليظهر هنا.' : 'لم نجد نتائج مطابقة. جرّب اسمًا آخر أو أضف الدكتور من نموذج التقييم.'}</div>`;
 }
 function ratings() {
-  return `${connectionBanner()}<div class="page-title"><div class="eyebrow">تجارب زملائك، بين يديك</div><h1>اكتشف دكتورك القادم</h1><p>ابدأ بالكلية، ثم تخصصك، واختر الدكتور.</p></div><section class="directory-filters"><label>الكلية<select id="college-filter">${
-    colleges.map((c) =>
-      `<option ${activeCollege === c ? "selected" : ""}>${
-        escapeHtml(c)
-      }</option>`
-    ).join("")
-  }</select></label><label>التخصص<select id="major-filter"><option>الكل</option>${
-    majors.filter((m) => majorBelongs(m, activeCollege)).map((m) =>
-      `<option ${m === activeMajor ? "selected" : ""}>${escapeHtml(m)}</option>`
-    ).join("")
-  }</select></label><label>الدكتور أو المادة<input id="search" placeholder="اكتب للبحث…" value="${
-    escapeHtml(query)
-  }"></label><button class="primary" id="new-review">${
-    ic("plus")
-  } تقييم جديد</button></section>${listSection()}`;
+  return `${connectionBanner()}${listSection()}`;
+}
+function savedPage() {
+  return `${connectionBanner()}<div class="page-title"><div class="eyebrow">اختياراتك في مكان واحد</div><h1>المحفوظات</h1><p>الدكاترة الذين حفظتهم للرجوع إليهم لاحقًا.</p></div><section class="doctors-section"><div class="doctor-carousel" id="doctor-grid" role="region" aria-label="الدكاترة المحفوظون" tabindex="0">${cards()}</div></section>`;
 }
 function developer() {
   return `<div class="page-title"><div class="eyebrow">خلف كل تجربة، فكرة</div><h1>مِعيار لاختيارك القادم</h1><p>منصة عربية تجعل تجارب الطلاب دليلًا لاختيارات أفضل.</p></div><section class="developer-card"><div class="brand">${logo}</div><h2>من الطلاب، من أجل الطلاب.</h2><p>مِعيار مساحة لتبادل التجارب الجامعية باحترام وشفافية. نبدأ بكلية الهندسة، ونتطلع لأن نرافق كل طالب في رحلته.</p><div class="dev-badges"><span>${
@@ -793,6 +786,11 @@ function toggleSave(id) {
   document.querySelectorAll(`[data-save="${id}"]`).forEach((b) =>
     b.classList.toggle("is-saved", saved.includes(id))
   );
+  if (page === "saved") {
+    document.querySelector("#doctor-grid").innerHTML = cards();
+    bindCards();
+    bindCarousel();
+  }
   toast(
     saved.includes(id) ? "تمت الإضافة إلى المحفوظات" : "تمت الإزالة من المحفوظات",
   );
