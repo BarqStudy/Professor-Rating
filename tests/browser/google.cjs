@@ -386,6 +386,16 @@ const server = http.createServer((req, res) => {
     await page.locator("[data-page=developer]").first().click();
     assert.equal(await page.locator(".nav-item.active").innerText(), "من نحن");
     await page.locator("#page-close").click();
+    for (const height of [900, 768, 600]) {
+      await page.setViewportSize({ width: 1440, height });
+      for (const selector of [".theme-toggle", ".user"]) {
+        const bounds = await page.locator(selector).boundingBox();
+        assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= height, `${selector} must remain visible at height ${height}`);
+      }
+    }
+    await page.locator(".theme-toggle").click();
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.locator(".theme-toggle").click();
     for (const width of [768, 1024, 1180]) {
       await page.setViewportSize({ width, height: 1024 });
       assert.equal(await page.locator(".main-wrap").evaluate((el) => getComputedStyle(el).marginRight), "0px");
