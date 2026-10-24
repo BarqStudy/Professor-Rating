@@ -1,17 +1,99 @@
-const projectUrl = (import.meta.env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
-export const configured = Boolean(projectUrl);
-export const botUsername = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "")
-  .replace(/^@/, "");
+import { createClient } from "@supabase/supabase-js";
+import { configured, projectUrl, publishableKey } from "./config.js";
+export { configured } from "./config.js";
+
+const callbackParams = typeof location === "undefined"
+  ? null
+  : new URLSearchParams(location.hash.slice(1));
+const oauthError = callbackParams?.has("error") ||
+  (typeof location !== "undefined" &&
+    new URL(location.href).searchParams.has("error"));
+const client = configured
+  ? createClient(projectUrl, publishableKey, {
+    auth: {
+      flowType: "pkce",
+      detectSessionInUrl: true,
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  })
+  : null;
+let cachedSession = null;
+client?.auth.onAuthStateChange((event, session) => {
+  cachedSession = session;
+  // Never await another auth method inside the SDK's auth-state callback.
+  queueMicrotask(() =>
+    window.dispatchEvent(
+      new CustomEvent("miyar-auth", { detail: { event, session } }),
+    )
+  );
+});
+export async function initializeAuth() {
+  if (!client) return null;
+  const { data, error } = await client.auth.getSession();
+  if (error || oauthError) {
+    throw new Error("تعذّر إكمال تسجيل الدخول باستخدام Google. حاول مجددًا.");
+  }
+  cachedSession = data.session;
+  return cachedSession;
+}
+export async function getGoogleSession() {
+  if (!client) return null;
+  const { data, error } = await client.auth.getSession();
+  if (error) {
+    throw new Error("انتهت جلسة الدخول. سجّل الدخول باستخدام Google مجددًا.");
+  }
+  cachedSession = data.session;
+  return cachedSession;
+}
+export async function signInGoogle() {
+  if (!client) throw new Error("لم يكتمل إعداد تسجيل الدخول بعد.");
+  // Give an in-app error while Google is not yet enabled, rather than navigating to an error JSON page.
+  let settings;
+  try {
+    const response = await fetch(`${projectUrl}/auth/v1/settings`, {
+      headers: { apikey: publishableKey },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) throw new Error();
+    settings = await response.json();
+  } catch {
+    throw new Error("تعذّر الاتصال بخدمة الدخول. حاول مجددًا.");
+  }
+  if (!settings.external?.google) {
+    throw new Error("تسجيل الدخول باستخدام Google لم يُفعّل بعد. جرّب لاحقًا.");
+  }
+  const redirectTo = new URL(import.meta.env.BASE_URL, location.origin).href;
+  const { error } = await client.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo, queryParams: { prompt: "select_account" } },
+  });
+  if (error) throw new Error("تعذّر بدء تسجيل الدخول باستخدام Google.");
+}
+export async function signOutGoogle() {
+  if (!client) return;
+  const { error } = await client.auth.signOut({ scope: "local" });
+  if (error) throw new Error("تعذّر تسجيل الخروج. حاول مجددًا.");
+  cachedSession = null;
+}
 export async function api(action, data = {}) {
   if (!configured) throw new Error("لم يتم ربط قاعدة البيانات بعد.");
-  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(projectUrl)) {
-    throw new Error("تحقق من رابط مشروع Supabase في إعدادات النشر.");
+  const isPublic = action === "catalogue" || action === "reviews";
+  const session = isPublic ? cachedSession : await getGoogleSession();
+  if (!isPublic && !session) {
+    throw new Error("سجّل الدخول باستخدام Google لإكمال العملية.");
   }
-  const initData = window.Telegram?.WebApp?.initData || "";
+  const headers = {
+    "Content-Type": "application/json",
+    apikey: publishableKey,
+  };
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
   const response = await fetch(`${projectUrl}/functions/v1/miyar`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...data, action, initData }),
+    headers,
+    body: JSON.stringify({ ...data, action }),
     signal: AbortSignal.timeout(20000),
   }).catch(() => {
     throw new Error("تعذّر الاتصال بالخدمة. تحقق من الإنترنت وحاول مجددًا.");
@@ -19,6 +101,11 @@ export async function api(action, data = {}) {
   const result = await response.json().catch(() => {
     throw new Error("استجابة غير متوقعة من الخدمة.");
   });
-  if (!response.ok) throw new Error(result.error || "تعذّر إكمال الطلب.");
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("المنصة قيد التجهيز؛ خدمة التقييمات لم تُفعّل بعد.");
+    }
+    throw new Error(result.error || "تعذّر إكمال الطلب.");
+  }
   return result;
 }

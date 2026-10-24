@@ -3,15 +3,15 @@ import {
   ApiError,
   integer,
   text,
+  uuid,
   validateReview,
-  verifyTelegram,
 } from "./security.js";
 
-export function createHandler({ db, env }) {
+export function createHandler({ db, env, authenticate }) {
   const origins = (env.ALLOWED_ORIGINS || "https://barqstudy.github.io").split(
     ",",
   ).map((x) => x.trim());
-  const admins = adminIds(env.ADMIN_TELEGRAM_IDS);
+  const admins = adminIds(env.ADMIN_AUTH_IDS);
   return async function handler(request) {
     const origin = request.headers.get("origin");
     const cors = {
@@ -94,27 +94,24 @@ export function createHandler({ db, env }) {
           })),
         );
       }
-      // A Telegram ID, username, or client flag by itself never grants access.
-      const identity = await verifyTelegram(
-        body.initData,
-        env.TELEGRAM_BOT_TOKEN,
-      );
+      // Identity comes only from a Supabase-verified Google session.
+      if (!authenticate) throw new ApiError(401, "سجّل الدخول باستخدام Google.");
+      const identity = await authenticate(request);
       let rows = await db(
-        `miyar_users?telegram_id=eq.${identity.id}&select=telegram_id,name,username,major_id,level,status`,
+        `miyar_accounts?auth_id=eq.${identity.id}&select=auth_id,name,major_id,level,status`,
       );
       if (!rows.length) {
-        rows = await db("miyar_users?on_conflict=telegram_id", {
+        rows = await db("miyar_accounts?on_conflict=auth_id", {
           method: "POST",
           prefer: "resolution=ignore-duplicates,return=representation",
           body: {
-            telegram_id: identity.id,
+            auth_id: identity.id,
             name: identity.name || "طالب",
-            username: identity.username,
           },
         });
         if (!rows?.length) {
           rows = await db(
-            `miyar_users?telegram_id=eq.${identity.id}&select=telegram_id,name,username,major_id,level,status`,
+            `miyar_accounts?auth_id=eq.${identity.id}&select=auth_id,name,major_id,level,status`,
           );
         }
       }
@@ -144,7 +141,7 @@ export function createHandler({ db, env }) {
         );
         const found = await db(`miyar_majors?id=eq.${major}&select=id`);
         if (!found.length) throw new ApiError(400, "التخصص غير موجود.");
-        await db(`miyar_users?telegram_id=eq.${identity.id}`, {
+        await db(`miyar_accounts?auth_id=eq.${identity.id}`, {
           method: "PATCH",
           body: { name, major_id: major, level },
         });
@@ -155,10 +152,10 @@ export function createHandler({ db, env }) {
           throw new ApiError(403, "حسابك مقيّد عن إضافة التقييمات.");
         }
         const r = validateReview(body);
-        const result = await db("rpc/miyar_submit_review", {
+        const result = await db("rpc/miyar_submit_google_review", {
           method: "POST",
           body: {
-            p_user: identity.id,
+            p_account: identity.id,
             p_college: r.college,
             p_major: r.major,
             p_name: r.name,
@@ -178,22 +175,28 @@ export function createHandler({ db, env }) {
       if (operation === "queue") {
         const [doctors, reviews] = await Promise.all([
           db(
-            "miyar_doctors?status=eq.pending&select=id,name,major_id,submitted_by,created_at&order=created_at.asc&limit=100",
+            "miyar_doctors?status=eq.pending&select=id,name,major_id,submitted_by_account,created_at&order=created_at.asc&limit=100",
           ),
           db(
-            "miyar_reviews?status=eq.pending&select=id,doctor_id,user_id,subject,comment,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
+            "miyar_reviews?status=eq.pending&select=id,doctor_id,account_id,subject,comment,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
           ),
         ]);
         // Grade is deliberately excluded even from the moderation response.
         return respond({
           doctors: doctors.map((
-            { id, name, major_id, submitted_by, created_at },
-          ) => ({ id, name, major_id, submitted_by, created_at })),
+            { id, name, major_id, submitted_by_account, created_at },
+          ) => ({
+            id,
+            name,
+            major_id,
+            submitted_by: submitted_by_account,
+            created_at,
+          })),
           reviews: reviews.map((
             {
               id,
               doctor_id,
-              user_id,
+              account_id,
               subject,
               comment,
               explanation,
@@ -204,7 +207,7 @@ export function createHandler({ db, env }) {
           ) => ({
             id,
             doctor_id,
-            user_id,
+            user_id: account_id,
             subject,
             comment,
             explanation,
@@ -294,14 +297,14 @@ export function createHandler({ db, env }) {
           },
         });
       } else if (operation === "user.status") {
-        const target = validId(body.telegramId);
+        const target = uuid(body.userId);
         if (admins.has(String(target))) {
           throw new ApiError(400, "لا يمكن حظر أو تقييد حساب أدمن.");
         }
         if (!["active", "restricted", "banned"].includes(body.status)) {
           throw new ApiError(400, "حالة المستخدم غير صالحة.");
         }
-        const found = await db(`miyar_users?telegram_id=eq.${target}`, {
+        const found = await db(`miyar_accounts?auth_id=eq.${target}`, {
           method: "PATCH",
           body: { status: body.status },
         });

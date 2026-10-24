@@ -1,6 +1,15 @@
 import "./style.css";
 import { readJSON, storage } from "./storage.js";
-import { api, botUsername, configured } from "./cloud.js";
+import {
+  api,
+  configured,
+  getGoogleSession,
+  initializeAuth,
+  signInGoogle,
+  signOutGoogle,
+} from "./cloud.js";
+let googleSession = null;
+let authNotice = "";
 let cloudMe = null,
   cloudStatus = configured ? "loading" : "demo",
   cloudError = "",
@@ -110,31 +119,12 @@ function displayName() {
   return studentProfile?.name ||
     ((storage.getItem("miyar-session") === "guest" || signedOut)
       ? "طالبنا"
-      : firstName);
+      : "طالبنا");
 }
 let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
 let page = "home", query = "", activeMajor = "الكل", savedOnly = false;
-let tg = window.Telegram?.WebApp;
-tg?.ready();
-tg?.expand();
-let username = tg?.initDataUnsafe?.user?.username;
-let firstName = tg?.initDataUnsafe?.user?.first_name || "طالبنا";
-document.querySelector("#telegram-sdk")?.addEventListener("load", () => {
-  tg = window.Telegram?.WebApp;
-  tg?.ready();
-  tg?.expand();
-  username = tg?.initDataUnsafe?.user?.username;
-  firstName = tg?.initDataUnsafe?.user?.first_name || "طالبنا";
-  if (tg) {
-    render();
-    if (
-      configured && !signedOut &&
-      storage.getItem("miyar-session") !== "guest"
-    ) connectCloudAccount();
-  }
-});
 const persist = () => {
   storage.setItem("athar-major-colleges", JSON.stringify(majorColleges));
   for (
@@ -200,7 +190,7 @@ function render() {
         } · المستوى ${Number(studentProfile.level).toLocaleString("ar")}</span>`
         : ""
     }<small>${
-      username ? "@" + escapeHtml(username) : "@student · حساب تجريبي"
+      googleSession ? "حساب Google متصل" : "زائر · تصفّح بحرية"
     }</small></div><span class="online"></span></div></div></aside><div class="main-wrap"><header><div class="mobile-brand" aria-label="مِعيار">${logo}</div><div class="breadcrumb">مساحتك الجامعية <span>/</span> <b>${
       ({
         home: "الرئيسية",
@@ -208,7 +198,13 @@ function render() {
         developer: "المطور",
         admin: "لوحة الإدارة",
       })[page]
-    }</b></div><div class="header-actions"><button class="icon-btn settings-trigger" id="open-settings" aria-label="الإعدادات" title="الإعدادات">${
+    }</b></div><div class="header-actions"><button class="google-account-button" id="google-account">${
+      googleSession
+        ? ic("users")
+        : '<span class="google-g" aria-hidden="true">G</span>'
+    }<span>${
+      googleSession ? "حسابي" : "دخول Google"
+    }</span></button><button class="icon-btn settings-trigger" id="open-settings" aria-label="الإعدادات" title="الإعدادات">${
       ic("settings")
     }</button><span class="semester"><i></i> الفصل الدراسي الثاني ١٤٤٧</span><button class="icon-btn" id="notice" aria-label="الإشعارات">${
       ic("bell")
@@ -237,7 +233,9 @@ function home() {
   return `${connectionBanner()}<section class="welcome"><div><div class="eyebrow"><span></span> معك في كل خطوة جامعية</div><h1>أهلًا ${
     escapeHtml(displayName())
   } <span class="wave">✦</span><br>اختيارك اليوم، <em>يبدأ بمِعيار.</em></h1><p>تجارب حقيقية من زملائك، تساعدك تختار دكتورك بثقة.<br>ابحث، اكتشف، وشارك تجربتك… لأن رأيك يفرق.</p><div class="student-summary">${
-    username ? `<span dir="ltr">@${escapeHtml(username)}</span>` : ""
+    googleSession
+      ? `<span>${ic("shield")} تم تسجيل الدخول باستخدام Google</span>`
+      : ""
   }${
     studentProfile
       ? `<span>${escapeHtml(studentProfile.major)} · المستوى ${
@@ -389,7 +387,7 @@ function developer() {
     ic("code")
   } نسخة تجريبية</span></div><p class="muted">${
     configured
-      ? "تُحفظ التقييمات والملفات الشخصية في قاعدة بيانات مِعيار. الإرسال متاح من داخل تيليجرام بعد التحقق من الحساب، وتُنشر التعليقات بعد مراجعتها. المحفوظات والمظهر وحجم الخط محفوظة على جهازك."
+      ? "تُحفظ التقييمات والملفات الشخصية في قاعدة بيانات مِعيار. الإرسال متاح بعد تسجيل الدخول باستخدام Google، وتُنشر التعليقات بعد مراجعتها. المحفوظات والمظهر وحجم الخط محفوظة على جهازك."
       : "هذه نسخة عرض تفاعلية. لم يكتمل ربط قاعدة البيانات بعد؛ البيانات والإرسال محليان على هذا الجهاز."
   }</p><button class="primary" id="share-platform">${
     ic("share")
@@ -430,7 +428,7 @@ function admin() {
         }</small></span><div><button data-approve="${i}">قبول</button><button data-reject="${i}" class="danger">رفض</button></div></div>`
       ).join("")
       : '<p class="muted">لا توجد طلبات معلّقة.</p>'
-  }</section><section class="panel"><h2>إدارة المستخدمين</h2><form id="user-action"><label>معرّف تيليجرام<input name="user" required placeholder="@username"></label><label>الإجراء<select name="action"><option>حظر</option><option>تقييد</option><option>فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق تجريبي</button></form><p class="muted">تُحفظ الحالة محليًا للعرض؛ لا تمنع وصول مستخدم حقيقي.</p></section></div>`;
+  }</section><section class="panel"><h2>إدارة المستخدمين</h2><form id="user-action"><label>معرّف الطالب<input name="user" required placeholder="معرّف الحساب"></label><label>الإجراء<select name="action"><option>حظر</option><option>تقييد</option><option>فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق تجريبي</button></form><p class="muted">تُحفظ الحالة محليًا للعرض؛ لا تمنع وصول مستخدم حقيقي.</p></section></div>`;
 }
 function escapeHtml(s) {
   return String(s).replace(
@@ -689,6 +687,18 @@ async function share(text, id) {
   }
 }
 function bind() {
+  document.querySelector("#dismiss-auth-notice")?.addEventListener(
+    "click",
+    () => {
+      authNotice = "";
+      render();
+    },
+  );
+  document.querySelector("#google-account")?.addEventListener(
+    "click",
+    () => googleSession ? openSettings() : openGoogleMessage(),
+  );
+
   document.querySelector("#retry-cloud")?.addEventListener(
     "click",
     () => loadCloud(),
@@ -763,7 +773,7 @@ function bind() {
         "معايير مجتمع مِعيار",
         `<div class="policy"><p>١. تحدّث عن تجربتك الفعلية، وناقش الشرح والتعامل والدرجات بموضوعية.</p><p>٢. لا تشارك بياناتك الشخصية أو بيانات الآخرين. لا تُعرض هويتك أو درجتك مع التعليق.</p><p>٣. تُرفض الكلمات المسيئة الظاهرة في الفلتر المحلي. تُراجع التعليقات على الخادم قبل النشر عند تفعيل الاتصال.</p><p>٤. ${
           configured
-            ? "يمكن للإدارة استخدام معرّف تيليجرام لتطبيق الحظر والتقييد؛ لا يظهر مع التقييمات العامة. الدرجة غير متاحة في العرض العام أو شاشة مراجعة التعليقات."
+            ? "يمكن للإدارة استخدام معرّف الحساب لتطبيق الحظر والتقييد؛ لا يظهر مع التقييمات العامة. الدرجة غير متاحة في العرض العام أو شاشة مراجعة التعليقات."
             : "هذه نسخة تجريبية ببيانات نموذجية وتخزين محلي."
         }</p></div>`,
       ),
@@ -942,8 +952,8 @@ function openSettings() {
       configured
         ? `<p class="cloud-identity">${
           cloudMe
-            ? "معرّفك في تيليجرام: " + cloudMe.id
-            : "تعديل الملف يتطلب فتح مِعيار من داخل بوت تيليجرام."
+            ? "معرّف حسابك: " + cloudMe.id
+            : "تعديل الملف يتطلب تسجيل الدخول باستخدام Google."
         }</p>`
         : ""
     }<button class="primary settings-save">${
@@ -959,8 +969,8 @@ function openSettings() {
           ic("logout")
         } تسجيل الخروج</button><small>${
           configured
-            ? "الخروج من مِعيار على هذا الجهاز؛ لا يغيّر حساب تيليجرام."
-            : "الخروج من ملفك المحلي في مِعيار؛ لا يغيّر حساب تيليجرام."
+            ? "إنهاء جلسة مِعيار على هذا الجهاز."
+            : "الخروج من ملفك المحلي في مِعيار."
         }</small></div>`
     }</form>`,
   );
@@ -996,10 +1006,8 @@ function openSettings() {
       const button = e.target.querySelector(".settings-save");
       button.disabled = true;
       try {
-        if (!tg?.initData) {
-          throw new Error(
-            "افتح مِعيار من الميني آب داخل بوت تيليجرام لتسجيل الدخول.",
-          );
+        if (!(await getGoogleSession())) {
+          throw new Error("سجّل الدخول باستخدام Google أولًا.");
         }
         if (!cloudMe) await connectCloudAccount(false);
         if (!cloudMe) throw new Error("تعذّر التحقق من حسابك.");
@@ -1044,7 +1052,20 @@ function openSettings() {
       }</span><h3>هل تريد تسجيل الخروج؟</h3><p>سنزيل اسمك وتخصصك ومستواك من هذا الجهاز. ستبقى تفضيلات المظهر وحجم الخط.</p><button class="primary" id="confirm-logout">تسجيل الخروج</button><button class="secondary" id="cancel-logout">البقاء في مِعيار</button></div>`,
     );
     document.querySelector("#cancel-logout").onclick = openSettings;
-    document.querySelector("#confirm-logout").onclick = () => {
+    document.querySelector("#confirm-logout").onclick = async () => {
+      const button = document.querySelector("#confirm-logout");
+      button.disabled = true;
+      if (configured) {
+        try {
+          await signOutGoogle();
+          googleSession = null;
+        } catch (error) {
+          button.disabled = false;
+          toast(error.message);
+          return;
+        }
+      }
+
       studentProfile = null;
       cloudMe = null;
       cloudQueue = null;
@@ -1066,24 +1087,11 @@ function renderSignedOut() {
       ic("check")
     }</span><h1>تم تسجيل خروجك</h1><p>نراك قريبًا في مِعيار.<br>${
       configured
-        ? "يمكنك الدخول من بوت تيليجرام أو التصفح كزائر."
+        ? "يمكنك الدخول باستخدام Google أو التصفح كزائر."
         : "يمكنك إنشاء ملفك المحلي من جديد أو التصفح كزائر."
     }</p><button class="primary" id="sign-in">الدخول مجددًا</button><button class="secondary" id="browse-guest">التصفح كزائر</button></section></main><div id="modal-root"></div><div id="toast" role="status"></div>`;
-  document.querySelector("#sign-in").onclick = () => {
-    if (configured) {
-      if (!tg?.initData) {
-        openTelegramMessage();
-        return;
-      }
-      connectCloudAccount().then(() => {
-        if (cloudMe) {
-          signedOut = false;
-          storage.setItem("miyar-session", "active");
-          render();
-        }
-      });
-    } else openSettings();
-  };
+  document.querySelector("#sign-in").onclick = () =>
+    configured ? startGoogleLogin() : openSettings();
   document.querySelector("#browse-guest").onclick = () => {
     signedOut = false;
     page = "home";
@@ -1103,18 +1111,27 @@ function majorBelongs(name, college) {
     : majorColleges[name] === college;
 }
 function connectionBanner() {
+  const notice = authNotice
+    ? `<div class="connection-banner error" role="alert">${
+      escapeHtml(authNotice)
+    }<button id="dismiss-auth-notice" aria-label="إغلاق تنبيه الدخول">إغلاق</button></div>`
+    : "";
   if (!configured) {
-    return '<div class="connection-banner demo">نسخة عرض تجريبية · التقييمات الحالية نموذجية والحفظ محلي.</div>';
+    return notice +
+      '<div class="connection-banner demo">نسخة عرض تجريبية · التقييمات الحالية نموذجية والحفظ محلي.</div>';
   }
   if (cloudStatus === "loading") {
-    return '<div class="connection-banner" role="status">جارٍ تحميل تقييمات مِعيار…</div>';
+    return notice +
+      '<div class="connection-banner" role="status">جارٍ تحميل تقييمات مِعيار…</div>';
   }
   if (cloudStatus === "error") {
-    return `<div class="connection-banner error" role="alert">${
-      escapeHtml(cloudError)
-    }<button id="retry-cloud">إعادة المحاولة</button></div>`;
+    return notice +
+      `<div class="connection-banner error" role="alert">${
+        escapeHtml(cloudError)
+      }<button id="retry-cloud">إعادة المحاولة</button></div>`;
   }
-  return '<div class="connection-banner live"><span></span>تقييمات مشتركة بين الطلاب · تُراجع المشاركات قبل النشر</div>';
+  return notice +
+    '<div class="connection-banner live"><span></span>تقييمات مشتركة بين الطلاب · تُراجع المشاركات قبل النشر</div>';
 }
 async function refreshCloudCatalogue() {
   const data = await api("catalogue");
@@ -1138,11 +1155,13 @@ async function loadCloud() {
   cloudStatus = "loading";
   cloudError = "";
   try {
+    googleSession = await initializeAuth();
+  } catch (error) {
+    authNotice = error.message;
+  }
+  try {
     await refreshCloudCatalogue();
-    if (
-      !signedOut && storage.getItem("miyar-session") !== "guest" &&
-      tg?.initData
-    ) await connectCloudAccount(false);
+    if (googleSession) await connectCloudAccount(false);
   } catch (error) {
     cloudStatus = "error";
     cloudError = error.message;
@@ -1152,9 +1171,23 @@ async function loadCloud() {
   if (doctors.some((d) => d.id === id)) detail(id);
 }
 async function connectCloudAccount(update = true) {
-  if (!tg?.initData) return null;
+  let session;
+  try {
+    session = await getGoogleSession();
+  } catch (error) {
+    cloudMe = null;
+    if (update) toast(error.message);
+    return null;
+  }
+  googleSession = session;
+  if (!session) {
+    cloudMe = null;
+    return null;
+  }
   if (!cloudAuthPending) {
     cloudAuthPending = api("me").then((me) => {
+      // Ignore responses for a session that was signed out or replaced while loading.
+      if (googleSession?.user.id !== session.user.id) return null;
       cloudMe = me;
       const major = cloudCatalogue?.majors.find((m) => m.id === me.major_id);
       studentProfile = {
@@ -1162,6 +1195,8 @@ async function connectCloudAccount(update = true) {
         major: major?.name || "",
         level: me.level || 1,
       };
+      signedOut = false;
+      storage.setItem("miyar-session", "active");
       return me;
     }).catch((error) => {
       cloudMe = null;
@@ -1177,39 +1212,43 @@ async function connectCloudAccount(update = true) {
   ) render();
   return me;
 }
-function openTelegramMessage() {
+async function startGoogleLogin() {
+  const button = document.querySelector("#google-signin") ||
+    document.querySelector("#sign-in");
+  if (button) button.disabled = true;
+  try {
+    await signInGoogle();
+  } catch (error) {
+    const box = document.querySelector(".google-login-error");
+    if (box) box.textContent = error.message;
+    else toast(error.message);
+    if (button) button.disabled = false;
+  }
+}
+function openGoogleMessage() {
   modal(
-    "الدخول عبر تيليجرام",
+    "الدخول إلى مِعيار",
     `<div class="login-explainer"><span class="settings-avatar">${
       ic("shield")
-    }</span><h3>حسابك يحمي مصداقية التقييم</h3><p>تصفّح الدكاترة بحرية. لإضافة تقييم أو حفظ ملفك، افتح مِعيار من زر الميني آب داخل بوت تيليجرام.</p>${
-      botUsername
-        ? `<a class="primary" href="https://t.me/${
-          encodeURIComponent(botUsername)
-        }" target="_blank" rel="noopener noreferrer">افتح بوت مِعيار</a>`
-        : '<p class="muted">افتح رابط المنصة من الميني آب في بوت مِعيار.</p>'
-    }</div>`,
+    }</span><h3>تجربتك تبدأ بخطوة بسيطة</h3><p>سجّل الدخول بحساب Google لتشارك تقييمك وتحفظ ملفك. لا يظهر اسمك أو بريدك مع تقييماتك.</p><button class="google-signin-button" id="google-signin"><span class="google-g" aria-hidden="true">G</span>الدخول باستخدام Google</button><p class="google-login-error form-error" role="alert"></p><small class="muted">يمكنك تصفّح الدكاترة دون تسجيل الدخول.</small></div>`,
   );
+  document.querySelector("#google-signin").onclick = startGoogleLogin;
 }
 function requireCloudAccount(next) {
+  if (!googleSession) {
+    openGoogleMessage();
+    return false;
+  }
   if (cloudStatus !== "ready") {
     toast("انتظر اكتمال تحميل المنصة، أو أعد المحاولة.");
     return false;
   }
-  if (!tg?.initData) {
-    openTelegramMessage();
-    return false;
-  }
-  if (
-    signedOut || storage.getItem("miyar-session") === "guest" || !cloudMe
-  ) {
+  if (!cloudMe) {
     connectCloudAccount(false).then((me) => {
       if (!me) {
-        toast("تعذّر تسجيل الدخول؛ أغلق الميني آب وافتحه مجددًا.");
+        toast("تعذّر التحقق من الحساب. حاول مجددًا.");
         return;
       }
-      signedOut = false;
-      storage.setItem("miyar-session", "active");
       render();
       next?.();
     });
@@ -1329,7 +1368,7 @@ function cloudAdmin() {
         d.verified ? "إلغاء التوثيق" : "توثيق"
       }</button><button class="danger" data-cloud-operation="doctor.delete" data-id="${d.id}">إزالة</button></div></div>`
     ).join("")
-  }<h2>إدارة المستخدمين</h2><form id="cloud-user-status"><label>معرّف تيليجرام الرقمي<input name="telegramId" required inputmode="numeric" pattern="[0-9]+" placeholder="الرقم الظاهر مع الطلب"><select name="status"><option value="banned">حظر</option><option value="restricted">تقييد الإرسال</option><option value="active">فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق</button></form></section><section class="panel moderation-panel"><h2>طلبات إضافة دكتور</h2>${
+  }<h2>إدارة المستخدمين</h2><form id="cloud-user-status"><label>معرّف حساب الطالب<input name="userId" required placeholder="UUID الظاهر مع الطلب"><select name="status"><option value="banned">حظر</option><option value="restricted">تقييد الإرسال</option><option value="active">فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق</button></form></section><section class="panel moderation-panel"><h2>طلبات إضافة دكتور</h2>${
     !queue
       ? '<p class="muted">جارٍ التحميل…</p>'
       : queue.error
@@ -1340,7 +1379,9 @@ function cloudAdmin() {
           escapeHtml(
             records.majors.find((m) => m.id === d.major_id)?.name || "",
           )
-        } · الطالب ${d.submitted_by}</small></span><div><button data-cloud-operation="doctor.approve" data-id="${d.id}">قبول</button><button class="danger" data-cloud-operation="doctor.reject" data-id="${d.id}">رفض</button></div></div>`
+        } · الطالب ${
+          escapeHtml(d.submitted_by || "حساب سابق")
+        }</small></span><div><button data-cloud-operation="doctor.approve" data-id="${d.id}">قبول</button><button class="danger" data-cloud-operation="doctor.reject" data-id="${d.id}">رفض</button></div></div>`
       ).join("")
       : '<p class="muted">لا توجد طلبات معلّقة.</p>'
   }<h2>مراجعة التقييمات</h2>${
@@ -1354,9 +1395,9 @@ function cloudAdmin() {
               )?.name ||
               "دكتور غير متاح",
           )
-        }</b><small>المادة: ${
-          escapeHtml(r.subject)
-        } · الطالب ${r.user_id}</small><p>${
+        }</b><small>المادة: ${escapeHtml(r.subject)} · الطالب ${
+          escapeHtml(r.user_id || "حساب سابق")
+        }</small><p>${
           escapeHtml(r.comment)
         }</p><span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div><button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
       ).join("")
@@ -1390,7 +1431,7 @@ function bindCloudAdmin() {
     document.querySelector(selector)?.addEventListener("submit", async (e) => {
       e.preventDefault();
       const values = Object.fromEntries(new FormData(e.target));
-      for (const field of ["collegeId", "majorId", "telegramId"]) {
+      for (const field of ["collegeId", "majorId"]) {
         if (field in values) values[field] = Number(values[field]);
       }
       const button = e.target.querySelector("button");
@@ -1425,6 +1466,30 @@ function bindCloudAdmin() {
   );
 }
 
+window.addEventListener("miyar-auth", async ({ detail }) => {
+  const previous = googleSession;
+  googleSession = detail.session;
+  if (!detail.session) {
+    cloudMe = null;
+    cloudQueue = null;
+    studentProfile = null;
+    storage.removeItem("miyar-profile");
+    if (detail.event === "SIGNED_OUT") {
+      storage.setItem("miyar-session", signedOut ? "signed-out" : "guest");
+    }
+  } else if (!previous || previous.user.id !== detail.session.user.id) {
+    cloudMe = null;
+    cloudQueue = null;
+    studentProfile = null;
+    signedOut = false;
+    storage.setItem("miyar-session", "active");
+    if (cloudStatus === "ready") await connectCloudAccount(false);
+  }
+  if (
+    detail.event !== "TOKEN_REFRESHED" &&
+    !document.querySelector(".modal-backdrop")
+  ) render();
+});
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });

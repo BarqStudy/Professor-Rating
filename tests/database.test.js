@@ -121,3 +121,102 @@ test("database migration, privacy roles, moderation, aggregates, duplicates and 
     await db.close();
   }
 });
+
+test("Google migration preserves legacy data and enforces UUID account privacy and rate limits", async (t) => {
+  const db = new PGlite();
+  const account = "11111111-1111-4111-8111-111111111111";
+  try {
+    await db.exec(
+      "create role anon; create role authenticated; create role service_role bypassrls; create schema auth; create table auth.users(id uuid primary key);",
+    );
+    await db.exec(
+      await readFile(
+        new URL(
+          "../supabase/migrations/202610240001_miyar.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    await db.exec(
+      "insert into miyar_users(telegram_id,name) values(123,'طالب سابق'); select miyar_submit_review(123,'كلية الهندسة','الهندسة المدنية','أحمد محمد العتيبي','مادة سابقة',92,80,80,80,'تجربة سابقة مفيدة'); update miyar_doctors set status='approved'; update miyar_reviews set status='published';",
+    );
+    await db.exec(
+      await readFile(
+        new URL(
+          "../supabase/migrations/202610240002_google_auth.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    assert.equal(
+      (await db.query("select count(*)::int as n from miyar_reviews")).rows[0]
+        .n,
+      1,
+    );
+    await db.query("insert into auth.users(id) values($1)", [account]);
+    for (const role of ["anon", "authenticated"]) {
+      await db.exec(`set role ${role}`);
+      await assert.rejects(
+        db.query("select * from miyar_accounts"),
+        /permission denied/,
+      );
+      await assert.rejects(
+        db.query(
+          "select miyar_submit_google_review($1,'a','b','c','d',90,90,90,90,'e')",
+          [account],
+        ),
+        /permission denied/,
+      );
+      await db.exec("reset role");
+    }
+    await db.exec("set role service_role");
+    await assert.rejects(
+      db.query(
+        "select miyar_submit_review(123,'a','b','c','d',90,90,90,90,'e')",
+      ),
+      /permission denied/,
+    );
+    await db.query(
+      "insert into miyar_accounts(auth_id,name) values($1,'طالب جديد')",
+      [account],
+    );
+    const submit = async (subject = "مادة جديدة") =>
+      (await db.query(
+        "select miyar_submit_google_review($1,'كلية الهندسة','الهندسة المدنية','أحمد محمد العتيبي',$2,95,90,90,90,'شرح واضح وتجربة مفيدة') as result",
+        [account, subject],
+      )).rows[0].result;
+    const result = await submit();
+    assert.equal(result.status, "pending");
+    const row = (await db.query(
+      "select account_id,user_id from miyar_reviews where id=$1",
+      [result.id],
+    )).rows[0];
+    assert.equal(row.account_id, account);
+    assert.equal(row.user_id, null);
+    await db.query("update miyar_reviews set status='published' where id=$1", [
+      result.id,
+    ]);
+    const data =
+      (await db.query("select miyar_catalogue() as data")).rows[0].data;
+    assert.equal(data.doctors[0].count, 2);
+    assert.equal(data.doctors[0].score, 85);
+    assert.ok(!JSON.stringify(data).includes(account));
+    assert.ok(!JSON.stringify(data).includes("grade"));
+    await assert.rejects(submit(), /unique constraint/);
+    await db.query(
+      "update miyar_accounts set status='restricted' where auth_id=$1",
+      [account],
+    );
+    await assert.rejects(submit("جديد"), /ACCOUNT_RESTRICTED/);
+    await db.query(
+      "update miyar_accounts set status='active' where auth_id=$1",
+      [account],
+    );
+    for (let i = 0; i < 4; i++) await submit("مادة " + i);
+    await assert.rejects(submit("مادة سادسة"), /RATE_LIMIT/);
+  } finally {
+    await db.close();
+  }
+});

@@ -14,8 +14,8 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
-      ADMIN_TELEGRAM_IDS: ${{ vars.ADMIN_TELEGRAM_IDS }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'bbnsorjxgehvoddluvyo' }}
+      ADMIN_AUTH_IDS: ${{ vars.ADMIN_AUTH_IDS }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,39 +28,18 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           python3 - <<'PY'
           import os, re
-          required = ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_DB_PASSWORD', 'SUPABASE_PROJECT_REF', 'TELEGRAM_BOT_TOKEN']
+          required = ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_DB_PASSWORD', 'SUPABASE_PROJECT_REF']
           missing = [name for name in required if not os.environ.get(name)]
           if missing:
               raise SystemExit('Missing settings: ' + ', '.join(missing))
           if not re.fullmatch(r'[a-z0-9]{20}', os.environ['SUPABASE_PROJECT_REF']):
               raise SystemExit('SUPABASE_PROJECT_REF must be the project reference, not its URL.')
-          if os.environ.get('ADMIN_TELEGRAM_IDS') and not re.fullmatch(r'[0-9]+(?:,[0-9]+)*', os.environ['ADMIN_TELEGRAM_IDS']):
-              raise SystemExit('ADMIN_TELEGRAM_IDS must contain numeric Telegram user IDs separated by commas.')
+          if os.environ.get('ADMIN_AUTH_IDS') and not re.fullmatch(r'[a-fA-F0-9-]{36}(?:,[a-fA-F0-9-]{36})*', os.environ['ADMIN_AUTH_IDS']):
+              raise SystemExit('ADMIN_AUTH_IDS must contain Supabase Auth user UUIDs separated by commas.')
           PY
-      - name: Verify Telegram bot
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          BOT_USERNAME: ${{ vars.VITE_TELEGRAM_BOT_USERNAME }}
-        run: |
-          python3 - <<'PYCODE'
-          import json, os, urllib.request
-          try:
-              url = 'https://api.telegram.org/bot' + os.environ['TELEGRAM_BOT_TOKEN'] + '/getMe'
-              with urllib.request.urlopen(url, timeout=30) as response:
-                  result = json.load(response)
-          except Exception:
-              raise SystemExit('Telegram verification failed. Check TELEGRAM_BOT_TOKEN and try again.')
-          if not result.get('ok') or not result.get('result', {}).get('is_bot'):
-              raise SystemExit('TELEGRAM_BOT_TOKEN does not identify a bot.')
-          expected = os.environ.get('BOT_USERNAME', '').lstrip('@').lower()
-          if expected and result['result'].get('username', '').lower() != expected:
-              raise SystemExit('VITE_TELEGRAM_BOT_USERNAME does not match TELEGRAM_BOT_TOKEN.')
-          print('Telegram bot verified without sending messages.')
-          PYCODE
       - uses: supabase/setup-cli@v1
         with:
           version: 2.122.0
@@ -74,7 +53,6 @@ jobs:
       - name: Configure private backend secrets
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           secret_file="$RUNNER_TEMP/miyar-secrets.env"
           trap 'rm -f "$secret_file"' EXIT
@@ -82,8 +60,7 @@ jobs:
           import os
           from pathlib import Path
           values = {
-              'TELEGRAM_BOT_TOKEN': os.environ['TELEGRAM_BOT_TOKEN'],
-              'ADMIN_TELEGRAM_IDS': os.environ['ADMIN_TELEGRAM_IDS'],
+              'ADMIN_AUTH_IDS': os.environ['ADMIN_AUTH_IDS'],
               'ALLOWED_ORIGINS': 'https://barqstudy.github.io',
           }
           for value in values.values():
@@ -94,7 +71,7 @@ jobs:
           target.chmod(0o600)
           PY
           supabase secrets set --env-file "$secret_file" --project-ref "$SUPABASE_PROJECT_REF" --yes
-      - name: Deploy Telegram API
+      - name: Deploy Google-authenticated API
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase functions deploy miyar --project-ref "$SUPABASE_PROJECT_REF" --use-api --yes

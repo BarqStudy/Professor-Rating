@@ -1,97 +1,153 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
 import {
   ApiError,
+  uuid,
   validateReview,
-  verifyTelegram,
 } from "../supabase/functions/miyar/security.js";
+import { createGoogleVerifier } from "../supabase/functions/miyar/auth.js";
 import { createHandler } from "../supabase/functions/miyar/handler.js";
 import { createDatabase } from "../supabase/functions/miyar/database.js";
-
-const token = "test-bot-token-not-a-real-credential";
-function signed(id = 123, extra = {}) {
-  const p = new URLSearchParams({
-    auth_date: String(Math.floor(Date.now() / 1000)),
-    user: JSON.stringify({ id, first_name: "طالب", username: "student" }),
-    ...extra,
-  });
-  const data = [...p.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    .map(([k, v]) => `${k}=${v}`).join("\n");
-  const secret = createHmac("sha256", "WebAppData").update(token).digest();
-  p.set("hash", createHmac("sha256", secret).update(data).digest("hex"));
-  return p.toString();
-}
+const member = "11111111-1111-4111-8111-111111111111",
+  admin = "99999999-9999-4999-8999-999999999999";
+const token = (id, method = "oauth") =>
+  `header.${
+    Buffer.from(JSON.stringify({ sub: id, amr: [{ method }] })).toString(
+      "base64url",
+    )
+  }.test-signature`;
+const memberToken = token(member), adminToken = token(admin);
+const googleUser = (id) => ({
+  id,
+  email_confirmed_at: "2026-10-24",
+  app_metadata: { provider: "google", providers: ["google"] },
+  identities: [{ provider: "google" }],
+  user_metadata: { full_name: "طالب" },
+});
+const verify = createGoogleVerifier(
+  "https://test.supabase.co",
+  "test-service-key",
+  async (url, options) => {
+    const access = options.headers.Authorization.slice(7);
+    if (![memberToken, adminToken].includes(access)) {
+      return new Response(
+        "{}",
+        { status: 401 },
+      );
+    }
+    return Response.json(googleUser(access === adminToken ? admin : member));
+  },
+);
+const env = {
+  ADMIN_AUTH_IDS: admin,
+  ALLOWED_ORIGINS: "https://barqstudy.github.io",
+};
 const review = {
   college: "كلية الهندسة",
   major: "الهندسة المدنية",
   name: "أحمد محمد العتيبي",
-  subject: "الإنشاءات",
+  subject: "ميكانيكا",
   grade: 92,
   scores: [90, 80, 70],
-  comment: "تجربة مفيدة وشرح واضح",
+  comment: "شرح واضح وتجربة مفيدة",
 };
-const env = {
-  TELEGRAM_BOT_TOKEN: token,
-  ADMIN_TELEGRAM_IDS: "999",
-  ALLOWED_ORIGINS: "https://barqstudy.github.io",
-};
-function request(body, origin = "https://barqstudy.github.io") {
+function request(body, access = "", origin = "https://barqstudy.github.io") {
   return new Request("https://test.supabase.co/functions/v1/miyar", {
     method: "POST",
-    headers: { "content-type": "application/json", origin },
+    headers: {
+      "content-type": "application/json",
+      origin,
+      ...(access ? { Authorization: `Bearer ${access}` } : {}),
+    },
     body: JSON.stringify(body),
   });
 }
 function userDb(status = "active", calls = []) {
   return async (path, options = {}) => {
     calls.push({ path, ...options });
-    if (path.startsWith("miyar_users?")) {
+    if (path.startsWith("miyar_accounts")) {
       return [{
-        telegram_id: 123,
+        auth_id: member,
         name: "طالب",
+        status,
         major_id: null,
         level: null,
-        status,
       }];
     }
-    if (path === "rpc/miyar_submit_review") return { id: 8, status: "pending" };
+    if (path === "rpc/miyar_submit_google_review") {
+      return { id: 8, status: "pending" };
+    }
     return [];
   };
 }
+const handler = (db = userDb()) =>
+  createHandler({ db, env, authenticate: verify });
 
-test("Telegram HMAC accepts a valid signed identity", async () => {
-  assert.equal((await verifyTelegram(signed(), token)).id, 123);
-});
-test("forged identity, duplicate fields, expired and future signatures fail", async () => {
-  await assert.rejects(
-    verifyTelegram(signed().replace("student", "admin"), token),
-    { status: 401 },
+test("Google identity is obtained from Supabase Auth for the exact bearer token", async () => {
+  let observed;
+  const verifier = createGoogleVerifier(
+    "https://test.supabase.co",
+    "test-service-key",
+    async (url, options) => {
+      observed = { url, options };
+      return Response.json(googleUser(member));
+    },
   );
-  await assert.rejects(verifyTelegram(signed() + "&auth_date=1", token), {
-    status: 401,
+  assert.equal((await verifier(request({}, memberToken))).id, member);
+  assert.equal(observed.url, "https://test.supabase.co/auth/v1/user");
+  assert.equal(observed.options.headers.Authorization, `Bearer ${memberToken}`);
+  assert.equal(observed.options.headers.apikey, "test-service-key");
+});
+test("missing, forged and expired tokens fail before any database access", async () => {
+  const calls = [];
+  const handle = handler(userDb("active", calls));
+  for (const access of ["", "forged.jwt.token", "expired-token"]) {
+    const response = await handle(
+      request({
+        action: "submit",
+        ...review,
+        userId: admin,
+        isAdmin: true,
+        initData: "legacy-input",
+      }, access),
+    );
+    assert.equal(response.status, 401);
+  }
+  assert.equal(calls.length, 0);
+});
+test("only verified Google OAuth identities are accepted, including rejection of password-linked sessions", async () => {
+  for (
+    const user of [
+      {
+        ...googleUser(member),
+        app_metadata: { provider: "email", providers: ["email"] },
+      },
+      { ...googleUser(member), identities: [{ provider: "email" }] },
+      { ...googleUser(member), email_confirmed_at: null },
+      { ...googleUser(member), is_anonymous: true },
+    ]
+  ) {
+    const verifier = createGoogleVerifier(
+      "https://test.supabase.co",
+      "key",
+      async () => Response.json(user),
+    );
+    await assert.rejects(verifier(request({}, memberToken)), { status: 403 });
+  }
+  const verifier = createGoogleVerifier(
+    "https://test.supabase.co",
+    "key",
+    async () => Response.json(googleUser(member)),
+  );
+  await assert.rejects(verifier(request({}, token(member, "password"))), {
+    status: 403,
   });
-  await assert.rejects(
-    verifyTelegram(
-      signed(123, { auth_date: String(Math.floor(Date.now() / 1000) - 3601) }),
-      token,
-    ),
-    { status: 401 },
-  );
-  await assert.rejects(
-    verifyTelegram(
-      signed(123, { auth_date: String(Math.floor(Date.now() / 1000) + 60) }),
-      token,
-    ),
-    { status: 401 },
-  );
-  await assert.rejects(verifyTelegram(signed(-1), token), { status: 401 });
-  await assert.rejects(verifyTelegram("", token), { status: 401 });
+  await assert.rejects(verifier(request({}, token(admin))), { status: 403 });
 });
-test("review validation checks integer grades, all sliders, names, obscured abuse and personal contacts", () => {
+test("review validation rejects noninteger grades, malformed sliders, abuse and contact details", () => {
   assert.deepEqual(validateReview(review).scores, [90, 80, 70]);
   for (
-    const changed of [
+    const fields of [
       { grade: 101 },
       { grade: "90" },
       { scores: [80, 90] },
@@ -102,124 +158,143 @@ test("review validation checks integer grades, all sliders, names, obscured abus
       { comment: "اتصل على 0501234567" },
       { comment: "https://example.com" },
     ]
-  ) assert.throws(() => validateReview({ ...review, ...changed }), ApiError);
+  ) assert.throws(() => validateReview({ ...review, ...fields }), ApiError);
+  assert.throws(() => uuid("123"), ApiError);
 });
-test("anonymous submissions and forged client admin roles do not touch protected operations", async () => {
+test("client admin flags and forged account IDs cannot grant administrative privileges", async () => {
   const calls = [];
-  const handle = createHandler({ db: userDb("active", calls), env });
-  let r = await handle(
-    request({ action: "submit", ...review, userId: 999, isAdmin: true }),
-  );
-  assert.equal(r.status, 401);
-  assert.equal(calls.length, 0);
-  r = await handle(
+  const response = await handler(userDb("active", calls))(
     request({
       action: "admin",
       operation: "college.delete",
       id: 1,
-      initData: signed(),
+      userId: admin,
       isAdmin: true,
-    }),
+    }, memberToken),
   );
-  assert.equal(r.status, 403);
+  assert.equal(response.status, 403);
   assert.equal(calls.filter((c) => c.method === "DELETE").length, 0);
 });
-test("banned and restricted users cannot submit, including forged statuses", async () => {
+test("banned and restricted users cannot submit despite a valid Google token", async () => {
   for (const status of ["banned", "restricted"]) {
-    let writes = 0;
-    const db = userDb(status);
-    const handle = createHandler({
-      env,
-      db: async (p, o) => {
-        if (p.startsWith("rpc/")) writes++;
-        return db(p, o);
-      },
-    });
-    const r = await handle(
-      request({
-        action: "submit",
-        ...review,
-        initData: signed(),
-        status: "active",
-      }),
+    const calls = [];
+    const response = await handler(userDb(status, calls))(
+      request({ action: "submit", ...review, status: "active" }, memberToken),
     );
-    assert.equal(r.status, 403);
-    assert.equal(writes, 0);
+    assert.equal(response.status, 403);
+    assert.equal(
+      calls.filter((c) => c.path === "rpc/miyar_submit_google_review").length,
+      0,
+    );
   }
 });
-test("authenticated submissions bind the verified user ID, ignore moderation fields and stay pending", async () => {
+test("submissions bind the verified account UUID and cannot select published status", async () => {
   const calls = [];
-  const handle = createHandler({ db: userDb("active", calls), env });
-  const r = await handle(
-    request({
-      action: "submit",
-      ...review,
-      initData: signed(),
-      userId: 999,
-      status: "published",
-    }),
+  const response = await handler(userDb("active", calls))(
+    request(
+      { action: "submit", ...review, userId: admin, status: "published" },
+      memberToken,
+    ),
   );
-  assert.equal(r.status, 201);
-  assert.equal((await r.json()).status, "pending");
-  const call = calls.find((c) => c.path === "rpc/miyar_submit_review");
-  assert.equal(call.body.p_user, 123);
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).status, "pending");
+  const call = calls.find((c) => c.path === "rpc/miyar_submit_google_review");
+  assert.equal(call.body.p_account, member);
   assert.equal(call.body.p_grade, 92);
   assert.ok(!("status" in call.body));
 });
-test("public review response removes identity and grade even if database adapter returns them", async () => {
-  const handle = createHandler({
-    env,
-    db: async (path) =>
-      path.startsWith("miyar_doctors") ? [{ id: 1 }] : [{
-        id: 1,
-        subject: "مادة",
-        comment: "تجربة مفيدة",
-        explanation: 90,
-        treatment: 80,
-        grading: 70,
-        created_at: "2026-10-24",
-        user_id: 123,
-        grade: 92,
-      }],
-  });
-  const r = await handle(request({ action: "reviews", doctor: 1 }));
-  assert.equal(r.status, 200);
-  const data = await r.json();
-  assert.ok(!JSON.stringify(data).includes("user_id"));
-  assert.ok(!JSON.stringify(data).includes("grade"));
-  assert.equal(data[0].scores[0], 90);
-});
-test("only allowlisted admins can moderate; review approval requires an approved doctor", async () => {
-  const calls = [];
-  const handle = createHandler({
-    env,
-    db: async (path, options) => {
-      calls.push({ path, ...options });
-      if (path.startsWith("miyar_users")) {
-        return [{ status: "active", name: "مدير" }];
-      }
-      if (path.startsWith("miyar_reviews")) {
-        return [{ id: 1, doctor_id: 2, comment: "مفيد" }];
-      }
-      return [];
-    },
-  });
-  const r = await handle(
-    request({
-      action: "admin",
-      operation: "review.approve",
+test("public reviews exclude private identity and grade fields", async () => {
+  const handle = handler(async (path) =>
+    path.startsWith("miyar_doctors") ? [{ id: 1 }] : [{
       id: 1,
-      initData: signed(999),
-    }),
+      subject: "مادة",
+      comment: "مفيد",
+      explanation: 90,
+      treatment: 80,
+      grading: 70,
+      created_at: "2026-10-24",
+      account_id: member,
+      grade: 92,
+    }]
   );
-  assert.equal(r.status, 409);
+  const response = await handle(request({ action: "reviews", doctor: 1 }));
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.ok(!JSON.stringify(data).includes(member));
+  assert.ok(!("grade" in data[0]));
+  assert.deepEqual(data[0].scores, [90, 80, 70]);
+});
+test("admin queue excludes private grades, and pending doctors cannot have their reviews published", async () => {
+  const calls = [];
+  const handle = handler(async (path, options) => {
+    calls.push({ path, ...options });
+    if (path.startsWith("miyar_accounts")) {
+      return [{ status: "active", name: "مدير" }];
+    }
+    if (path.startsWith("miyar_reviews")) {
+      return [{
+        id: 2,
+        doctor_id: 1,
+        account_id: member,
+        grade: 92,
+        comment: "مفيد",
+      }];
+    }
+    if (path.includes("status=eq.pending")) {
+      return [{
+        id: 1,
+        name: "أحمد محمد العتيبي",
+        major_id: 1,
+        submitted_by_account: member,
+        grade: 92,
+      }];
+    }
+    return [];
+  });
+  let response = await handle(
+    request({ action: "admin", operation: "queue" }, adminToken),
+  );
+  assert.equal(response.status, 200);
+  const queue = await response.json();
+  assert.ok(!("grade" in queue.reviews[0]));
+  assert.ok(!("grade" in queue.doctors[0]));
+  assert.equal(queue.reviews[0].user_id, member);
+  assert.equal(queue.doctors[0].submitted_by, member);
+  response = await handle(
+    request(
+      { action: "admin", operation: "review.approve", id: 2 },
+      adminToken,
+    ),
+  );
+  assert.equal(response.status, 409);
   assert.equal(calls.filter((c) => c.method === "PATCH").length, 0);
 });
-test("untrusted origins, oversized requests and raw database errors are rejected safely", async () => {
-  const handle = createHandler({ db: userDb(), env });
+test("admin user management requires a UUID and cannot restrict another admin", async () => {
+  let response = await handler()(
+    request({
+      action: "admin",
+      operation: "user.status",
+      userId: admin,
+      status: "banned",
+    }, adminToken),
+  );
+  assert.equal(response.status, 400);
+  response = await handler()(
+    request({
+      action: "admin",
+      operation: "user.status",
+      userId: "123",
+      status: "banned",
+    }, adminToken),
+  );
+  assert.equal(response.status, 400);
+});
+test("bad origins, oversized bodies, auth outages and database internals fail safely", async () => {
+  const handle = handler();
   assert.equal(
-    (await handle(request({ action: "catalogue" }, "https://attacker.test")))
-      .status,
+    (await handle(
+      request({ action: "catalogue" }, "", "https://attacker.test"),
+    )).status,
     403,
   );
   assert.equal(
@@ -227,55 +302,25 @@ test("untrusted origins, oversized requests and raw database errors are rejected
       .status,
     413,
   );
+  const verifier = createGoogleVerifier(
+    "https://test.supabase.co",
+    "key",
+    async () => {
+      throw new Error("private internals");
+    },
+  );
+  await assert.rejects(
+    verifier(request({}, memberToken)),
+    (e) => e.status === 503 && !e.message.includes("internals"),
+  );
   const db = createDatabase(
     "https://test.supabase.co",
-    "not-a-real-key",
+    "test-key",
     async () =>
-      new Response(JSON.stringify({ message: "secret database internals" }), {
-        status: 500,
-      }),
+      Response.json({ message: "private internals" }, { status: 500 }),
   );
   await assert.rejects(
     db("test"),
-    (e) => e.status === 502 && !e.message.includes("secret"),
+    (e) => e.status === 502 && !e.message.includes("internals"),
   );
-});
-
-test("admin moderation response omits private grade, including unexpected adapter fields", async () => {
-  const handle = createHandler({
-    env,
-    db: async (path) => {
-      if (path.startsWith("miyar_users")) {
-        return [{ status: "active", name: "مدير" }];
-      }
-      if (path.startsWith("miyar_doctors")) {
-        return [{
-          id: 1,
-          name: "أحمد محمد العتيبي",
-          major_id: 1,
-          submitted_by: 123,
-          grade: 92,
-        }];
-      }
-      return [{
-        id: 2,
-        doctor_id: 1,
-        user_id: 123,
-        subject: "مادة",
-        comment: "مفيد",
-        explanation: 80,
-        treatment: 70,
-        grading: 60,
-        grade: 92,
-      }];
-    },
-  });
-  const response = await handle(
-    request({ action: "admin", operation: "queue", initData: signed(999) }),
-  );
-  assert.equal(response.status, 200);
-  const queue = await response.json();
-  assert.ok(!("grade" in queue.reviews[0]));
-  assert.ok(!("grade" in queue.doctors[0]));
-  assert.equal(queue.reviews[0].user_id, 123);
 });

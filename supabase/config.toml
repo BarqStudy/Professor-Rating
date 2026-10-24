@@ -1,5 +1,6 @@
 project_id = "miyar"
 
 [functions.miyar]
-# Telegram initData is verified by the function. A Supabase JWT is not used.
+# The function accepts anonymous catalogue reads, and verifies protected
+# requests with Supabase Auth using the Google session bearer token.
 verify_jwt = false
