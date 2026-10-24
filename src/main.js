@@ -125,6 +125,7 @@ let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
 let page = "home", query = "", activeMajor = "الكل", savedOnly = false;
+let collegeSelected = false;
 const persist = () => {
   storage.setItem("athar-major-colleges", JSON.stringify(majorColleges));
   for (
@@ -184,27 +185,19 @@ function render() {
     }<span>تبديل المظهر</span><span class="switch"></span></button><div class="user"><span class="user-avatar">${
       ic("users")
     }</span><div><b>${escapeHtml(displayName())}</b>${
-      studentProfile
-        ? `<span class="profile-meta">${
-          escapeHtml(studentProfile.major)
-        } · المستوى ${Number(studentProfile.level).toLocaleString("ar")}</span>`
-        : ""
-    }<small>${
-      googleSession ? "حساب Google متصل" : "زائر · تصفّح بحرية"
-    }</small></div><span class="online"></span></div></div></aside><div class="main-wrap"><header><div class="mobile-brand" aria-label="مِعيار">${logo}</div><div class="breadcrumb">مساحتك الجامعية <span>/</span> <b>${
+      googleSession ? "" : "<small>زائر · تصفّح بحرية</small>"
+    }</div><span class="online"></span></div></div></aside><div class="main-wrap"><header><div class="mobile-brand" aria-label="مِعيار">${logo}</div><div class="breadcrumb">مساحتك الجامعية <span>/</span> <b>${
       ({
         home: "الرئيسية",
         ratings: "التقييمات",
         developer: "المطور",
         admin: "لوحة الإدارة",
       })[page]
-    }</b></div><div class="header-actions"><button class="google-account-button" id="google-account">${
-      googleSession
-        ? ic("users")
-        : '<span class="google-g" aria-hidden="true">G</span>'
-    }<span>${
-      googleSession ? "حسابي" : "دخول Google"
-    }</span></button><button class="icon-btn settings-trigger" id="open-settings" aria-label="الإعدادات" title="الإعدادات">${
+    }</b></div><div class="header-actions">${
+      !googleSession
+        ? `<button class="google-account-button" id="google-account"><span class="google-g" aria-hidden="true">G</span><span>دخول Google</span></button>`
+        : ""
+    }<button class="icon-btn settings-trigger" id="open-settings" aria-label="الإعدادات" title="الإعدادات">${
       ic("settings")
     }</button><span class="semester"><i></i> الفصل الدراسي الثاني ١٤٤٧</span><button class="icon-btn" id="notice" aria-label="الإشعارات">${
       ic("bell")
@@ -232,17 +225,7 @@ function render() {
 function home() {
   return `${connectionBanner()}<section class="welcome"><div><div class="eyebrow"><span></span> معك في كل خطوة جامعية</div><h1>أهلًا ${
     escapeHtml(displayName())
-  } <span class="wave">✦</span><br>اختيارك اليوم، <em>يبدأ بمِعيار.</em></h1><p>تجارب حقيقية من زملائك، تساعدك تختار دكتورك بثقة.<br>ابحث، اكتشف، وشارك تجربتك… لأن رأيك يفرق.</p><div class="student-summary">${
-    googleSession
-      ? `<span>${ic("shield")} تم تسجيل الدخول باستخدام Google</span>`
-      : ""
-  }${
-    studentProfile
-      ? `<span>${escapeHtml(studentProfile.major)} · المستوى ${
-        Number(studentProfile.level).toLocaleString("ar")
-      }</span>`
-      : ""
-  }</div><div class="welcome-tags"><span>${
+  } <span class="wave">✦</span><br>اختيارك اليوم، <em>يبدأ بمِعيار.</em></h1><div class="welcome-tags"><span>${
     ic("shield")
   } هويتك لا تظهر في التقييم</span><span>${
     ic("users")
@@ -260,7 +243,9 @@ function home() {
     escapeHtml(query)
   }"><kbd>⌕</kbd></div><button class="filter-button" id="filter">${
     ic("filter")
-  }<span>كلية الهندسة</span><span class="chevron">⌄</span></button></section><section class="quick-actions"><button class="action-card new-review" id="new-review"><span class="action-icon">${
+  }<span>${
+    escapeHtml(collegeSelected ? activeCollege : "كل الكليات")
+  }</span><span class="chevron">⌄</span></button></section><section class="quick-actions"><button class="action-card new-review" id="new-review"><span class="action-icon">${
     ic("plus")
   }</span><div><span class="tiny-label">تجربتك تستحق المشاركة</span><h2>أضف تقييمًا جديدًا</h2><p>شارك تجربتك، وساعد زملاءك في الاختيار</p></div><span class="action-arrow">${
     ic("arrow")
@@ -296,9 +281,10 @@ function home() {
   }</button></section>`;
 }
 function listSection() {
+  const expanded = collegeSelected || page === "ratings";
   return `<section class="doctors-section"><div class="section-heading"><div><span class="eyebrow">تجارب تستحق الاطلاع</span><h2>${
     page === "ratings" ? "دليل الدكاترة والتقييمات" : "دكاترة تركوا أثرًا"
-  } <span class="small-star">✦</span></h2><p>تعرّف على الدكاترة الأعلى تقييمًا من طلاب كليتك</p></div><button class="text-button" ${
+  } <span class="small-star">✦</span></h2><p>اختر كليتك، ثم تخصصك، واكتشف تجارب زملائك</p></div><div class="section-tools"><button class="text-button" ${
     page === "home" ? 'data-page="ratings"' : 'id="saved-filter"'
   }>${
     page === "home"
@@ -308,17 +294,82 @@ function listSection() {
       : "المحفوظات"
   } ${
     ic(page === "home" ? "arrow" : "bookmark")
-  }</button></div><div class="chips">${
-    ["الكل", ...majors.filter((m) => majorBelongs(m, activeCollege))].map((m) =>
-      `<button class="chip ${
-        activeMajor === m ? "selected" : ""
-      }" data-major="${escapeHtml(m)}">${escapeHtml(m)}</button>`
+  }</button><div class="carousel-controls"><button class="carousel-control previous" id="doctors-previous" aria-label="الدكاترة السابقون" aria-controls="doctor-grid">${
+    ic("arrow")
+  }</button><button class="carousel-control" id="doctors-next" aria-label="الدكاترة التاليون" aria-controls="doctor-grid">${
+    ic("arrow")
+  }</button></div></div></div><div class="college-tabs" role="group" aria-label="الكليات">${
+    colleges.map((college) =>
+      `<button class="college-tab ${
+        expanded && college === activeCollege ? "selected" : ""
+      }" data-college="${escapeHtml(college)}" aria-pressed="${
+        expanded && college === activeCollege
+      }" aria-expanded="${
+        expanded && college === activeCollege
+      }" aria-controls="major-options"><span class="college-tab-icon">${
+        ic("cap")
+      }</span><span>${escapeHtml(college)}</span><small>${
+        doctors.filter((d) => (d.college || "كلية الهندسة") === college).length
+          .toLocaleString("ar")
+      } دكتور</small></button>`
     ).join("")
-  }</div><div class="doctor-grid" id="doctor-grid">${cards()}</div></section>`;
+  }</div><div id="major-options">${
+    expanded
+      ? `<div class="major-filter"><span class="filter-caption">تخصصات ${
+        escapeHtml(activeCollege)
+      }</span><div class="chips" role="group" aria-label="التخصصات">${
+        ["الكل", ...majors.filter((m) => majorBelongs(m, activeCollege))].map(
+          (m) =>
+            `<button class="chip ${
+              activeMajor === m ? "selected" : ""
+            }" data-major="${escapeHtml(m)}" aria-pressed="${
+              activeMajor === m
+            }">${escapeHtml(m)}</button>`,
+        ).join("")
+      }</div></div>`
+      : '<p class="college-hint">اختر كلية لعرض تخصصاتها</p>'
+  }</div><div class="doctor-carousel" id="doctor-grid" role="region" aria-label="بطاقات الدكاترة" tabindex="0">${cards()}</div></section>`;
+}
+function selectCollege(college) {
+  activeCollege = college;
+  activeMajor = "الكل";
+  collegeSelected = true;
+  render();
+}
+function updateCarouselControls() {
+  const track = document.querySelector("#doctor-grid");
+  if (!track) return;
+  const maximum = Math.max(0, track.scrollWidth - track.clientWidth),
+    offset = Math.abs(track.scrollLeft);
+  const previous = document.querySelector("#doctors-previous"),
+    next = document.querySelector("#doctors-next");
+  if (previous) previous.disabled = offset <= 2;
+  if (next) next.disabled = offset >= maximum - 2;
+}
+function bindCarousel() {
+  const track = document.querySelector("#doctor-grid");
+  if (!track) return;
+  const move = (direction) => {
+    const card = track.querySelector(".doctor-card");
+    if (!card) return;
+    const step = card.getBoundingClientRect().width +
+      parseFloat(getComputedStyle(track).gap || 0);
+    track.scrollBy({
+      left: direction * step,
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
+  };
+  document.querySelector("#doctors-next").onclick = () => move(-1);
+  document.querySelector("#doctors-previous").onclick = () => move(1);
+  track.addEventListener("scroll", updateCarouselControls, { passive: true });
+  requestAnimationFrame(updateCarouselControls);
 }
 function cards() {
   let filtered = doctors.filter((d) =>
-    (d.college || "كلية الهندسة") === activeCollege &&
+    (!(collegeSelected || page === "ratings") ||
+      (d.college || "كلية الهندسة") === activeCollege) &&
     (activeMajor === "الكل" || d.major === activeMajor) &&
     (!savedOnly || saved.includes(d.id)) &&
     (!query || [d.name, ...d.subjects].some((s) => s.includes(query)))
@@ -468,6 +519,17 @@ function closeModal() {
     document.body.classList.remove("modal-open");
   }, 180);
 }
+function scoreColor(value) {
+  return value < 50
+    ? "#dc655c"
+    : value <= 65
+    ? "#d2a145"
+    : value <= 80
+    ? "#7d9748"
+    : value <= 89
+    ? "#4c916d"
+    : "#22835e";
+}
 function labelScore(v) {
   return v < 50
     ? "سيئ"
@@ -511,7 +573,9 @@ function reviewForm(id) {
         : "في هذه النسخة التجريبية لا تُخزّن الدرجة."
     }</small></div><div class="sliders">${
       ["الشرح", "التعامل", "المساعدة بالدرجات"].map((t, i) =>
-        `<label class="slider-label"><span>${t}<output id="out-${i}">٨٠ <small>جيد</small></output></span><input type="range" name="score${i}" min="0" max="100" value="80" data-range="${i}" style="--range-color:#7d9748"><span class="range-labels"><small>٠ · سيئ</small><small>١٠٠ · ممتاز</small></span></label>`
+        `<label class="slider-label"><span>${t}<output id="out-${i}">٨٠ <small>جيد</small></output></span><input type="range" name="score${i}" min="0" max="100" value="80" aria-valuetext="80 من 100، جيد" data-range="${i}" style="--range-color:${
+          scoreColor(80)
+        }"><span class="range-labels"><small>٠ · سيئ</small><small>١٠٠ · ممتاز</small></span></label>`
       ).join("")
     }</div><label>تعليقك عن الدكتور<textarea name="comment" rows="3" maxlength="600" required placeholder="كيف كانت تجربتك؟ شارك رأيك بموضوعية واحترام…"></textarea></label><small class="muted">نرحّب بالنقد البنّاء. تُرفض العبارات المسيئة، ولا تُنشر معلومات شخصية.</small><div class="form-error" role="alert"></div><button class="primary submit-review">${
       ic("plus")
@@ -532,16 +596,8 @@ function reviewForm(id) {
   document.querySelectorAll("[data-range]").forEach((el) =>
     el.oninput = () => {
       const v = +el.value;
-      el.style.setProperty(
-        "--range-color",
-        v < 50
-          ? "#dc655c"
-          : v <= 65
-          ? "#d2a145"
-          : v <= 80
-          ? "#7d9748"
-          : "#22835e",
-      );
+      el.style.setProperty("--range-color", scoreColor(v));
+      el.setAttribute("aria-valuetext", `${v} من 100، ${labelScore(v)}`);
       document.querySelector("#out-" + el.dataset.range).innerHTML = `${
         v.toLocaleString("ar")
       } <small>${labelScore(v)}</small>`;
@@ -741,7 +797,12 @@ function bind() {
     query = e.target.value;
     document.querySelector("#doctor-grid").innerHTML = cards();
     bindCards();
+    bindCarousel();
   });
+  document.querySelectorAll("[data-college]").forEach((b) =>
+    b.onclick = () => selectCollege(b.dataset.college)
+  );
+  bindCarousel();
   document.querySelectorAll("[data-major]").forEach((b) =>
     b.onclick = () => {
       activeMajor = b.dataset.major;
@@ -758,9 +819,7 @@ function bind() {
     render();
   });
   document.querySelector("#college-filter")?.addEventListener("change", (e) => {
-    activeCollege = e.target.value;
-    activeMajor = "الكل";
-    render();
+    selectCollege(e.target.value);
   });
   document.querySelector("#saved-filter")?.addEventListener("click", () => {
     savedOnly = !savedOnly;
@@ -1490,6 +1549,7 @@ window.addEventListener("miyar-auth", async ({ detail }) => {
     !document.querySelector(".modal-backdrop")
   ) render();
 });
+window.addEventListener("resize", updateCarouselControls);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });

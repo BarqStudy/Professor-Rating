@@ -54,6 +54,36 @@ const catalogue = {
   }],
   stats: { doctors: 1, reviews: 0 },
 };
+catalogue.colleges.push({ id: 2, name: "كلية العلوم" });
+catalogue.majors.push({ id: 2, college_id: 1, name: "الهندسة الكهربائية" }, {
+  id: 3,
+  college_id: 2,
+  name: "الفيزياء",
+});
+for (
+  const data of [{
+    id: 18,
+    name: "خالد محمد الحربي",
+    major: "الهندسة المدنية",
+    major_id: 1,
+  }, {
+    id: 19,
+    name: "عبدالله سعد القحطاني",
+    major: "الهندسة الكهربائية",
+    major_id: 2,
+  }, {
+    id: 20,
+    name: "محمد علي السالم",
+    college: "كلية العلوم",
+    major: "الفيزياء",
+    major_id: 3,
+  }, {
+    id: 21,
+    name: "فهد محمد العتيبي",
+    major: "الهندسة المدنية",
+    major_id: 1,
+  }]
+) catalogue.doctors.push({ ...catalogue.doctors[0], ...data });
 const mime = {
   ".html": "text/html",
   ".js": "text/javascript",
@@ -170,6 +200,65 @@ const server = http.createServer((req, res) => {
     await page.goto(url);
     await page.locator(".connection-banner.live").waitFor();
     assert.equal(await page.locator("[data-page=admin]").count(), 0);
+    assert.equal(
+      await page.locator(".student-summary,.profile-meta").count(),
+      0,
+    );
+    assert.ok(
+      !(await page.locator("body").innerText()).includes(
+        "تجارب حقيقية من زملائك",
+      ),
+    );
+    assert.equal(await page.locator("[data-college]").count(), 2);
+    assert.equal(await page.locator("[data-major]").count(), 0);
+    assert.equal(await page.locator(".doctor-card").count(), 5);
+    await page.locator('[data-college="كلية الهندسة"]').click();
+    assert.equal(await page.locator(".doctor-card").count(), 4);
+    assert.equal(await page.locator('[data-major="الفيزياء"]').count(), 0);
+    await page.locator('[data-major="الهندسة الكهربائية"]').click();
+    assert.equal(await page.locator(".doctor-card").count(), 1);
+    assert.match(
+      await page.locator(".doctor-card").innerText(),
+      /عبدالله سعد القحطاني/,
+    );
+    await page.locator('[data-college="كلية العلوم"]').click();
+    assert.equal(await page.locator(".doctor-card").count(), 1);
+    assert.equal(
+      await page.locator('[data-major="الهندسة المدنية"]').count(),
+      0,
+    );
+    await page.locator('[data-college="كلية الهندسة"]').click();
+    assert.equal(
+      await page.locator('[data-major="الكل"]').getAttribute("aria-pressed"),
+      "true",
+    );
+    await page.waitForFunction(() =>
+      !document.querySelector("#doctors-next").disabled
+    );
+    await page.locator("#doctors-next").click();
+    await page.waitForFunction(() =>
+      Math.abs(document.querySelector("#doctor-grid").scrollLeft) > 20
+    );
+    await page.locator("#doctors-previous").click();
+    await page.waitForFunction(() =>
+      document.querySelector("#doctors-previous").disabled
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.ok(await page.locator(".hero-art").isVisible());
+    const art = await page.locator(".hero-art").boundingBox();
+    assert.ok(art.x >= 0 && art.x + art.width <= 390);
+    assert.equal(
+      await page.evaluate(() =>
+        document.documentElement.scrollWidth > innerWidth
+      ),
+      false,
+    );
+    await page.screenshot({
+      path: "/tmp/miyar-updated-mobile.png",
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+
     await page.locator("#new-review").click();
     await page.locator("#google-signin").waitFor();
     await page.locator("#google-signin").click();
@@ -195,7 +284,43 @@ const server = http.createServer((req, res) => {
       ),
     );
     assert.equal(await page.locator("[data-page=admin]").count(), 1);
+    assert.equal(await page.locator("#google-account").count(), 0);
+    assert.equal(await page.locator("#open-settings").count(), 1);
+    assert.ok(
+      !(await page.locator(".welcome").innerText()).includes("المستوى"),
+    );
+    assert.ok(
+      !(await page.locator(".welcome").innerText()).includes("تم تسجيل الدخول"),
+    );
+
     await page.locator("#new-review").click();
+
+    const slider = page.locator("[name=score0]");
+    await slider.scrollIntoViewIfNeeded();
+    let bounds = await slider.boundingBox();
+    await page.mouse.click(bounds.x + 5, bounds.y + bounds.height / 2);
+    assert.equal(await slider.inputValue(), "0");
+    assert.equal(
+      await slider.evaluate((e) => e.style.getPropertyValue("--range-color")),
+      "#dc655c",
+    );
+    assert.match(
+      await slider.evaluate((e) => getComputedStyle(e).backgroundImage),
+      /^linear-gradient\(to right, rgb\(220, 101, 92\)/,
+    );
+    bounds = await slider.boundingBox();
+    await page.mouse.click(
+      bounds.x + bounds.width - 5,
+      bounds.y + bounds.height / 2,
+    );
+    assert.equal(await slider.inputValue(), "100");
+    assert.equal(
+      await slider.evaluate((e) => e.style.getPropertyValue("--range-color")),
+      "#22835e",
+    );
+    await page.locator("#review-form").evaluate((form) =>
+      form.scrollIntoView()
+    );
     await page.locator("[name=doctor]").fill("أحمد محمد العتيبي");
     await page.locator("[name=subject]").fill("ميكانيكا");
     await page.locator("[name=grade]").fill("92");
@@ -250,7 +375,10 @@ const server = http.createServer((req, res) => {
     fail = false;
     await page.locator("#retry-cloud").click();
     await page.locator(".connection-banner.live").waitFor();
-    assert.equal(await page.locator(".doctor-card").count(), 1);
+    assert.equal(
+      await page.locator(".doctor-card").count(),
+      catalogue.doctors.length,
+    );
     await page.goto("about:blank");
     await page.goto(url + "#error=access_denied&error_description=cancelled");
     await page.getByText("تعذّر إكمال تسجيل الدخول باستخدام Google. حاول مجددًا.")
@@ -258,7 +386,7 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator('script[src*="telegram"]').count(), 0);
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: Google-only visitor gate, disabled-provider feedback, PKCE redirect/callback, signed API requests, cloud profile persistence, admin verification, real SDK logout, mobile layout and outage/retry. Auth and API network mocked.",
+      "PASS: College/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
     );
   } finally {
     await browser.close();
