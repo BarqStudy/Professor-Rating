@@ -253,11 +253,11 @@ function home() {
     ic("search")
   }<input id="search" placeholder="ابحث باسم الدكتور أو المادة…" aria-label="ابحث باسم الدكتور أو المادة" value="${
     escapeHtml(query)
-  }"><kbd>⌕</kbd></div><button class="filter-button" id="filter">${
+  }"></div><button class="filter-button" id="filter">${
     ic("filter")
   }<span>${
     escapeHtml(collegeSelected ? activeCollege : "كل الكليات")
-  }</span><span class="chevron">⌄</span></button></section><section class="quick-actions"><button class="action-card new-review" id="new-review"><span class="action-icon">${
+  }</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></section><section class="quick-actions"><button class="action-card new-review" id="new-review"><span class="action-icon">${
     ic("plus")
   }</span><div><span class="tiny-label">تجربتك تستحق المشاركة</span><h2>أضف تقييمًا جديدًا</h2><p>شارك تجربتك، وساعد زملاءك في الاختيار</p></div><span class="action-arrow">${
     ic("arrow")
