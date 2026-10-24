@@ -124,7 +124,8 @@ function displayName() {
 let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
-let page = "home", query = "", activeMajor = "الكل", savedOnly = false;
+const pageNames = ["home", "ratings", "review", "developer", "admin"];
+let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
 const persist = () => {
   storage.setItem("athar-major-colleges", JSON.stringify(majorColleges));
@@ -155,8 +156,8 @@ function nav() {
   return `<nav>${
     [["home", "home", "الرئيسية"], ["ratings", "star", "التقييمات"], [
       "developer",
-      "code",
-      "المطور",
+      "users",
+      "من نحن",
     ]].map(([p, i, t]) =>
       `<button data-page="${p}" class="nav-item ${
         page === p ? "active" : ""
@@ -171,6 +172,11 @@ function nav() {
       }</span></button>`
       : ""
   }</nav>`;
+}
+function setPage(next) {
+  page = next;
+  const hash = next === "home" ? "" : `#${next}`;
+  if (location.hash !== hash) history.pushState(null, "", location.pathname + location.search + hash);
 }
 function render() {
   if (signedOut) {
@@ -190,7 +196,8 @@ function render() {
       ({
         home: "الرئيسية",
         ratings: "التقييمات",
-        developer: "المطور",
+        developer: "من نحن",
+        review: "أضف تقييمًا",
         admin: "لوحة الإدارة",
       })[page]
     }</b></div><div class="header-actions">${
@@ -214,6 +221,8 @@ function render() {
         ? home()
         : page === "ratings"
         ? ratings()
+        : page === "review"
+        ? reviewPage()
         : page === "admin"
         ? admin()
         : developer()
@@ -463,7 +472,7 @@ function admin() {
     ).join("")
   }</section><section class="panel"><h2>إدارة الدكاترة</h2><button class="primary" id="add-doctor">${
     ic("plus")
-  } إضافة دكتور</button>${
+  } إضافة دكتور</button>${bulkDoctorForm()}${
     doctors.map((d) =>
       `<div class="admin-row"><span>د. ${
         escapeHtml(d.name)
@@ -480,6 +489,48 @@ function admin() {
       ).join("")
       : '<p class="muted">لا توجد طلبات معلّقة.</p>'
   }</section><section class="panel"><h2>إدارة المستخدمين</h2><form id="user-action"><label>معرّف الطالب<input name="user" required placeholder="معرّف الحساب"></label><label>الإجراء<select name="action"><option>حظر</option><option>تقييد</option><option>فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق تجريبي</button></form><p class="muted">تُحفظ الحالة محليًا للعرض؛ لا تمنع وصول مستخدم حقيقي.</p></section></div>`;
+}
+function bulkDoctorForm() {
+  const options = configured
+    ? (cloudCatalogue?.majors || []).map((m) => `<option value="${m.id}">${escapeHtml(m.name)} · ${escapeHtml(cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.name || "")}</option>`).join("")
+    : majors.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
+  return `<form id="bulk-doctors" class="bulk-doctors"><h3>إضافة دكاترة دفعة واحدة</h3><p class="muted">اختر التخصص واكتب اسم كل دكتور الثلاثي في سطر مستقل. يُضافون بدون تقييمات.</p><label>الكلية والتخصص<select name="major" required>${options}</select></label><label>أسماء الدكاترة<textarea name="names" rows="6" maxlength="10100" required placeholder="أحمد محمد العتيبي&#10;خالد عبدالله الحربي"></textarea></label><small>حتى ١٠٠ اسم في الدفعة. تُستبعد الأسماء المكررة في التخصص.</small><p class="bulk-result" role="status" aria-live="polite"></p><button class="primary" type="submit">${ic("plus")} إضافة الدفعة</button></form>`;
+}
+function bindBulkDoctors() {
+  const form = document.querySelector("#bulk-doctors");
+  if (!form) return;
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    if (configured ? !cloudMe?.isAdmin : !demoAdmin) return;
+    const major = form.elements.major.value;
+    const names = [...new Set(form.elements.names.value.split(/\r?\n/).map((n) => n.trim().replace(/\s+/g, " ")).filter(Boolean))];
+    const status = form.querySelector(".bulk-result");
+    if (!names.length || names.length > 100 || names.some((n) => n.length < 8 || n.length > 100 || n.split(/\s+/).length < 3)) {
+      status.textContent = "اكتب من ١ إلى ١٠٠ اسم ثلاثي، كل اسم بين ٨ و١٠٠ حرف في سطر مستقل.";
+      return;
+    }
+    const majorName = configured ? cloudCatalogue.majors.find((m) => m.id === Number(major))?.name : major;
+    const majorCollege = configured ? cloudCatalogue.colleges.find((c) => c.id === cloudCatalogue.majors.find((m) => m.id === Number(major))?.college_id)?.name : majorColleges[major];
+    const existing = new Set(doctors.filter((d) => d.major === majorName && d.college === majorCollege).map((d) => d.name.trim().replace(/\s+/g, " ")));
+    const pending = names.filter((n) => !existing.has(n));
+    const controls = [...form.querySelectorAll("input,select,textarea,button")];
+    controls.forEach((el) => el.disabled = true);
+    let added = 0;
+    let failure = "";
+    for (const name of pending) {
+      status.textContent = `جارٍ الإضافة… ${added} / ${pending.length}`;
+      try {
+        if (configured) await api("admin", { operation: "doctor.add", name, majorId: Number(major) });
+        else doctors.push({ id: Date.now() + added, name, college: majorCollege, major, subjects: [], score: 0, count: 0, color: "blue", initials: name.slice(0, 2), verified: false, quote: "لم تُضف تجارب بعد." });
+        added++;
+      } catch (error) { failure = error.message; break; }
+    }
+    form.elements.names.value = pending.slice(added).join("\n");
+    if (configured) { try { await refreshCloudCatalogue(); } catch {} }
+    else persist();
+    controls.forEach((el) => el.disabled = false);
+    status.textContent = `تمت إضافة ${added} دكتور بدون تقييمات. تم تجاوز ${names.length - pending.length} اسم موجود مسبقًا.${failure ? ` توقفت الإضافة: ${failure}. الأسماء المتبقية محفوظة لإعادة المحاولة.` : ""}`;
+  };
 }
 function escapeHtml(s) {
   return String(s).replace(
@@ -499,12 +550,22 @@ function toast(s) {
   el.classList.add("visible");
   setTimeout(() => el.classList.remove("visible"), 3200);
 }
+let modalTrigger = null;
 function modal(title, body) {
+  if (!document.querySelector(".modal-backdrop")) modalTrigger = document.activeElement;
   document.querySelector("#modal-root").innerHTML =
     `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-label="${title}"><div class="modal-heading"><div><span class="eyebrow">تجارب صادقة، بمعيارك</span><h2>${title}</h2></div><button class="icon-btn close-modal" aria-label="إغلاق">${
       ic("close")
     }</button></div>${body}</section></div>`;
   document.body.classList.add("modal-open");
+  document.querySelectorAll("#app > aside,#app > .main-wrap").forEach((el) => el.inert = true);
+  document.querySelector(".modal").addEventListener("keydown", (event) => {
+    if (event.key !== "Tab") return;
+    const elements = [...event.currentTarget.querySelectorAll("button,input,select,textarea,a[href],[tabindex='0']")].filter((el) => !el.disabled && el.getClientRects().length);
+    const first = elements[0], last = elements.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  });
   document.querySelector(".close-modal").onclick = closeModal;
   document.querySelector(".modal-backdrop").onclick = (e) => {
     if (e.target.classList.contains("modal-backdrop")) closeModal();
@@ -517,6 +578,9 @@ function closeModal() {
   setTimeout(() => {
     document.querySelector("#modal-root").innerHTML = "";
     document.body.classList.remove("modal-open");
+    document.querySelectorAll("#app > aside,#app > .main-wrap").forEach((el) => el.inert = false);
+    modalTrigger?.focus();
+    if (page === "review") { setPage("home"); render(); }
   }, 180);
 }
 function scoreColor(value) {
@@ -541,8 +605,14 @@ function labelScore(v) {
     ? "جيد جدًا"
     : "ممتاز";
 }
+function reviewPage() {
+  return `<section class="review-landing"><div class="page-title"><div class="eyebrow">مساحة لتجربتك</div><h1>أضف تقييمًا</h1><p>تجربة واحدة منك تساعد زملاءك في الاختيار.</p></div><div class="panel review-intro">${ic("star")}<h2>شارك تجربتك بمعيارك</h2><p>قيّم الشرح والتعامل والمساعدة بالدرجات بكل خصوصية.</p><button class="primary" id="new-review">ابدأ التقييم</button></div></section>`;
+}
 function reviewForm(id) {
+  setPage("review");
+  render();
   if (configured && !requireCloudAccount(() => reviewForm(id))) return;
+  window.scrollTo({ top: 0, behavior: "smooth" });
   const selectedDoctor = doctors.find((d) => d.id === id);
   const reviewCollege = selectedDoctor?.college || activeCollege || colleges[0];
   modal(
@@ -635,6 +705,7 @@ function reviewForm(id) {
       try {
         await api("submit", { ...data, grade: Number(f.get("grade")) });
         document.body.classList.remove("modal-open");
+        setPage("home");
         render();
         toast("وصل تقييمك، وسيظهر بعد موافقة الإدارة.");
       } catch (error) {
@@ -764,17 +835,17 @@ function bind() {
     openSettings,
   );
   document.querySelector("#page-close")?.addEventListener("click", () => {
-    page = "home";
+    setPage("home");
     render();
   });
   document.querySelector(".brand").onclick = (e) => {
     e.preventDefault();
-    page = "home";
+    setPage("home");
     render();
   };
   document.querySelectorAll("[data-page]").forEach((b) =>
     b.onclick = () => {
-      page = b.dataset.page;
+      setPage(b.dataset.page);
       query = "";
       savedOnly = false;
       render();
@@ -811,7 +882,7 @@ function bind() {
   );
   bindCards();
   document.querySelector("#filter")?.addEventListener("click", () => {
-    page = "ratings";
+    setPage("ratings");
     render();
   });
   document.querySelector("#major-filter")?.addEventListener("change", (e) => {
@@ -844,6 +915,7 @@ function bind() {
     () => share("مِعيار — تجارب حقيقية، لاختيارات أفضل"),
   );
   bindAdmin();
+  bindBulkDoctors();
 }
 function bindCards() {
   document.querySelectorAll("[data-doctor]").forEach((b) =>
@@ -1129,7 +1201,7 @@ function openSettings() {
       cloudMe = null;
       cloudQueue = null;
       signedOut = true;
-      page = "home";
+      setPage("home");
       query = "";
       activeMajor = "الكل";
       savedOnly = false;
@@ -1153,7 +1225,7 @@ function renderSignedOut() {
     configured ? startGoogleLogin() : openSettings();
   document.querySelector("#browse-guest").onclick = () => {
     signedOut = false;
-    page = "home";
+    setPage("home");
     storage.setItem("miyar-session", "guest");
     render();
   };
@@ -1418,7 +1490,7 @@ function cloudAdmin() {
         )
       }</small></span><button class="danger" data-cloud-operation="major.delete" data-id="${m.id}">حذف</button></div>`
     ).join("")
-  }</section><section class="panel"><h2>إدارة الدكاترة</h2><form id="cloud-add-doctor"><label>اسم الدكتور الثلاثي<input name="name" required minlength="8" maxlength="100"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${
+  }</section><section class="panel"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>اسم الدكتور الثلاثي<input name="name" required minlength="8" maxlength="100"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${
     doctors.map((d) =>
       `<div class="admin-row"><span>د. ${escapeHtml(d.name)}<small>${
         escapeHtml(d.major)
@@ -1548,6 +1620,11 @@ window.addEventListener("miyar-auth", async ({ detail }) => {
     detail.event !== "TOKEN_REFRESHED" &&
     !document.querySelector(".modal-backdrop")
   ) render();
+});
+window.addEventListener("popstate", () => {
+  document.body.classList.remove("modal-open");
+  page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home";
+  render();
 });
 window.addEventListener("resize", updateCarouselControls);
 document.addEventListener("keydown", (e) => {

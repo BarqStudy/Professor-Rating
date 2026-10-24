@@ -130,6 +130,7 @@ const server = http.createServer((req, res) => {
     const errors = [], calls = [];
     let googleEnabled = false,
       fail = false,
+      failBulk = true,
       me = {
         id: member,
         name: "سارة",
@@ -188,6 +189,13 @@ const server = http.createServer((req, res) => {
             };
           }
           if (body.action === "submit") result = { id: 8, status: "pending" };
+          if (body.operation === "doctor.add") {
+            if (body.name === "ناصر سعيد الغامدي" && failBulk) {
+              failBulk = false;
+              return route.fulfill({ status: 503, json: { error: "انقطاع تجريبي" } });
+            }
+            catalogue.doctors.push({ ...catalogue.doctors[0], id: 100 + catalogue.doctors.length, name: body.name, major_id: body.majorId });
+          }
           if (body.operation === "queue") result = { doctors: [], reviews: [] };
           return route.fulfill({ json: result });
         }
@@ -264,7 +272,7 @@ const server = http.createServer((req, res) => {
     await page.locator("#google-signin").click();
     await page.getByText("تسجيل الدخول باستخدام Google لم يُفعّل بعد. جرّب لاحقًا.")
       .waitFor();
-    assert.equal(page.url(), url);
+    assert.equal(page.url(), url + "#review");
     googleEnabled = true;
     await page.locator("#google-signin").click();
     await page.waitForURL("**/auth/v1/authorize?**");
@@ -295,6 +303,10 @@ const server = http.createServer((req, res) => {
 
     await page.locator("#new-review").click();
 
+    assert.equal(new URL(page.url()).hash, "#review");
+    assert.equal(await page.locator(".main-wrap").evaluate((el) => el.inert), true);
+    assert.match(await page.locator(".modal-backdrop").evaluate((el) => getComputedStyle(el).backdropFilter), /blur/);
+    await page.screenshot({ path: "/tmp/miyar-glass-review.png" });
     const slider = page.locator("[name=score0]");
     await slider.scrollIntoViewIfNeeded();
     let bounds = await slider.boundingBox();
@@ -341,6 +353,26 @@ const server = http.createServer((req, res) => {
     }).waitFor();
     await page.locator("[data-page=admin]").click();
     await page.getByText("لا توجد طلبات معلّقة.").waitFor();
+    const batch = page.locator("#bulk-doctors");
+    await batch.locator("[name=names]").fill("اسم غيرصالح");
+    await batch.locator("button").click();
+    assert.equal(calls.filter((c) => c.operation === "doctor.add").length, 0);
+    await batch.locator("[name=names]").fill("أحمد محمد العتيبي\nسالم عبدالله القحطاني\nسالم عبدالله القحطاني\nناصر سعيد الغامدي");
+    await batch.locator("button").click();
+    await page.getByText(/الأسماء المتبقية محفوظة/).waitFor();
+    assert.equal(await batch.locator("[name=names]").inputValue(), "ناصر سعيد الغامدي");
+    await batch.locator("button").click();
+    await page.waitForFunction(() => document.querySelector("#bulk-doctors [name=names]").value === "");
+    assert.equal(catalogue.doctors.filter((d) => d.name === "سالم عبدالله القحطاني").length, 1);
+    assert.equal(catalogue.doctors.find((d) => d.name === "ناصر سعيد الغامدي").count, 0);
+    assert.ok(calls.filter((c) => c.operation === "doctor.add").every((c) => c.authorization === `Bearer ${access}` && !("scores" in c)));
+    await page.locator("[data-page=ratings]").first().click();
+    assert.equal(new URL(page.url()).hash, "#ratings");
+    await page.reload();
+    await page.getByRole("heading", { name: "اكتشف دكتورك القادم" }).waitFor();
+    assert.equal(new URL(page.url()).hash, "#ratings");
+    await page.locator("[data-page=developer]").first().click();
+    assert.equal(await page.locator(".nav-item.active").innerText(), "من نحن");
     await page.locator("#page-close").click();
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(
@@ -386,7 +418,7 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator('script[src*="telegram"]').count(), 0);
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: College/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
+      "PASS: Dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
     );
   } finally {
     await browser.close();
