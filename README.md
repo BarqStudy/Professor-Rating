@@ -29,3 +29,9 @@ npm run dev -- --port 5173
 تستخدم الواجهة ملفات خط «ثمانية» التي وفّرها المستخدم، المستضافة محليًا في `public/fonts`، بأوزان Light وRegular وMedium وBold وBlack، دون الاعتماد على Google Fonts. مكتبة Telegram الرسمية محملة من `telegram.org`.
 
 فحوص التحقق المنفذة: بناء الإنتاج، صحة JavaScript، استجابة خادم التطوير، وفحص DOM تفاعلي للبحث والحفظ والتقييم واستبعاد الدرجة ورفض الكلمات المسيئة والإدارة وتبديل المظهر.
+
+## النشر على GitHub Pages
+
+من إعدادات المستودع افتح **Pages → Build and deployment → Source** واختر **GitHub Actions**.
+سير العمل `Deploy Athar to GitHub Pages` يبني المشروع وينشر مجلد `dist` عند كل رفع إلى `main`؛ ويمكن تشغيله يدويًا من تبويب Actions. لا تنشر ملفات المصدر مباشرةً باستخدام Deploy from a branch.
+المسار الأساسي مضبوط على `/Professor-Rating/`، بما يطابق رابط المستودع على GitHub Pages.
