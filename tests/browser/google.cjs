@@ -344,6 +344,23 @@ const server = http.createServer((req, res) => {
     assert.ok(!("initData" in submission));
     assert.equal(submission.grade, 92);
     await page.locator("#open-settings").click();
+    const dayColors = new Set(), nightColors = new Set();
+    for (const color of ["blue", "green", "pink", "apple"]) {
+      await page.locator(`[data-color-option="${color}"]`).click();
+      assert.equal(await page.locator("html").getAttribute("data-color"), color);
+      assert.equal(await page.locator(`[data-color-option="${color}"]`).getAttribute("aria-pressed"), "true");
+      await page.locator('[data-appearance="light"]').click();
+      dayColors.add(await page.locator(".miyar-mark").first().evaluate((el) => getComputedStyle(el).color));
+      await page.locator('[data-appearance="dark"]').click();
+      assert.equal(await page.locator("body").evaluate((el) => getComputedStyle(el).backgroundImage), "none");
+      assert.equal(await page.locator(".modal").evaluate((el) => getComputedStyle(el).backdropFilter), "none");
+      nightColors.add(await page.locator(".miyar-mark").first().evaluate((el) => getComputedStyle(el).color));
+    }
+    assert.equal(dayColors.size, 4);
+    assert.equal(nightColors.size, 4);
+    await page.locator('[data-color-option="pink"]').click();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: "/tmp/miyar-settings-pink-dark.png" });
     await page.locator("#settings-form [name=name]").fill("سارة محمد");
     await page.locator(".settings-save").click();
     await page.locator(".modal-backdrop").waitFor({ state: "detached" });
@@ -351,9 +368,25 @@ const server = http.createServer((req, res) => {
     await page.getByRole("heading", { level: 1 }).filter({
       hasText: "أهلًا سارة",
     }).waitFor();
+    assert.equal(await page.locator("html").getAttribute("data-color"), "pink");
+    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.locator("#open-settings").click();
+    assert.equal(await page.locator('[data-color-option="pink"]').getAttribute("aria-pressed"), "true");
+    await page.locator('[data-color-option="blue"]').click();
+    await page.locator('[data-appearance="light"]').click();
+    await page.locator(".close-modal").click();
+    await page.locator(".modal-backdrop").waitFor({ state: "detached" });
     await page.locator("[data-page=admin]").click();
     await page.getByText("لا توجد طلبات معلّقة.").waitFor();
     const batch = page.locator("#bulk-doctors");
+    assert.equal(await batch.evaluate((el) => getComputedStyle(el).flexDirection), "column");
+    const batchBox = await batch.boundingBox();
+    for (const selector of ["h3", "textarea", "select", "button"]) {
+      const box = await batch.locator(selector).boundingBox();
+      assert.ok(box.width > 100 && box.x >= batchBox.x && box.x + box.width <= batchBox.x + batchBox.width);
+    }
+    assert.equal(await batch.evaluate((el) => el.scrollWidth > el.clientWidth), false);
+    await page.screenshot({ path: "/tmp/miyar-admin-desktop-fixed.png", fullPage: true });
     await batch.locator("[name=names]").fill("اسم غيرصالح");
     await batch.locator("button").click();
     assert.equal(calls.filter((c) => c.operation === "doctor.add").length, 0);

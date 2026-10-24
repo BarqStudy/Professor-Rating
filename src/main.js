@@ -152,6 +152,22 @@ if (configured) {
 if (storage.getItem("athar-theme") === "dark") {
   document.documentElement.dataset.theme = "dark";
 }
+const platformColors = [
+  { id: "blue", name: "أزرق", hue: 218 },
+  { id: "green", name: "أخضر", hue: 155 },
+  { id: "pink", name: "وردي", hue: 330 },
+  { id: "apple", name: "تفاحي", hue: 90 },
+];
+function applyPlatformColor(id) {
+  const color = platformColors.find((item) => item.id === id) || platformColors[0];
+  document.documentElement.dataset.color = color.id;
+  document.documentElement.style.setProperty("--brand-hue", color.hue);
+  storage.setItem("miyar-color", color.id);
+}
+applyPlatformColor(storage.getItem("miyar-color"));
+function appearanceSettings() {
+  return `<section class="appearance-settings"><h3>ألوان المنصة</h3><p>اختر لونك المفضل؛ يُحفظ تلقائيًا ويعمل بالنهار والليل.</p><div class="color-options" role="group" aria-label="لون المنصة">${platformColors.map((color) => `<button type="button" class="color-option" data-color-option="${color.id}" aria-pressed="${document.documentElement.dataset.color === color.id}" style="--swatch-hue:${color.hue}"><span class="color-swatch" aria-hidden="true">${ic("check")}</span>${color.name}</button>`).join("")}</div><h3>المظهر</h3><div class="appearance-modes" role="group" aria-label="مظهر المنصة"><button type="button" data-appearance="light" aria-pressed="${document.documentElement.dataset.theme !== 'dark'}">${ic("sun")} نهاري</button><button type="button" data-appearance="dark" aria-pressed="${document.documentElement.dataset.theme === 'dark'}">${ic("moon")} ليلي</button></div></section>`;
+}
 function nav() {
   return `<nav>${
     [["home", "home", "الرئيسية"], ["ratings", "star", "التقييمات"], ["saved", "bookmark", "المحفوظات"], [
@@ -1075,7 +1091,7 @@ function openSettings() {
           +profile.level === l ? "selected" : ""
         }>المستوى ${l.toLocaleString("ar")}</option>`
       ).join("")
-    }</select></label></div><section class="font-settings"><div><h3>حجم الخط</h3><p>اختر الحجم الأريح لك. يُحفظ اختيارك تلقائيًا.</p></div><div class="font-stepper"><button type="button" id="font-smaller" aria-label="تصغير الخط">−</button><output id="font-size-value" aria-live="polite">${
+    }</select></label></div>${appearanceSettings()}<section class="font-settings"><div><h3>حجم الخط</h3><p>اختر الحجم الأريح لك. يُحفظ اختيارك تلقائيًا.</p></div><div class="font-stepper"><button type="button" id="font-smaller" aria-label="تصغير الخط">−</button><output id="font-size-value" aria-live="polite">${
       Math.round(fontScale * 100).toLocaleString("ar")
     }٪</output><button type="button" id="font-larger" aria-label="تكبير الخط">+</button></div><div class="font-preview">مِعيار… لاختيارٍ أوضح وتجربةٍ أفضل.</div><button type="button" id="font-reset" class="text-button">استعادة الحجم الافتراضي</button></section><div class="form-error" role="alert"></div>${
       configured
@@ -1103,6 +1119,19 @@ function openSettings() {
         }</small></div>`
     }</form>`,
   );
+  document.querySelectorAll("[data-color-option]").forEach((button) => {
+    button.onclick = () => {
+      applyPlatformColor(button.dataset.colorOption);
+      document.querySelectorAll("[data-color-option]").forEach((option) => option.setAttribute("aria-pressed", String(option === button)));
+    };
+  });
+  document.querySelectorAll("[data-appearance]").forEach((button) => {
+    button.onclick = () => {
+      document.documentElement.dataset.theme = button.dataset.appearance;
+      storage.setItem("athar-theme", button.dataset.appearance);
+      document.querySelectorAll("[data-appearance]").forEach((option) => option.setAttribute("aria-pressed", String(option === button)));
+    };
+  });
   const updateFont = (delta) => {
     fontScale =
       Math.round(Math.max(.9, Math.min(1.3, fontScale + delta)) * 100) / 100;
