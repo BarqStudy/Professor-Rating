@@ -461,11 +461,7 @@ function savedPage() {
 function developer() {
   return `<div class="page-title"><div class="eyebrow">خلف كل تجربة، فكرة</div><h1>مِعيار لاختيارك القادم</h1><p>منصة عربية تجعل تجارب الطلاب دليلًا لاختيارات أفضل.</p></div><section class="developer-card"><div class="brand">${logo}</div><h2>من الطلاب، من أجل الطلاب.</h2><p>مِعيار مساحة لتبادل التجارب الجامعية باحترام وشفافية. نبدأ بكلية الهندسة، ونتطلع لأن نرافق كل طالب في رحلته.</p><div class="dev-badges"><span>${
     ic("shield")
-  } خصوصيتك أولًا</span><span>${ic("heart")} تجربة عربية</span></div><p class="muted">${
-    configured
-      ? "تُحفظ التقييمات والملفات الشخصية في قاعدة بيانات مِعيار. الإرسال متاح بعد تسجيل الدخول باستخدام Google، وتُنشر التعليقات بعد مراجعتها. المحفوظات والمظهر وحجم الخط محفوظة على جهازك."
-      : "هذه نسخة عرض تفاعلية. لم يكتمل ربط قاعدة البيانات بعد؛ البيانات والإرسال محليان على هذا الجهاز."
-  }</p><button class="primary" id="share-platform">${
+  } خصوصيتك أولًا</span><span>${ic("heart")} تجربة عربية</span></div><p class="muted">نؤمن أن التجربة تستحق أن تُشارك. يساعدك مِعيار على مقارنة تجارب زملائك في الشرح والتعامل والمساعدة بالدرجات، لتختار ما يناسبك. شارك رأيك بموضوعية واحترام؛ فقد تكون تجربتك سببًا في اختيار أفضل لطالب آخر.</p><button class="primary" id="share-platform">${
     ic("share")
   } شارك مِعيار</button><button class="university-request-button secondary" data-university-request>${ic("cap")} أضف جامعتك أو كليتك لمِعيار ${ic("arrow")}</button></section>`;
 }
