@@ -140,6 +140,7 @@ const server = http.createServer((req, res) => {
     const own={id:501,doctor_id:17,doctor_name:"أحمد محمد العتيبي",subject:"ميكانيكا",comment:"التقييم القديم المنشور",explanation:80,treatment:80,grading:80,status:"published",edit_status:null};
     let pendingEdits=[], pendingReports=[], notifyPublished=false;
     const requestHistory=[],requestEvents=[];
+    let catalogueRequests=[],ambassadors=[];
     const guest={id:"44444444-4444-4444-8444-444444444444",university_id:null,status:"active"};
     const guestToken="ab".repeat(32);
     let googleEnabled = false,
@@ -207,6 +208,30 @@ const server = http.createServer((req, res) => {
           if (body.action === "doctor.summary") result={reviewCount:3,totalPublished:3,themes:[{label:"إشادة بالشرح",count:2}],insufficient:false};
           if (body.action === "notifications") result=notifyPublished&&body.doctors.includes(18)?[{review_id:601,doctor_id:18,doctor_name:"خالد محمد الحربي",published_at:new Date(Date.now()+10000).toISOString()}]:[];
           if (body.action === "doctor.request") {requestHistory.push({id:55,kind:"doctor",title:body.name,status:"pending",reason:null,created_at:new Date().toISOString(),university:"جامعة نجران"});result={id:55,status:"pending",existing:false};}
+          if (['doctor.correction','ambassador.propose'].includes(body.action)) {
+            const kind=body.action==='doctor.correction'?'doctor.correct':body.kind;
+            const source=kind.startsWith('doctor.')?catalogue.doctors.find((item)=>item.id===body.targetId):kind.startsWith('college.')?catalogue.colleges.find((item)=>item.id===body.targetId):catalogue.majors.find((item)=>item.id===body.targetId);
+            const id=1001+requestHistory.filter((item)=>item.kind==='catalogue').length;
+            catalogueRequests.push({id,kind,name:body.name,university_id:body.universityId||3,university:'جامعة نجران',target_id:body.targetId,parent_id:body.parentId,details:body.details,original:{name:source?.name,parent_id:source?.major_id||source?.college_id||null},ambassador:body.action==='ambassador.propose',author_name:'سارة',account_id:member,created_at:new Date().toISOString()});
+            requestHistory.push({id,kind:'catalogue',proposal_kind:kind,title:body.name,status:'pending',created_at:new Date().toISOString(),university:'جامعة نجران'});
+            result={id,status:'pending'};
+          }
+          if(body.operation==='ambassador.set'){
+            if(body.active&&!ambassadors.some((row)=>row.university_id===body.universityId))ambassadors.push({account_id:member,email:body.email,name:'سارة',university_id:body.universityId,status:'active'});
+            if(!body.active)ambassadors=ambassadors.filter((row)=>row.university_id!==body.universityId);
+            me.ambassadorUniversities=ambassadors.map((row)=>row.university_id);
+          }
+          if(['catalogue.approve','catalogue.reject'].includes(body.operation)){
+            const proposal=catalogueRequests.find((item)=>item.id===body.id);
+            if(body.operation==='catalogue.approve'){
+              if(proposal.kind==='doctor.correct'){const doctor=catalogue.doctors.find((item)=>item.id===proposal.target_id);doctor.name=proposal.name;doctor.major_id=proposal.parent_id;}
+              if(proposal.kind==='major.add')catalogue.majors.push({id:400,college_id:proposal.parent_id,name:proposal.name});
+            }
+            const history=requestHistory.find((item)=>item.kind==='catalogue'&&item.id===body.id);
+            history.status=body.operation.endsWith('approve')?'approved':'rejected';history.reason=body.reason||'';history.decided_at=new Date().toISOString();
+            requestEvents.push({...history,id:900+requestEvents.length,request_id:history.id});
+            catalogueRequests=catalogueRequests.filter((item)=>item.id!==body.id);
+          }
           if (body.action === "report") { pendingReports.push({id:701,review_id:body.review,reason:body.reason,details:body.details,doctor_name:own.doctor_name,subject:"رياضيات",comment:"تجربة مادة الرياضيات"});result={id:701,status:"pending"}; }
           if (body.action === "edit") {
             pendingEdits.push({id:801+requestHistory.filter((item)=>item.kind==="edit").length,review_id:body.review,doctor_name:own.doctor_name,old_subject:own.subject,old_comment:own.comment,old_explanation:own.explanation,old_treatment:own.treatment,old_grading:own.grading,subject:body.subject,comment:body.comment,explanation:body.scores[0],treatment:body.scores[1],grading:body.scores[2]});
@@ -249,7 +274,7 @@ const server = http.createServer((req, res) => {
             }
             catalogue.doctors.push({ ...catalogue.doctors[0], id: 100 + catalogue.doctors.length, name: body.name, major_id: body.majorId });
           }
-          if (body.operation === "queue") result = { doctors: requestHistory.filter((item)=>item.kind==="doctor"&&item.status==="pending").map((item)=>({id:item.id,name:item.title,major_id:1,submitted_by:member})), reviews: [], edits:pendingEdits, reports:pendingReports };
+          if (body.operation === "queue") result = { doctors: requestHistory.filter((item)=>item.kind==="doctor"&&item.status==="pending").map((item)=>({id:item.id,name:item.title,major_id:1,submitted_by:member})), reviews: [], edits:pendingEdits, reports:pendingReports,catalogueRequests,ambassadors };
           return route.fulfill({ json: result });
         }
         return route.fulfill({
@@ -714,6 +739,77 @@ const server = http.createServer((req, res) => {
     await page.locator(".close-modal").click();
     await page.locator(".modal-backdrop").waitFor({ state: "detached" });
     await page.locator("#page-close").click();
+    // Corrections preserve the published record until an administrator decides.
+    await page.locator('#search').fill('أحمد محمد العتيبي');
+    await page.locator('.card-detail[data-doctor="17"]').click();
+    await page.locator('#suggest-doctor-correction').click();
+    await page.locator('#doctor-correction-form [name=name]').fill('أحمد محمد العتيبي المصحح');
+    await page.locator('#doctor-correction-form [name=details]').fill('تصحيح كتابة الاسم في الدليل');
+    await page.locator('#doctor-correction-form [type=submit]').click();
+    await page.getByRole('heading',{name:'تم استلام طلبك'}).waitFor();
+    assert.equal(catalogue.doctors.find((item)=>item.id===17).name,'أحمد محمد العتيبي');
+    assert.ok(calls.some((call)=>call.action==='doctor.correction'&&call.targetId===17&&call.parentId===1&&call.authorization===`Bearer ${access}`));
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('[data-page=admin]').click();
+    await page.locator('[data-cloud-operation="catalogue.approve"]').click();
+    await page.getByText('لا توجد مقترحات بانتظار المراجعة.').waitFor();
+    assert.equal(catalogue.doctors.find((item)=>item.id===17).name,'أحمد محمد العتيبي المصحح');
+    await page.locator('#assign-ambassador [name=email]').fill('student@example.test');
+    await page.locator('#assign-ambassador [name=universityId]').selectOption('3');
+    await page.locator('#assign-ambassador [type=submit]').click();
+    await page.locator('[data-revoke-ambassador]').waitFor();
+    assert.deepEqual(me.ambassadorUniversities,[3]);
+    me.isAdmin=false;
+    await page.reload();await page.locator('[data-page=ambassador]').waitFor();
+    assert.equal(await page.locator('[data-page=admin]').count(),0);
+    await page.locator('[data-page=ambassador]').click();
+    assert.equal(await page.locator('#ambassador-university option').count(),1);
+    assert.equal(await page.locator('#ambassador-university').inputValue(),'3');
+    await page.locator('#ambassador-kind').selectOption('major.add');
+    await page.locator('#ambassador-proposal-form [name=parentId]').selectOption('2');
+    await page.locator('#ambassador-proposal-form [name=name]').fill('الأحياء التطبيقية');
+    await page.locator('#ambassador-proposal-form [type=submit]').click();
+    await page.getByRole('heading',{name:'تم استلام طلبك'}).waitFor();
+    assert.ok(!catalogue.majors.some((item)=>item.name==='الأحياء التطبيقية'));
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.reload();await page.locator('#ambassador-proposal-form').waitFor();
+    assert.equal(await page.locator('#ambassador-kind').inputValue(),'major.add');
+    assert.equal(await page.locator('#ambassador-proposal-form [name=parentId]').inputValue(),'2');
+    await page.locator('#ambassador-kind').selectOption('college.correct');
+    await page.locator('#ambassador-proposal-form [name=targetId]').selectOption('1');
+    assert.equal(await page.locator('#ambassador-proposal-form [name=name]').inputValue(),'كلية الهندسة');
+    await page.locator('#ambassador-proposal-form [name=name]').fill('كلية الهندسة المعدلة');
+    await page.locator('#ambassador-proposal-form [type=submit]').click();
+    await page.getByRole('heading',{name:'تم استلام طلبك'}).waitFor();
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    for(const width of [390,768,1440]){
+      await page.setViewportSize({width,height:900});
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      await page.screenshot({path:`/tmp/miyar-ambassador-${width}.png`});
+    }
+    me.isAdmin=true;
+    await page.reload();await page.locator('[data-page=admin]').waitFor();
+    await page.locator('[data-page=admin]').click();
+    await page.locator('[data-cloud-operation="catalogue.approve"]').first().waitFor();
+    await page.locator('.ambassador-management').screenshot({path:'/tmp/miyar-ambassador-management.png'});
+    await page.locator('.catalogue-moderation').screenshot({path:'/tmp/miyar-catalogue-moderation.png'});
+    await page.locator('[data-cloud-operation="catalogue.approve"]').first().click();
+    await page.waitForFunction(()=>document.querySelectorAll('[data-cloud-operation="catalogue.approve"]').length===1);
+    assert.ok(catalogue.majors.some((item)=>item.name==='الأحياء التطبيقية'));
+    await page.locator('[data-cloud-operation="catalogue.reject"]').click();
+    await page.locator('#request-rejection-form [name=reason]').fill('اسم الكلية الحالي مطابق للدليل');
+    await page.locator('#request-rejection-form [type=submit]').click();
+    await page.getByText('لا توجد مقترحات بانتظار المراجعة.').waitFor();
+    assert.equal(catalogue.colleges.find((item)=>item.id===1).name,'كلية الهندسة');
+    await page.locator('#open-settings').click();await page.locator('#my-requests-settings').click();
+    await page.locator('.request-history-card').first().waitFor();
+    assert.match(await page.locator('.request-history').innerText(),/تصحيح بيانات كلية/);
+    assert.match(await page.locator('.request-history').innerText(),/اسم الكلية الحالي مطابق للدليل/);
+    await page.locator('[data-page=admin]').click();
+    await page.locator('[data-revoke-ambassador]').click();await page.locator('#confirm-revoke-ambassador').click();
+    await page.getByText('لم تعيّن سفراء بعد.').waitFor();
+    assert.deepEqual(me.ambassadorUniversities,[]);
+    await page.locator('[data-page=home]').click();
     for (const height of [900, 768, 600]) {
       await page.setViewportSize({ width: 1440, height });
       for (const selector of [".theme-toggle", ".user"]) {
@@ -792,7 +888,7 @@ const server = http.createServer((req, res) => {
     await page.locator('.connection-banner.live').waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
+      "PASS: Scoped ambassador assignment/revocation, proposal moderation and persistence, student data corrections and history, responsive ambassador workspace, Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
     );
   } finally {
     await browser.close();

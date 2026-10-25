@@ -34,6 +34,14 @@ export function createDatabase(url, key, fetcher = fetch) {
         );
       }
       const reasons = {
+        AMBASSADOR_ACCOUNT_REQUIRED: [400, "يجب أن يسجّل صاحب هذا البريد الدخول إلى مِعيار أولًا."],
+        AMBASSADOR_SCOPE: [403, "صلاحية السفير لا تشمل هذه الجامعة أو العملية."],
+        AMBASSADOR_REVOKED: [409, "سُحبت صلاحية السفير أو قُيّد حسابه. ارفض المقترح مع بيان السبب."],
+        INVALID_UNIVERSITY: [400, "الجامعة غير موجودة."],
+        INVALID_PROPOSAL: [400, "تحقق من بيانات المقترح."],
+        PROPOSAL_TARGET_UNAVAILABLE: [409, "السجل المقترح تصحيحه أو القسم المرتبط به غير متاح."],
+        PROPOSAL_UNCHANGED: [400, "غيّر الاسم أو القسم قبل إرسال التصحيح."],
+        PROPOSAL_STALE: [409, "تغيّرت البيانات منذ إرسال المقترح. راجع البيانات الحالية وارفض الطلب القديم."],
         REASON_REQUIRED: [400, "اكتب سبب رفض الطلب."],
         INVALID_BULK: [400, "حدد الدكاترة والإجراء المطلوب."],
         REVIEW_UNAVAILABLE: [409, "التقييم غير متاح لهذه العملية."],

@@ -1,4 +1,5 @@
 import { handleGuest } from "./guest.js";
+import { catalogueProposal, ambassadorAdmin } from "./ambassadors.js";
 import { studentCommunity, adminCommunity, publicSummary } from "./community.js";
 import {
   adminIds,
@@ -127,6 +128,7 @@ export function createHandler({ db, env, authenticate }) {
       }
       const isAdmin = admins.has(String(identity.id));
       if (action === "me") {
+        const memberships = user.status === 'active' ? await db(`miyar_ambassadors?account_id=eq.${identity.id}&select=university_id`) : [];
         return respond({
           id: identity.id,
           name: user.name,
@@ -135,6 +137,7 @@ export function createHandler({ db, env, authenticate }) {
           level: user.level,
           status: user.status,
           isAdmin,
+          ambassadorUniversities: memberships.map((row) => row.university_id),
         });
       }
       if (action === "university") {
@@ -162,6 +165,8 @@ export function createHandler({ db, env, authenticate }) {
         });
         return respond({ ok: true });
       }
+      const proposal = await catalogueProposal(action, body, user, identity.id, db);
+      if (proposal) return respond(proposal.data, proposal.status);
       const community = await studentCommunity(action, body, user, identity.id, db);
       if (community) return respond(community.data, community.status || 200);
       if (action === "submit") {
@@ -192,6 +197,8 @@ export function createHandler({ db, env, authenticate }) {
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      const ambassadorResult = await ambassadorAdmin(operation, body, identity.id, db);
+      if (ambassadorResult) return respond(ambassadorResult);
       const communityResult = await adminCommunity(operation, body, db);
       if (communityResult) return respond(communityResult);
       if (operation === "queue") {
@@ -203,10 +210,15 @@ export function createHandler({ db, env, authenticate }) {
             "miyar_reviews?status=eq.pending&select=id,doctor_id,account_id,guest_id,subject,comment,tags,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
           ),
         ]);
-        const extra = await db("rpc/miyar_community_queue", {method:"POST",body:{}});
+        const [extra, catalogueRequests, ambassadors] = await Promise.all([
+          db("rpc/miyar_community_queue", {method:"POST",body:{}}),
+          db("rpc/miyar_catalogue_queue", {method:"POST",body:{}}),
+          db("rpc/miyar_ambassador_list", {method:"POST",body:{}}),
+        ]);
         // Grade is deliberately excluded even from the moderation response.
         return respond({
           edits: extra?.edits || [], reports: extra?.reports || [],
+          catalogueRequests: catalogueRequests || [], ambassadors: ambassadors || [],
           doctors: doctors.map((
             { id, name, major_id, submitted_by_account, submitted_by_guest, created_at },
           ) => ({

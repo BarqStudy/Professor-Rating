@@ -27,6 +27,7 @@ let cloudMe = null,
   cloudCatalogue = null,
   cloudQueue = null;
 let cloudAuthPending = null;
+let cloudQueueLoading = false;
 const demoAdmin = import.meta.env.DEV && !configured;
 const icons = {
   settings:
@@ -135,7 +136,7 @@ function displayName() {
 let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
-const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin"];
+const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador"];
 let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
 const persist = () => {
@@ -197,7 +198,7 @@ function nav() {
       }">${ic("shield")}<span>${
         configured ? "لوحة الإدارة" : "إدارة تجريبية"
       }</span></button>`
-      : ""
+      : cloudMe?.ambassadorUniversities?.length ? `<button data-page="ambassador" class="nav-item ${page === 'ambassador' ? 'active' : ''}">${ic('cap')}<span>مساحة السفير</span></button>` : ""
   }</nav>`;
 }
 function setPage(next) {
@@ -228,6 +229,7 @@ function render() {
         saved: "المحفوظات",
         requests: "متابعة الطلبات",
         admin: "لوحة الإدارة",
+        ambassador: "مساحة السفير",
       })[page]
     }</b></div><div class="header-actions">${
       !googleSession
@@ -258,9 +260,12 @@ function render() {
         ? reviewPage()
         : page === "admin"
         ? admin()
+        : page === "ambassador"
+        ? ambassadorPage()
         : developer()
     }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span>بُني بشغف لرحلتك الجامعية</span></footer></div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
   bind();
+  if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();
   if (page === "requests" && googleSession && requestsOwner !== googleSession.user.id && !requestsLoading) loadMyRequests();
   if (needsUniversity()) openUniversityChoice(true);
 }
@@ -1056,6 +1061,7 @@ function bind() {
   });
   document.querySelectorAll("[data-request-doctor]").forEach((button) => button.onclick = requestDoctorForm);
   document.querySelector("#my-requests-page")?.addEventListener("click", openRequests);
+  bindAmbassadorPage();
   document.querySelector("#requests-refresh")?.addEventListener("click", loadMyRequests);
   document.querySelector("#requests-login")?.addEventListener("click", openGoogleMessage);
   document.querySelector("#my-reviews-page")?.addEventListener("click", () => myReviews());
@@ -1579,19 +1585,29 @@ async function cloudDoctorDetail(id, subject = "") {
     document.querySelectorAll("[data-report-review]").forEach((button) => button.onclick = () => reportReview(Number(button.dataset.reportReview)));
     document.querySelector("#detail-rate").onclick = () => reviewForm(id);
     document.querySelector("#detail-mine").onclick = () => myReviews(id);
+    const correction = document.createElement('button');
+    correction.type = 'button'; correction.className = 'secondary';
+    correction.id = 'suggest-doctor-correction'; correction.textContent = 'اقتراح تصحيح بيانات الدكتور';
+    correction.onclick = () => doctorCorrectionForm(id);
+    document.querySelector('.detail-actions').append(correction);
     document.querySelector("#share-doctor-card").onclick = () => shareDoctorCard(doctor);
     document.querySelector("#share-doctor").onclick = () => share(`تعرّف على تقييمات د. ${doctor.name} في مِعيار`,id);
     document.querySelector("#save-detail").onclick = (event) => { toggleSave(id); event.currentTarget.innerHTML=ic("bookmark")+(saved.includes(id)?" محفوظ":" حفظ"); };
   } catch(error) { if (loading.isConnected) modal("تعذّر تحميل التقييمات",`<p role="alert">${escapeHtml(error.message)}</p>`); }
 }
 async function loadCloudQueue(update = true) {
-  if (!cloudMe?.isAdmin) return;
+  if (!cloudMe?.isAdmin || cloudQueueLoading) return;
+  const owner = cloudMe.id;
+  cloudQueueLoading = true;
   try {
-    cloudQueue = await api("admin", { operation: "queue" });
+    const queue = await api("admin", { operation: "queue" });
+    if (cloudMe?.id === owner && cloudMe.isAdmin) cloudQueue = queue;
   } catch (error) {
-    cloudQueue = { error: error.message, doctors: [], reviews: [] };
+    if (cloudMe?.id === owner && cloudMe.isAdmin) cloudQueue = { error: error.message, doctors: [], reviews: [] };
+  } finally {
+    cloudQueueLoading = false;
   }
-  if (update && page === "admin") render();
+  if (update && page === "admin" && cloudMe?.id === owner) render();
 }
 function cloudAdmin() {
   if (!cloudMe?.isAdmin) {
@@ -1660,7 +1676,7 @@ function cloudAdmin() {
         }</p>${reviewTagLabels(r.tags)}<span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div><button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
       ).join("")
       : '<p class="muted">لا توجد تقييمات بانتظار المراجعة.</p>'
-  }</section>${communityAdminPanel(queue)}</div>`;
+  }</section>${communityAdminPanel(queue)}${ambassadorAdminPanel(queue)}</div>`;
 }
 async function cloudAdminAction(operation, data) {
   const scrollTop = window.scrollY;
@@ -1725,6 +1741,7 @@ function bindCloudAdmin() {
     });
   }
   bindAdminDirectory();
+  bindAmbassadorAdmin();
   bindCloudOperations();
 }
 function bindCloudOperations(root = document) {
@@ -1735,7 +1752,7 @@ function bindCloudOperations(root = document) {
       if (operation === "doctor.verify") {
         data.verified = b.dataset.verified === "true";
       }
-      if (["doctor.reject", "edit.reject"].includes(operation)) {
+      if (["doctor.reject", "edit.reject", "catalogue.reject"].includes(operation)) {
         rejectionForm(operation, data.id);
       } else if (operation.endsWith(".delete")) {
         modal(
@@ -1866,7 +1883,7 @@ async function openNotifications(){
   if(updatesRequest) await updatesRequest;
   await refreshSavedUpdates();
   const count=savedUpdates.length+requestUpdates.length;
-  modal('الإشعارات',`${notificationError?`<p role="alert">${escapeHtml(notificationError)}</p><button class="secondary" id="retry-notifications">إعادة المحاولة</button>`:''}${count?`${requestUpdates.map((request)=>`<button class="notification-row" data-open-requests><span>${request.kind==='doctor'?'طلب إضافة الدكتور':'طلب تعديل تقييم الدكتور'} ${escapeHtml(request.title)} · ${request.status==='approved'?'تمت الموافقة':'تم الرفض'}${request.reason?`<small>السبب: ${escapeHtml(request.reason)}</small>`:''}</span>${ic('arrow')}</button>`).join('')}${savedUpdates.map((row)=>`<button class="notification-row" data-notice-doctor="${row.doctor_id}"><span>تقييم جديد للدكتور ${escapeHtml(row.doctor_name)}</span><small>${new Date(row.published_at).toLocaleDateString('ar')}</small>${ic('arrow')}</button>`).join('')}<button class="secondary" id="read-notifications">تحديد الكل كمقروء</button>`:'<p class="empty">لا توجد تقييمات جديدة لدكاترتك المحفوظين حتى الآن.</p><p class="muted">ستظهر هنا أيضًا قرارات الإدارة بشأن طلباتك.</p>'}`);
+  modal('الإشعارات',`${notificationError?`<p role="alert">${escapeHtml(notificationError)}</p><button class="secondary" id="retry-notifications">إعادة المحاولة</button>`:''}${count?`${requestUpdates.map((request)=>`<button class="notification-row" data-open-requests><span>طلب ${escapeHtml(requestKindName(request))} ${escapeHtml(request.title)} · ${request.status==='approved'?'تمت الموافقة':'تم الرفض'}${request.reason?`<small>السبب: ${escapeHtml(request.reason)}</small>`:''}</span>${ic('arrow')}</button>`).join('')}${savedUpdates.map((row)=>`<button class="notification-row" data-notice-doctor="${row.doctor_id}"><span>تقييم جديد للدكتور ${escapeHtml(row.doctor_name)}</span><small>${new Date(row.published_at).toLocaleDateString('ar')}</small>${ic('arrow')}</button>`).join('')}<button class="secondary" id="read-notifications">تحديد الكل كمقروء</button>`:'<p class="empty">لا توجد تقييمات جديدة لدكاترتك المحفوظين حتى الآن.</p><p class="muted">ستظهر هنا أيضًا قرارات الإدارة بشأن طلباتك.</p>'}`);
   document.querySelectorAll('[data-notice-doctor]').forEach((button)=>button.onclick=()=>cloudDoctorDetail(Number(button.dataset.noticeDoctor)));
   document.querySelectorAll('[data-open-requests]').forEach((button)=>button.onclick=openRequests);
   document.querySelector('#retry-notifications')?.addEventListener('click',openNotifications);
@@ -1886,7 +1903,7 @@ function requestsPage(){
  if(!googleSession)return '<div class="page-title"><h1>متابعة طلباتي</h1><p>سجّل الدخول لمتابعة طلباتك وقرارات الإدارة.</p><button class="primary" id="requests-login">الدخول باستخدام Google</button></div>';
  const statuses={pending:'قيد المراجعة',approved:'تمت الموافقة',rejected:'تم الرفض',archived:'غير متاح'};
  const own=requestsOwner===googleSession.user.id?myRequestsData:[];
- return `<div class="page-title"><h1>متابعة طلباتي</h1><p>طلبات إضافة الدكاترة وتعديل التقييمات، مع حالة كل طلب وسبب القرار.</p><button class="secondary" id="requests-refresh">تحديث الطلبات</button></div>${requestsLoading?'<p role="status">جارٍ تحميل طلباتك…</p>':requestsError?`<p role="alert">${escapeHtml(requestsError)}</p>`:own.length?`<div class="request-history">${own.map((request)=>`<article class="panel request-history-card"><span class="request-status" data-status="${escapeHtml(request.status)}">${statuses[request.status]||''}</span><h2>${request.kind==='doctor'?'طلب إضافة دكتور':'طلب تعديل تقييم'}</h2><h3>د. ${escapeHtml(request.title)}</h3><p>${escapeHtml(request.university||'')}</p><small>أُرسل ${new Date(request.created_at).toLocaleDateString('ar')}${request.decided_at?` · القرار ${new Date(request.decided_at).toLocaleDateString('ar')}`:''}</small>${request.reason?`<p class="decision-reason">سبب القرار: ${escapeHtml(request.reason)}</p>`:request.status==='rejected'?'<p class="muted">لم يُسجّل سبب لهذا القرار السابق.</p>':''}</article>`).join('')}</div>`:'<p class="empty">لم ترسل طلبات إضافة أو تعديل حتى الآن.</p>'}`;
+ return `<div class="page-title"><h1>متابعة طلباتي</h1><p>طلبات الإضافة والتعديل وتصحيح البيانات، مع حالة كل طلب وسبب القرار.</p><button class="secondary" id="requests-refresh">تحديث الطلبات</button></div>${requestsLoading?'<p role="status">جارٍ تحميل طلباتك…</p>':requestsError?`<p role="alert">${escapeHtml(requestsError)}</p>`:own.length?`<div class="request-history">${own.map((request)=>`<article class="panel request-history-card"><span class="request-status" data-status="${escapeHtml(request.status)}">${statuses[request.status]||''}</span><h2>طلب ${escapeHtml(requestKindName(request))}</h2><h3>${escapeHtml(request.title)}</h3><p>${escapeHtml(request.university||'')}</p><small>أُرسل ${new Date(request.created_at).toLocaleDateString('ar')}${request.decided_at?` · القرار ${new Date(request.decided_at).toLocaleDateString('ar')}`:''}</small>${request.reason?`<p class="decision-reason">سبب القرار: ${escapeHtml(request.reason)}</p>`:request.status==='rejected'?'<p class="muted">لم يُسجّل سبب لهذا القرار السابق.</p>':''}</article>`).join('')}</div>`:'<p class="empty">لم ترسل طلبات حتى الآن.</p>'}`;
 }
 async function loadMyRequests(){
  if(!googleSession||requestsLoading)return;
@@ -1904,6 +1921,99 @@ function openRequests(){
 function rejectionForm(operation,id){
  modal('سبب رفض الطلب',`<form id="request-rejection-form"><p>سيظهر السبب لصاحب الطلب مع قرار الرفض.</p><label>سبب الرفض<textarea name="reason" minlength="3" maxlength="300" rows="4" required placeholder="اكتب سببًا واضحًا يساعد الطالب على تصحيح طلبه"></textarea></label><button type="submit" class="primary">تأكيد الرفض وإرسال السبب</button></form>`);
  document.querySelector('#request-rejection-form').onsubmit=async(event)=>{event.preventDefault();const button=event.target.querySelector('button');button.disabled=true;await cloudAdminAction(operation,{id,reason:new FormData(event.target).get('reason')});button.disabled=false;};
+}
+const proposalNames = {
+ 'doctor.add':'إضافة دكتور','college.add':'إضافة كلية','major.add':'إضافة تخصص',
+ 'doctor.correct':'تصحيح بيانات دكتور','college.correct':'تصحيح بيانات كلية','major.correct':'تصحيح بيانات تخصص',
+};
+function requestKindName(request) {
+ return request.kind==='catalogue'?(proposalNames[request.proposal_kind]||'تحديث بيانات الدليل'):request.kind==='doctor'?'إضافة دكتور':'تعديل تقييم';
+}
+function doctorCorrectionForm(id) {
+ if(!requireCloudAccount(()=>doctorCorrectionForm(id)))return;
+ const doctor=doctors.find((item)=>item.id===id);
+ if(!doctor){toast('الدكتور غير متاح في جامعتك الحالية.');return;}
+ modal('اقتراح تصحيح بيانات الدكتور',`<p>صحّح الاسم أو التخصص. تبقى البيانات الحالية كما هي حتى تعتمد الإدارة طلبك.</p><form id="doctor-correction-form"><label>اسم الدكتور الثلاثي<input name="name" value="${escapeHtml(doctor.name)}" minlength="8" maxlength="100" required></label><label>الكلية والتخصص<select name="parentId" required>${studentMajors().map((major)=>`<option value="${major.id}" ${major.id===doctor.major_id?'selected':''}>${escapeHtml(major.name)} · ${escapeHtml(cloudCatalogue.colleges.find((college)=>college.id===major.college_id)?.name||'')}</option>`).join('')}</select></label><label>توضيح التصحيح (اختياري)<textarea name="details" rows="3" maxlength="600" placeholder="اشرح الخطأ والمعلومة الصحيحة دون إضافة بيانات شخصية"></textarea></label><p class="form-error" role="alert"></p><button class="primary" type="submit">إرسال التصحيح للمراجعة</button></form>`);
+ document.querySelector('#doctor-correction-form').onsubmit=(event)=>{
+  event.preventDefault();const form=event.target,data=new FormData(form);
+  submitCommunityForm(form,'doctor.correction',{targetId:id,name:data.get('name'),parentId:Number(data.get('parentId')),details:data.get('details')},'وصل اقتراح التصحيح. يمكنك متابعة حالته وسبب القرار في «متابعة طلباتي».');
+ };
+}
+function ambassadorPage() {
+ const ids=cloudMe?.ambassadorUniversities||[];
+ if(!configured||!googleSession||!ids.length)return '<div class="empty">مساحة السفير متاحة للحسابات التي تعيّنها الإدارة. أعد تسجيل الدخول إذا مُنحت الصلاحية حديثًا.</div>';
+ const universities=(cloudCatalogue?.universities||[]).filter((university)=>ids.includes(university.id));
+ const stored=readJSON('miyar-ambassador-context-'+cloudMe.id,{});
+ const context=stored&&typeof stored==='object'&&!Array.isArray(stored)?stored:{};
+ if(!universities.some((university)=>university.id===Number(context.university)))context.university=universities[0]?.id;
+ if(!proposalNames[context.kind])context.kind='doctor.add';
+ return `<div class="page-title"><div class="eyebrow">سفراء مِعيار</div><h1>مساحة السفير</h1><p>ساهم في ترتيب دليل جامعتك. جميع الإضافات والتصحيحات تُراجعها الإدارة قبل النشر.</p><div class="directory-actions"><button class="secondary" id="ambassador-refresh">تحديث الصلاحيات والبيانات</button><button class="secondary" id="ambassador-requests">متابعة مقترحاتي</button></div></div><section class="panel ambassador-workspace"><h2>إضافة أو تصحيح بيانات</h2><div class="form-grid"><label>الجامعة<select id="ambassador-university">${universities.map((university)=>`<option value="${university.id}" ${university.id===Number(context.university)?'selected':''}>${escapeHtml(university.name)}</option>`).join('')}</select></label><label>نوع المقترح<select id="ambassador-kind">${Object.entries(proposalNames).map(([kind,label])=>`<option value="${kind}" ${kind===context.kind?'selected':''}>${label}</option>`).join('')}</select></label></div><p class="muted">لإضافة تخصص أو دكتور إلى قسم جديد، انتظر اعتماد الكلية أو التخصص أولًا. لا تتيح صلاحية السفير نشر التقييمات أو حذف السجلات أو إدارة الحسابات.</p><div id="ambassador-fields"></div></section>`;
+}
+function bindAmbassadorPage() {
+ const root=document.querySelector('#ambassador-fields');
+ if(!root||!cloudMe?.ambassadorUniversities?.length)return;
+ const university=document.querySelector('#ambassador-university'),kind=document.querySelector('#ambassador-kind');
+ const key='miyar-ambassador-context-'+cloudMe.id,stored=readJSON(key,{});
+ const context=stored&&typeof stored==='object'&&!Array.isArray(stored)?stored:{};
+ const save=()=>storage.setItem(key,JSON.stringify({...context,university:Number(university.value),kind:kind.value}));
+ const fill=(targetChanged=false)=>{
+  const data=cloudCatalogue;
+  const colleges=data.colleges.filter((college)=>college.university_id===Number(university.value));
+  const majors=data.majors.filter((major)=>colleges.some((college)=>college.id===major.college_id));
+  const faculty=data.doctors.filter((doctor)=>majors.some((major)=>major.id===doctor.major_id));
+  const category=kind.value.split('.')[0],correcting=kind.value.endsWith('.correct');
+  const targets=category==='college'?colleges:category==='major'?majors:faculty;
+  const target=correcting?targets.find((item)=>item.id===Number(context.target)):null;
+  if(!target)context.target='';
+  const parents=category==='major'?colleges:category==='doctor'?majors:[];
+  const parentName=(item)=>category==='doctor'?`${item.name} · ${colleges.find((college)=>college.id===item.college_id)?.name||''}`:item.name;
+  let parent=context.parent;
+  if(targetChanged&&target)parent=category==='doctor'?target.major_id:target.college_id;
+  if(!parents.some((item)=>item.id===Number(parent)))parent=parents[0]?.id;
+  context.parent=parent;
+  root.innerHTML=`<form id="ambassador-proposal-form">${correcting?`<label>السجل الحالي<select name="targetId" required><option value="">اختر السجل المطلوب تصحيحه</option>${targets.map((item)=>`<option value="${item.id}" ${target?.id===item.id?'selected':''}>${escapeHtml(item.name)}${category==='doctor'?' · '+escapeHtml(majors.find((major)=>major.id===item.major_id)?.name||''):category==='major'?' · '+escapeHtml(colleges.find((college)=>college.id===item.college_id)?.name||''):''}</option>`).join('')}</select></label>`:''}<label>${category==='doctor'?'اسم الدكتور الثلاثي':category==='college'?'اسم الكلية':'اسم التخصص'}<input name="name" required minlength="${category==='doctor'?8:2}" maxlength="100" value="${escapeHtml(target?.name||'')}"></label>${category!=='college'?`<label>${category==='doctor'?'الكلية والتخصص':'الكلية'}<select name="parentId" required>${parents.length?parents.map((item)=>`<option value="${item.id}" ${item.id===Number(parent)?'selected':''}>${escapeHtml(parentName(item))}</option>`).join(''):'<option value="">لا يوجد قسم معتمد؛ أرسل طلب إضافته أولًا</option>'}</select></label>`:''}<label>تفاصيل المقترح (اختياري)<textarea name="details" rows="3" maxlength="600"></textarea></label><p class="form-error" role="alert"></p><button class="primary" type="submit">إرسال المقترح لاعتماد الإدارة</button></form>`;
+  save();
+  root.querySelector('[name=targetId]')?.addEventListener('change',(event)=>{context.target=event.target.value;fill(true);});
+  root.querySelector('[name=parentId]')?.addEventListener('change',(event)=>{context.parent=event.target.value;save();});
+  root.querySelector('form').onsubmit=(event)=>{
+   event.preventDefault();const form=event.target,values=new FormData(form);
+   submitCommunityForm(form,'ambassador.propose',{kind:kind.value,universityId:Number(university.value),targetId:correcting?Number(values.get('targetId')):null,parentId:category==='college'?null:Number(values.get('parentId')),name:values.get('name'),details:values.get('details')},'وصل مقترحك للإدارة. تبقى البيانات الحالية كما هي حتى الموافقة، وتجد القرار في «متابعة طلباتي».');
+  };
+ };
+ for(const select of [university,kind])select.onchange=()=>{context.target='';context.parent='';fill();};
+ fill();
+ document.querySelector('#ambassador-requests').onclick=openRequests;
+ document.querySelector('#ambassador-refresh').onclick=async(event)=>{
+  event.currentTarget.disabled=true;
+  try{await Promise.all([connectCloudAccount(false),refreshCloudCatalogue()]);render();}
+  catch(error){toast(error.message);if(event.target.isConnected)event.target.disabled=false;}
+ };
+}
+function ambassadorAdminPanel(queue) {
+ const records=cloudCatalogue||{universities:[],colleges:[],majors:[]};
+ const rows=queue?.catalogueRequests||[],members=queue?.ambassadors||[];
+ const parentLabel=(kind,id)=>kind.startsWith('doctor.')?records.majors.find((item)=>item.id===id)?.name||'تخصص غير متاح':kind.startsWith('major.')?records.colleges.find((item)=>item.id===id)?.name||'كلية غير متاحة':'';
+ return `<section class="panel ambassador-management"><h2>سفراء مِعيار</h2><p class="muted">عيّن سفيرًا لجامعة محددة باستخدام بريد حسابه في Google. يجب أن يكون قد دخل إلى مِعيار مرة واحدة. لا تُنشر مقترحاته دون موافقتك.</p><form id="assign-ambassador"><label>بريد حساب السفير<input name="email" type="email" required maxlength="254" dir="ltr" autocomplete="off" placeholder="student@example.com"></label><label>الجامعة<select name="universityId" required>${(records.universities||[]).map((university)=>`<option value="${university.id}">${escapeHtml(university.name)}</option>`).join('')}</select></label><p class="form-error" role="alert"></p><button class="primary" type="submit">تعيين سفير</button></form><div class="admin-record-list" aria-label="السفراء المعيّنون">${!queue?'<p role="status">جارٍ التحميل…</p>':members.length?members.map((member)=>`<div class="admin-row"><span>${escapeHtml(member.name)}<small><bdi>${escapeHtml(member.email)}</bdi> · ${escapeHtml(records.universities?.find((university)=>university.id===member.university_id)?.name||'')}${member.status!=='active'?' · الحساب مقيّد أو محظور':''}</small></span><button class="danger" data-revoke-ambassador="${escapeHtml(member.email)}" data-university="${member.university_id}">سحب الصلاحية</button></div>`).join(''):'<p class="muted">لم تعيّن سفراء بعد.</p>'}</div></section><section class="panel catalogue-moderation"><h2>تصحيحات البيانات ومقترحات السفراء</h2><p class="muted">الموافقة تطبّق التغيير على الدليل. لا تتأثر تقييمات الدكتور أو توثيقه بتصحيح اسمه أو تخصصه.</p><div class="catalogue-proposal-list" role="region" tabindex="0" aria-label="مقترحات تحديث الدليل">${!queue?'<p role="status">جارٍ التحميل…</p>':queue.error?`<p role="alert">${escapeHtml(queue.error)}</p>`:rows.length?rows.map((row)=>`<article class="moderation-review"><h3>${proposalNames[row.kind]||''} · ${escapeHtml(row.name)}</h3><p class="muted">${escapeHtml(row.university)} · ${row.ambassador?'مقترح سفير':'تصحيح من طالب'} · ${escapeHtml(row.author_name)}<small>معرّف الحساب: ${escapeHtml(row.account_id)}</small></p><div class="edit-diff">${row.kind.endsWith('.correct')?`<div><b>البيانات عند إرسال الطلب</b><p>${escapeHtml(row.original?.name||'')}</p><small>${escapeHtml(parentLabel(row.kind,row.original?.parent_id))}</small></div>`:''}<div><b>البيانات المقترحة</b><p>${escapeHtml(row.name)}</p><small>${escapeHtml(parentLabel(row.kind,row.parent_id))}</small></div></div>${row.details?`<p>توضيح صاحب الطلب: ${escapeHtml(row.details)}</p>`:''}<div class="review-tools"><button class="primary" data-cloud-operation="catalogue.approve" data-id="${row.id}">اعتماد وتطبيق التغيير</button><button class="secondary danger" data-cloud-operation="catalogue.reject" data-id="${row.id}">رفض مع السبب</button></div></article>`).join(''):'<p class="muted">لا توجد مقترحات بانتظار المراجعة.</p>'}</div></section>`;
+}
+function bindAmbassadorAdmin() {
+ const form=document.querySelector('#assign-ambassador');
+ if(!form||!cloudMe?.isAdmin)return;
+ const key='miyar-ambassador-admin-university-'+cloudMe.id,university=form.querySelector('[name=universityId]'),previous=storage.getItem(key);
+ if([...university.options].some((option)=>option.value===previous))university.value=previous;
+ university.onchange=()=>storage.setItem(key,university.value);
+ form.onsubmit=async(event)=>{
+  event.preventDefault();const data=new FormData(form),button=form.querySelector('[type=submit]');button.disabled=true;
+  storage.setItem(key,university.value);
+  try{await cloudAdminAction('ambassador.set',{email:data.get('email'),universityId:Number(data.get('universityId')),active:true});}
+  finally{button.disabled=false;}
+ };
+ document.querySelectorAll('[data-revoke-ambassador]').forEach((button)=>button.onclick=()=>{
+  modal('سحب صلاحية السفير',`<p>سيُمنع هذا الحساب من إرسال مقترحات السفراء لهذه الجامعة فورًا. تبقى الطلبات السابقة في سجل المراجعة.</p><button class="primary" id="confirm-revoke-ambassador">تأكيد سحب الصلاحية</button>`);
+  document.querySelector('#confirm-revoke-ambassador').onclick=async(event)=>{
+   event.currentTarget.disabled=true;
+   await cloudAdminAction('ambassador.set',{email:button.dataset.revokeAmbassador,universityId:Number(button.dataset.university),active:false});
+  };
+ });
 }
 async function shareDoctorCard(doctor){
  modal('بطاقة مشاركة الدكتور','<p data-card-loading>جارٍ تجهيز الصورة…</p>');
