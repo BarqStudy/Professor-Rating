@@ -7,6 +7,10 @@ const env = {
   ADMIN_AUTH_IDS: Deno.env.get("ADMIN_AUTH_IDS"),
   ALLOWED_ORIGINS: Deno.env.get("ALLOWED_ORIGINS"),
   GUEST_PEPPER: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+  AI_PROVIDER: Deno.env.get("AI_PROVIDER"),
+  AI_MODEL: Deno.env.get("AI_MODEL"),
+  OPENAI_API_KEY: Deno.env.get("OPENAI_API_KEY"),
+  GEMINI_API_KEY: Deno.env.get("GEMINI_API_KEY"),
 };
 const url = Deno.env.get("SUPABASE_URL");
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

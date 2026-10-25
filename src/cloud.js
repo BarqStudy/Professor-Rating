@@ -79,7 +79,7 @@ export async function signOutGoogle() {
 export async function api(action, data = {}) {
   if (!configured) throw new Error("لم يتم ربط قاعدة البيانات بعد.");
   const isGuest = action.startsWith("guest.");
-  const isPublic = isGuest || action === "catalogue" || action === "reviews" || action === "doctor.summary";
+  const isPublic = isGuest || action === "catalogue" || action === "reviews" || action === "doctor.summary" || action === "ai.status";
   const session = isPublic ? cachedSession : await getGoogleSession();
   if (!isPublic && !session) {
     throw new Error("سجّل الدخول باستخدام Google لإكمال العملية.");
@@ -97,7 +97,7 @@ export async function api(action, data = {}) {
     keepalive: action === "guest.presence",
     headers,
     body: JSON.stringify({ ...data, action }),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(action === 'guest.ai.ask' ? 45000 : 20000),
   }).catch(() => {
     throw new Error("تعذّر الاتصال بالخدمة. تحقق من الإنترنت وحاول مجددًا.");
   });

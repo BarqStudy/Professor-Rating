@@ -1,4 +1,5 @@
 import { handleGuest } from "./guest.js";
+import { handleAi } from "./ai.js";
 import { catalogueProposal, ambassadorAdmin } from "./ambassadors.js";
 import { studentCommunity, adminCommunity, publicSummary } from "./community.js";
 import {
@@ -10,7 +11,7 @@ import {
   validateReview,
 } from "./security.js";
 
-export function createHandler({ db, env, authenticate }) {
+export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
   const origins = (env.ALLOWED_ORIGINS || "https://barqstudy.github.io").split(
     ",",
   ).map((x) => x.trim());
@@ -73,6 +74,8 @@ export function createHandler({ db, env, authenticate }) {
         throw new ApiError(400, "طلب غير صالح.");
       }
       const action = body.action;
+      const aiResult = await handleAi(request, body, db, env, aiFetch);
+      if (aiResult) return respond(aiResult);
       const guestResult = await handleGuest(request, body, db, env.GUEST_PEPPER);
       if (guestResult) return respond(guestResult.data, guestResult.status || 200);
       if (action === "catalogue") {

@@ -1,4 +1,5 @@
 import { REVIEW_TAGS } from "../supabase/functions/miyar/tags.js";
+import { createAssistant } from './assistant.js';
 import { createDoctorCard } from "./doctor-card.js";
 import { setupPwa, installPlatform } from "./pwa.js";
 import "./style.css";
@@ -28,6 +29,17 @@ let cloudMe = null,
   cloudQueue = null;
 let cloudAuthPending = null;
 let cloudQueueLoading = false;
+const miyarAssistant = createAssistant({
+  api,
+  ensureGuestSession: async () => {
+    guestProfile = await ensureGuestSession();
+    const university = currentUniversityId();
+    if (university && guestProfile.university_id !== university) guestProfile = await api('guest.university', { universityId: university });
+    return guestProfile;
+  },
+  universityId: () => currentUniversityId(), universityName: () => selectedUniversity()?.name,
+  configured: () => configured,
+});
 const demoAdmin = import.meta.env.DEV && !configured;
 const icons = {
   settings:
@@ -136,7 +148,7 @@ function displayName() {
 let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
-const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador"];
+const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant"];
 let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
 const persist = () => {
@@ -230,6 +242,7 @@ function render() {
         requests: "متابعة الطلبات",
         admin: "لوحة الإدارة",
         ambassador: "مساحة السفير",
+        assistant: "مساعد مِعيار",
       })[page]
     }</b></div><div class="header-actions">${
       !googleSession
@@ -262,9 +275,12 @@ function render() {
         ? admin()
         : page === "ambassador"
         ? ambassadorPage()
+        : page === "assistant"
+        ? miyarAssistant.page()
         : developer()
-    }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span>بُني بشغف لرحلتك الجامعية</span></footer></div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
+    }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span>بُني بشغف لرحلتك الجامعية</span></footer>${page !== 'assistant' ? `<button type="button" class="assistant-launcher" data-page="assistant" aria-label="مساعد مِعيار"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2Z"/></svg><span>مساعد مِعيار</span></button>` : ''}</div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
   bind();
+  if (page === 'assistant') miyarAssistant.bind();
   if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();
   if (page === "requests" && googleSession && requestsOwner !== googleSession.user.id && !requestsLoading) loadMyRequests();
   if (needsUniversity()) openUniversityChoice(true);
@@ -2138,6 +2154,7 @@ async function refreshPresence(visible=!document.hidden){
 
 window.addEventListener("miyar-auth", async ({ detail }) => {
   const previous = googleSession;
+  if (previous?.user.id !== detail.session?.user.id) miyarAssistant.reset();
   googleSession = detail.session;
   if (!detail.session) {
     cloudMe = null;

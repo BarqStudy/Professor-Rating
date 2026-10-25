@@ -110,5 +110,9 @@ jobs:
           presence = call('guest.presence', {'tabId': str(uuid.uuid4()), 'visible': False}, visitor['token'])
           if not isinstance(presence.get('online'), int) or presence['online'] < 0:
               raise SystemExit('Presence counter verification failed.')
+          assistant = call('ai.status')
+          if not isinstance(assistant.get('enabled'), bool):
+              raise SystemExit('Assistant configuration endpoint failed.')
+          print('Assistant provider:', 'configured' if assistant['enabled'] else 'waiting for a private provider API key')
           print('Backend, guest sessions and live presence are reachable. Public catalogue contains', len(data['colleges']), 'colleges.')
           PY

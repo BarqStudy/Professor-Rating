@@ -8,6 +8,14 @@ async function networkHash(request,pepper){
  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(pepper),{name:'HMAC',hash:'SHA-256'},false,['sign']);
  return hex(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode('miyar-guest-network:'+ip.slice(0,256))));
 }
+export async function verifiedGuest(request,db){
+ const token=request.headers.get('x-miyar-guest')||'';
+ if(!/^[a-f0-9]{64}$/.test(token))throw new ApiError(401,'تعذّر التحقق من جلسة الزائر. أعد المحاولة.');
+ const rows=await db(`miyar_guest_sessions?token_hash=eq.${await guestTokenHash(token)}&select=id,university_id,status`);
+ const guest=rows[0];if(!guest)throw new ApiError(401,'انتهت جلسة الزائر. أعد المحاولة.');
+ if(guest.status==='banned')throw new ApiError(403,'جلسة الزائر محظورة من المنصة.');
+ return guest;
+}
 export async function handleGuest(request,body,db,pepper){
  const action=body.action;
  if(!['guest.start','guest.me','guest.university','guest.presence','guest.submit'].includes(action))return null;
@@ -16,11 +24,7 @@ export async function handleGuest(request,body,db,pepper){
   const profile=await rpc(db,'miyar_open_guest',{p_token_hash:await guestTokenHash(token),p_network_hash:await networkHash(request,pepper)});
   return {status:201,data:{...profile,token}};
  }
- const token=request.headers.get('x-miyar-guest')||'';
- if(!/^[a-f0-9]{64}$/.test(token))throw new ApiError(401,'تعذّر التحقق من جلسة الزائر. أعد المحاولة.');
- const rows=await db(`miyar_guest_sessions?token_hash=eq.${await guestTokenHash(token)}&select=id,university_id,status`);
- const guest=rows[0];if(!guest)throw new ApiError(401,'انتهت جلسة الزائر. أعد المحاولة.');
- if(guest.status==='banned')throw new ApiError(403,'جلسة الزائر محظورة من المنصة.');
+ const guest=await verifiedGuest(request,db);
  if(action==='guest.me')return {data:guest};
  if(action==='guest.presence'){
   if(typeof body.visible!=='boolean')throw new ApiError(400,'حالة الجلسة غير صالحة.');

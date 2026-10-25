@@ -141,6 +141,7 @@ const server = http.createServer((req, res) => {
     let pendingEdits=[], pendingReports=[], notifyPublished=false;
     const requestHistory=[],requestEvents=[];
     let catalogueRequests=[],ambassadors=[];
+    let aiEnabled=false,aiFails=false;
     const guest={id:"44444444-4444-4444-8444-444444444444",university_id:null,status:"active"};
     const guestToken="ab".repeat(32);
     let googleEnabled = false,
@@ -195,6 +196,11 @@ const server = http.createServer((req, res) => {
           });
           let result = { ok: true };
           if (body.action === "catalogue") result = catalogue;
+          if(body.action==='ai.status')result={enabled:aiEnabled};
+          if(body.action==='guest.ai.ask'){
+            if(aiFails)return route.fulfill({status:429,json:{error:'وصلت للحد اليومي للمساعد.'}});
+            result={answer:'اختر الدكتور من صفحة التقييمات ثم أضف تجربتك. <img src=x onerror="window.aiInjected=true">',sources:[{label:'إضافة تقييم',href:'#ratings'}],remaining:9};
+          }
           if (body.action === "guest.start") result={...guest,token:guestToken};
           if (body.action === "guest.me") result={...guest};
           if (body.action === "guest.university") {guest.university_id=body.universityId;result={...guest};}
@@ -429,6 +435,36 @@ const server = http.createServer((req, res) => {
     await page.waitForFunction(()=>document.querySelector('[data-online-count]').textContent.includes((7).toLocaleString('ar')));
     assert.match(await page.locator('.semester').innerText(),/الأول ١٤٤٨/);
     assert.equal(calls.filter((call)=>call.action==='exchange').length,0);
+    await page.locator('[data-page=assistant]').click();
+    await page.getByText('مساعد مِعيار قيد التجهيز. سيُتاح بعد اكتمال ربط خدمة الذكاء الاصطناعي.').waitFor();
+    assert.equal(await page.locator('#assistant-form [type=submit]').isDisabled(),true);
+    assert.equal(await page.locator('#assistant-log').innerText(),'');
+    aiEnabled=true;
+    await page.locator('#page-close').click();await page.locator('[data-page=assistant]').click();
+    await page.getByText('جاهز لمساعدتك · الإجابات تستند إلى بيانات مِعيار المنشورة.').waitFor();
+    await page.locator('[data-assistant-prompt]').first().click();
+    await page.locator('.assistant-message.assistant').waitFor();
+    assert.match(await page.locator('.assistant-message.assistant').innerText(),/اختر الدكتور/);
+    assert.equal(await page.locator('#assistant-log img').count(),0);
+    assert.equal(await page.evaluate(()=>window.aiInjected),undefined);
+    assert.equal(await page.locator('.assistant-sources a').getAttribute('href'),'#ratings');
+    const aiCall=calls.find((call)=>call.action==='guest.ai.ask');
+    assert.equal(aiCall.guest_token,guestToken);assert.equal(aiCall.authorization,undefined);assert.deepEqual(aiCall.history,[]);
+    for(const width of [390,1024]){
+      await page.setViewportSize({width,height:1000});
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      await page.screenshot({path:`/tmp/miyar-assistant-${width}.png`,fullPage:true});
+    }
+    aiFails=true;
+    await page.locator('#assistant-question').fill('كيف أغيّر جامعتي؟');
+    await page.locator('#assistant-form [type=submit]').click();
+    await page.getByText('وصلت للحد اليومي للمساعد.').waitFor();
+    assert.equal(await page.locator('#assistant-question').inputValue(),'كيف أغيّر جامعتي؟');
+    assert.equal(await page.locator('.assistant-message').count(),2);
+    await page.locator('#assistant-clear').click();assert.equal(await page.locator('.assistant-message').count(),0);
+    assert.equal(await page.evaluate(()=>Object.keys(localStorage).some((key)=>key.includes('assistant')||key.includes('ai-chat'))),false);
+    await page.setViewportSize({width:1440,height:1000});
+    await page.locator('#page-close').click();
     await page.locator('#google-account').click();
     await page.locator("#google-signin").waitFor();
     await page.locator("#google-signin").click();
@@ -888,7 +924,7 @@ const server = http.createServer((req, res) => {
     await page.locator('.connection-banner.live').waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: Scoped ambassador assignment/revocation, proposal moderation and persistence, student data corrections and history, responsive ambassador workspace, Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
+      "PASS: AI availability gating, grounded chat UI with citations, escaped model output, guest session binding and quota error recovery, Scoped ambassador assignment/revocation, proposal moderation and persistence, student data corrections and history, responsive ambassador workspace, Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
     );
   } finally {
     await browser.close();
