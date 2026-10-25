@@ -200,6 +200,12 @@ const server = http.createServer((req, res) => {
             };
           }
           if (body.action === "submit") result = { id: 8, status: "pending" };
+          if (body.operation === "major.add") {
+            catalogue.majors.push({ id: 20 + catalogue.majors.length, college_id: body.collegeId, name: body.name });
+          }
+          if (body.operation === "college.add") {
+            catalogue.colleges.push({ id: 20 + catalogue.colleges.length, university_id: body.universityId, name: body.name });
+          }
           if (body.operation === "doctor.add") {
             if (body.name === "ناصر سعيد الغامدي" && failBulk) {
               failBulk = false;
@@ -460,6 +466,30 @@ const server = http.createServer((req, res) => {
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     await page.locator("[data-page=admin]").click();
     await page.getByText("لا توجد طلبات معلّقة.").waitFor();
+    const majorForm = page.locator("#cloud-add-major");
+    await majorForm.locator('[name=collegeId]').selectOption("2");
+    for (const name of ["الفلك", "الأحياء"]) {
+      await majorForm.locator('[name=name]').fill(name);
+      await majorForm.locator('button').click();
+      await page.waitForFunction(() => document.querySelector('#cloud-add-major [name=name]').value === "");
+      assert.equal(await majorForm.locator('[name=collegeId]').inputValue(), "2");
+      assert.equal(await majorForm.locator('[name=name]').evaluate((el) => el === document.activeElement), true);
+    }
+    assert.ok(calls.filter((call) => call.operation === "major.add").every((call) => call.collegeId === 2));
+    const collegeForm = page.locator("#cloud-add-college");
+    await collegeForm.locator('[name=universityId]').selectOption("3");
+    await collegeForm.locator('[name=name]').fill("كلية الطب");
+    await collegeForm.locator('button').click();
+    await page.waitForFunction(() => document.querySelector('#cloud-add-college [name=name]').value === "");
+    assert.equal(await collegeForm.locator('[name=universityId]').inputValue(), "3");
+    assert.equal(await majorForm.locator('[name=collegeId]').inputValue(), "2");
+    await page.locator("#refresh-cloud-admin").click();
+    await page.getByText("لا توجد طلبات معلّقة.").waitFor();
+    assert.equal(await majorForm.locator('[name=collegeId]').inputValue(), "2");
+    await page.reload();
+    await page.locator("#cloud-add-major").waitFor();
+    assert.equal(await page.locator('#cloud-add-major [name=collegeId]').inputValue(), "2");
+    assert.equal(await page.locator('#cloud-add-college [name=universityId]').inputValue(), "3");
     const batch = page.locator("#bulk-doctors");
     assert.equal(await batch.evaluate((el) => getComputedStyle(el).flexDirection), "column");
     const batchBox = await batch.boundingBox();

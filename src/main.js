@@ -1582,17 +1582,17 @@ function cloudAdmin() {
   ).join("");
   const queue = cloudQueue;
   const allDoctors = records.doctors || [];
-  return `<div class="page-title"><div class="eyebrow">إدارة مِعيار</div><h1>لوحة التحكم</h1><p>المشاركات لا تُنشر تلقائيًا. راجع التعليقات وطلبات الدكاترة من هنا.</p><button class="secondary" id="refresh-cloud-admin">تحديث الطلبات</button></div><div class="admin-grid"><section class="panel"><h2>الجامعات والكليات والتخصصات</h2><form id="cloud-add-university"><label>إضافة جامعة<input name="name" required minlength="2" maxlength="100" placeholder="اسم الجامعة"></label><button class="primary">إضافة جامعة</button></form><form id="cloud-add-college"><label>إضافة كلية<select name="universityId" required><option value="">اختر الجامعة</option>${(records.universities || []).map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")}</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم الكلية"></label><button class="primary">إضافة</button></form>${
+  return `<div class="page-title"><div class="eyebrow">إدارة مِعيار</div><h1>لوحة التحكم</h1><p>المشاركات لا تُنشر تلقائيًا. راجع التعليقات وطلبات الدكاترة من هنا.</p><button class="secondary" id="refresh-cloud-admin">تحديث الطلبات</button></div><div class="admin-grid"><section class="panel academic-management"><h2>الجامعات والكليات والتخصصات</h2><p class="admin-context-hint">نحتفظ بآخر جامعة وكلية اخترتها لتكمل الإضافة دون إعادة الاختيار.</p><h3 class="admin-step-title"><span>١</span> الجامعات</h3><form id="cloud-add-university"><label>إضافة جامعة<input name="name" required minlength="2" maxlength="100" placeholder="اسم الجامعة"></label><button class="primary">إضافة جامعة</button></form><h3 class="admin-step-title"><span>٢</span> الكليات</h3><form id="cloud-add-college"><label>إضافة كلية<select name="universityId" required><option value="">اختر الجامعة</option>${(records.universities || []).map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")}</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم الكلية"></label><button class="primary">إضافة الكلية</button></form><div class="admin-record-list" aria-label="الكليات المضافة">${
     records.colleges.map((c) =>
       `<div class="admin-row"><span>${
         escapeHtml(c.name)
       }<small>${escapeHtml(records.universities?.find((u) => u.id === c.university_id)?.name || "")}</small></span><button class="danger" data-cloud-operation="college.delete" data-id="${c.id}">حذف</button></div>`
     ).join("")
-  }<form id="cloud-add-major"><label>إضافة تخصص<select name="collegeId" required>${
+  }</div><h3 class="admin-step-title"><span>٣</span> التخصصات</h3><form id="cloud-add-major"><label>إضافة تخصص<select name="collegeId" required>${
     records.colleges.map((c) =>
       `<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(records.universities?.find((u) => u.id === c.university_id)?.name || "")}</option>`
     ).join("")
-  }</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم التخصص"></label><button class="primary">إضافة</button></form>${
+  }</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم التخصص"></label><button class="primary">إضافة التخصص</button></form><div class="admin-record-list" aria-label="التخصصات المضافة">${
     records.majors.map((m) =>
       `<div class="admin-row"><span>${escapeHtml(m.name)}<small>${
         escapeHtml(
@@ -1600,7 +1600,7 @@ function cloudAdmin() {
         )
       }</small></span><button class="danger" data-cloud-operation="major.delete" data-id="${m.id}">حذف</button></div>`
     ).join("")
-  }</section><section class="panel"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>اسم الدكتور الثلاثي<input name="name" required minlength="8" maxlength="100"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${
+  }</div></section><section class="panel"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>اسم الدكتور الثلاثي<input name="name" required minlength="8" maxlength="100"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${
     allDoctors.map((d) =>
       `<div class="admin-row"><span>د. ${escapeHtml(d.name)}<small>${
         escapeHtml(d.major)
@@ -1646,17 +1646,36 @@ function cloudAdmin() {
   }</section></div>`;
 }
 async function cloudAdminAction(operation, data) {
+  const scrollTop = window.scrollY;
   try {
     await api("admin", { operation, ...data });
     await Promise.all([refreshCloudCatalogue(), loadCloudQueue(false)]);
     render();
+    window.scrollTo({ top: scrollTop, behavior: "instant" });
     toast("تم حفظ التغيير في المنصة.");
+    return true;
   } catch (error) {
     toast(error.message);
+    return false;
   }
 }
 function bindCloudAdmin() {
   if (!cloudMe?.isAdmin) return;
+  const key = `miyar-admin-selections-${cloudMe.id}`;
+  const stored = readJSON(key, {});
+  const selections = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
+  for (const selector of ["#cloud-add-college [name=universityId]", "#cloud-add-major [name=collegeId]", "#cloud-add-doctor [name=majorId]", "#bulk-doctors [name=major]"]) {
+    const select = document.querySelector(selector);
+    if (!select) continue;
+    const value = selections[selector];
+    if ([...select.options].some((option) => option.value === String(value))) select.value = String(value);
+    else delete selections[selector];
+    select.addEventListener("change", () => {
+      selections[selector] = select.value;
+      storage.setItem(key, JSON.stringify(selections));
+    });
+  }
+  storage.setItem(key, JSON.stringify(selections));
   document.querySelector("#refresh-cloud-admin")?.addEventListener(
     "click",
     () => loadCloudQueue(),
@@ -1678,8 +1697,11 @@ function bindCloudAdmin() {
       }
       const button = e.target.querySelector("button");
       button.disabled = true;
-      await cloudAdminAction(operation, values);
+      const saved = await cloudAdminAction(operation, values);
       button.disabled = false;
+      if (saved && ["university.add", "college.add", "major.add", "doctor.add"].includes(operation)) {
+        document.querySelector(`${selector} [name=name]`)?.focus({ preventScroll: true });
+      }
     });
   }
   document.querySelectorAll("[data-cloud-operation]").forEach((b) =>
