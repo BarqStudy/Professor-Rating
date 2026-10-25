@@ -1698,6 +1698,10 @@ async function cloudAdminAction(operation, data) {
   const scrollTop = window.scrollY;
   try {
     await api("admin", { operation, ...data });
+    if (operation === 'university.delete') {
+      await connectCloudAccount(false);
+      if (guestProfile?.university_id === data.id) guestProfile = await ensureGuestSession();
+    }
     await Promise.all([refreshCloudCatalogue(), loadCloudQueue(false)]);
     requestsOwner="";
     document.body.classList.remove("modal-open");
@@ -1788,7 +1792,7 @@ function bindCloudOperations(root = document) {
         const university = operation === 'university.delete' ? cloudCatalogue?.universities?.find((item) => item.id === data.id) : null;
         modal(
           university ? "تأكيد حذف الجامعة" : "تأكيد الإزالة",
-          `${university ? `<p>هل تريد حذف <strong>${escapeHtml(university.name)}</strong> من مِعيار؟</p><p class="muted">يُسمح بحذف الجامعة التي لا ترتبط بكليات أو حسابات أو طلبات. الحذف نهائي.</p>` : '<p class="muted">هل تريد إزالة هذا السجل من المنصة؟ الكليات والتخصصات المرتبطة بسجلات أخرى لا تُحذف.</p>'}<p class="form-error" id="delete-operation-error" role="alert"></p><button class="primary" id="confirm-cloud-delete">${university ? 'تأكيد الحذف' : 'تأكيد الإزالة'}</button>`,
+          `${university ? `<p>هل تريد حذف <strong>${escapeHtml(university.name)}</strong> من مِعيار؟</p><p class="muted">تُحفظ الحسابات والتقييمات، ويُطلب من الحسابات والزوار المرتبطين بها اختيار جامعة أخرى. يتطلب وجود كليات أو سجل طلبات أو صلاحيات سفراء معالجة الارتباطات أولًا. حذف الجامعة نهائي.</p>` : '<p class="muted">هل تريد إزالة هذا السجل من المنصة؟ الكليات والتخصصات المرتبطة بسجلات أخرى لا تُحذف.</p>'}<p class="form-error" id="delete-operation-error" role="alert"></p><button class="primary" id="confirm-cloud-delete">${university ? 'تأكيد الحذف' : 'تأكيد الإزالة'}</button>`,
         );
         document.querySelector("#confirm-cloud-delete").onclick = async () => {
           const button = document.querySelector("#confirm-cloud-delete");

@@ -11,21 +11,22 @@ test('only administrators can delete universities, with valid IDs, missing-row d
  const handle=createHandler({env:{ADMIN_AUTH_IDS:admin},authenticate:async()=>({id:actor}),db:async(path,options={})=>{
   calls.push({path,...options});
   if(path.startsWith('miyar_accounts'))return[{auth_id:actor,status:'active',university_id:3}];
-  if(options.method==='DELETE'){
-   const id=Number(path.match(/id=eq\.(\d+)/)?.[1]);
+  if(path==='rpc/miyar_delete_university'){
+   const id=options.body.p_id;
    if(id===3)throw new ApiError(409,'Foreign key reference');
-   return remaining.delete(id)?[{id}]:[];
+   if(!remaining.delete(id))throw new ApiError(404,'الجامعة غير موجودة.');
+   return {ok:true};
   }
   return[];
  }});
  const request=(id)=>new Request('https://test',{method:'POST',body:JSON.stringify({action:'admin',operation:'university.delete',id,isAdmin:true})});
- assert.equal((await handle(request(8))).status,403);assert.equal(calls.filter((call)=>call.method==='DELETE').length,0);
+ assert.equal((await handle(request(8))).status,403);assert.equal(calls.filter((call)=>call.path==='rpc/miyar_delete_university').length,0);
  actor=admin;
  for(const id of [0,-1,'8',null])assert.equal((await handle(request(id))).status,400);
  assert.equal((await handle(request(999))).status,404);
  assert.equal((await handle(request(8))).status,200);assert.ok(!remaining.has(8));
  assert.equal((await handle(request(8))).status,404);
- const blocked=await handle(request(3));assert.equal(blocked.status,409);assert.match((await blocked.json()).error,/لا يمكن حذف الجامعة/);assert.ok(remaining.has(3));
+ const blocked=await handle(request(3));assert.equal(blocked.status,409);assert.ok(remaining.has(3));
 });
 test('university deletion never cascades through colleges, account selections, visitor sessions, ambassadors or proposal history',async()=>{
  const db=new PGlite();try{

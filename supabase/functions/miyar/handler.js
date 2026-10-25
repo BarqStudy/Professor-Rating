@@ -265,15 +265,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       if (operation === "university.add") {
         await db("miyar_universities", { method: "POST", body: { name: text(body.name, 2, 100, "الجامعة") } });
       } else if (operation === "university.delete") {
-        const id = validId(body.id);
-        let deleted;
-        try {
-          deleted = await db(`miyar_universities?id=eq.${id}`, { method: "DELETE" });
-        } catch (error) {
-          if (error instanceof ApiError && error.status === 409) throw new ApiError(409, "لا يمكن حذف الجامعة لارتباطها بكليات أو حسابات أو طلبات. تُحفظ البيانات المرتبطة بها.");
-          throw error;
-        }
-        if (!deleted?.length) throw new ApiError(404, "الجامعة غير موجودة أو حُذفت سابقًا.");
+        await db('rpc/miyar_delete_university', { method: 'POST', body: { p_id: validId(body.id) } });
       } else if (operation === "college.add") {
         await db("miyar_colleges", {
           method: "POST",

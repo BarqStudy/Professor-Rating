@@ -276,7 +276,9 @@ const server = http.createServer((req, res) => {
           }
           if(body.operation==='university.add')catalogue.universities.push({id:Math.max(...catalogue.universities.map((row)=>row.id))+1,name:body.name});
           if(body.operation==='university.delete'){
-            if(catalogue.colleges.some((row)=>row.university_id===body.id)||me.university_id===body.id||guest.university_id===body.id)return route.fulfill({status:409,json:{error:'لا يمكن حذف الجامعة لارتباطها بكليات أو حسابات أو طلبات. تُحفظ البيانات المرتبطة بها.'}});
+            if(catalogue.colleges.some((row)=>row.university_id===body.id))return route.fulfill({status:409,json:{error:'لا يمكن حذف الجامعة لوجود كليات مرتبطة بها. تُحفظ الكليات والدكاترة والتقييمات.'}});
+            if(me.university_id===body.id)me={...me,university_id:null,major_id:null};
+            if(guest.university_id===body.id)guest.university_id=null;
             catalogue.universities=catalogue.universities.filter((row)=>row.id!==body.id);
           }
           if (body.operation === "doctor.add") {
@@ -871,9 +873,18 @@ const server = http.createServer((req, res) => {
     await page.waitForFunction(()=>[...document.querySelectorAll('[aria-label="الجامعات المضافة"] .admin-row')].some((row)=>row.innerText.includes('جامعة للاختبار')));
     const temporaryUniversity=catalogue.universities.find((row)=>row.name==='جامعة للاختبار');
     await page.locator('#cloud-add-college [name=universityId]').selectOption(String(temporaryUniversity.id));
+    await page.locator('#open-settings').click();await page.locator('#change-university').click();
+    await page.locator('#university-choice select').selectOption(String(temporaryUniversity.id));
+    await page.locator('#university-choice button').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('[data-page=admin]').click();
     await page.locator(`[data-cloud-operation="university.delete"][data-id="${temporaryUniversity.id}"]`).click();
-    await page.locator('#confirm-cloud-delete').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('#confirm-cloud-delete').click();await page.locator('#university-choice').waitFor();
     assert.ok(!catalogue.universities.some((row)=>row.id===temporaryUniversity.id));
+    assert.equal(me.university_id,null);assert.equal(me.isAdmin,true);
+    assert.equal(await page.locator(`#university-choice option[value="${temporaryUniversity.id}"]`).count(),0);
+    await page.locator('#university-choice select').selectOption('3');await page.locator('#university-choice button').click();
+    await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('[data-page=admin]').click();
     assert.equal(await page.locator(`[data-cloud-operation="university.delete"][data-id="${temporaryUniversity.id}"]`).count(),0);
     assert.notEqual(await page.locator('#cloud-add-college [name=universityId]').inputValue(),String(temporaryUniversity.id));
     await page.locator('[data-page=home]').click();
