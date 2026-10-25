@@ -6,6 +6,7 @@ import { createGoogleVerifier } from "./auth.js";
 const env = {
   ADMIN_AUTH_IDS: Deno.env.get("ADMIN_AUTH_IDS"),
   ALLOWED_ORIGINS: Deno.env.get("ALLOWED_ORIGINS"),
+  GUEST_PEPPER: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
 };
 const url = Deno.env.get("SUPABASE_URL");
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

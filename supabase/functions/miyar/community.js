@@ -23,9 +23,10 @@ export async function studentCommunity(action,body,user,account,db) {
     if(!['abuse','personal','irrelevant'].includes(body.reason)) throw new ApiError(400,'اختر سبب البلاغ.');
     return {status:201,data:await rpc(db,'miyar_submit_report',{p_account:account,p_review:id(body.review),p_reason:body.reason,p_details:text(body.details||'',0,600,'تفاصيل البلاغ')})};
   }
+  if(body.pledged!==true)throw new ApiError(400,"وافق على تعهّد التقييم أولًا.");
   // Reuse the existing content filters; edits cannot change the doctor, author, or private grade.
   const review=validateReview({...body,college:'كلية',major:'تخصص',name:'اسم دكتور كامل',grade:0});
-  return {status:201,data:await rpc(db,'miyar_request_edit',{p_account:account,p_review:id(body.review),p_subject:review.subject,p_comment:review.comment,p_explanation:review.scores[0],p_treatment:review.scores[1],p_grading:review.scores[2]})};
+  return {status:201,data:await rpc(db,'miyar_request_edit',{p_account:account,p_review:id(body.review),p_subject:review.subject,p_comment:review.comment,p_explanation:review.scores[0],p_treatment:review.scores[1],p_grading:review.scores[2],p_tags:review.tags})};
 }
 export async function adminCommunity(operation,body,db) {
   if(['doctor.approve','doctor.reject','edit.approve','edit.reject'].includes(operation)) {

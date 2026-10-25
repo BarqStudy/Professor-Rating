@@ -76,7 +76,7 @@ jobs:
           target.chmod(0o600)
           PY
           supabase secrets set --env-file "$secret_file" --project-ref "$SUPABASE_PROJECT_REF" --yes
-      - name: Deploy Google-authenticated API
+      - name: Deploy Miyar API
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase functions deploy miyar --project-ref "$SUPABASE_PROJECT_REF" --use-api --yes
@@ -94,5 +94,21 @@ jobs:
               raise SystemExit('University catalogue migration is missing.')
           if any(not c.get('university_id') for c in data['colleges']):
               raise SystemExit('A college is missing its university.')
-          print('Backend is reachable. Public catalogue contains', len(data['colleges']), 'colleges.')
+          def call(action, values=None, token=None):
+              headers = {'Content-Type': 'application/json', 'Origin': 'https://miyar.website'}
+              if token:
+                  headers['x-miyar-guest'] = token
+              payload = json.dumps({'action': action, **(values or {})}).encode()
+              with urllib.request.urlopen(urllib.request.Request(url, data=payload, headers=headers), timeout=30) as result:
+                  return json.load(result)
+          visitor = call('guest.start')
+          profile = call('guest.me', token=visitor['token'])
+          if profile.get('id') != visitor.get('id') or profile.get('status') != 'active':
+              raise SystemExit('Guest session verification failed.')
+          import uuid
+          # Query the counter without creating an active visitor or a test review.
+          presence = call('guest.presence', {'tabId': str(uuid.uuid4()), 'visible': False}, visitor['token'])
+          if not isinstance(presence.get('online'), int) or presence['online'] < 0:
+              raise SystemExit('Presence counter verification failed.')
+          print('Backend, guest sessions and live presence are reachable. Public catalogue contains', len(data['colleges']), 'colleges.')
           PY

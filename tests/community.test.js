@@ -66,7 +66,7 @@ test('community HTTP actions bind authenticated identity and cannot invoke admin
  const db=async(path,options={})=>{calls.push({path,...options});if(path.startsWith('miyar_accounts'))return[{auth_id:a,status:'active',university_id:3}];return{ok:true};};
  const handler=createHandler({env:{},db,authenticate:async()=>({id:a})});
  const request=(body)=>new Request('https://test',{method:'POST',body:JSON.stringify(body)});
- const edit={action:'edit',review:1,subject:'ميكانيكا',comment:'تجربة محدثة وواضحة',scores:[70,80,90],userId:b};
+ const edit={action:'edit',pledged:true,review:1,subject:'ميكانيكا',comment:'تجربة محدثة وواضحة',scores:[70,80,90],userId:b};
  assert.equal((await handler(request(edit))).status,201);
  assert.equal(calls.find((call)=>call.path==='rpc/miyar_request_edit').body.p_account,a);
  assert.equal((await handler(request({...edit,comment:'غبي'}))).status,400);

@@ -1,3 +1,4 @@
+import { handleGuest } from "./guest.js";
 import { studentCommunity, adminCommunity, publicSummary } from "./community.js";
 import {
   adminIds,
@@ -20,7 +21,7 @@ export function createHandler({ db, env, authenticate }) {
         ? origin
         : origins[0],
       "Access-Control-Allow-Headers":
-        "content-type, apikey, authorization, x-client-info",
+        "content-type, apikey, authorization, x-client-info, x-miyar-guest",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       Vary: "Origin",
       "Cache-Control": "no-store",
@@ -71,6 +72,8 @@ export function createHandler({ db, env, authenticate }) {
         throw new ApiError(400, "طلب غير صالح.");
       }
       const action = body.action;
+      const guestResult = await handleGuest(request, body, db, env.GUEST_PEPPER);
+      if (guestResult) return respond(guestResult.data, guestResult.status || 200);
       if (action === "catalogue") {
         return respond(
           await db("rpc/miyar_catalogue", { method: "POST", body: {} }),
@@ -84,13 +87,14 @@ export function createHandler({ db, env, authenticate }) {
         );
         if (!doctors.length) throw new ApiError(404, "الدكتور غير موجود.");
         const rows = await db(
-          `miyar_reviews?doctor_id=eq.${id}&status=eq.published${body.subject ? `&subject=eq.${encodeURIComponent(text(body.subject,2,120,"المادة"))}` : ""}&select=id,subject,comment,explanation,treatment,grading,created_at&order=created_at.desc&limit=100`,
+          `miyar_reviews?doctor_id=eq.${id}&status=eq.published${body.subject ? `&subject=eq.${encodeURIComponent(text(body.subject,2,120,"المادة"))}` : ""}&select=id,subject,comment,tags,explanation,treatment,grading,created_at&order=created_at.desc&limit=100`,
         );
         return respond(
           rows.map((r) => ({
             id: r.id,
             subject: r.subject,
             comment: r.comment,
+            tags: r.tags || [],
             scores: [r.explanation, r.treatment, r.grading],
             date: r.created_at,
           })),
@@ -165,6 +169,7 @@ export function createHandler({ db, env, authenticate }) {
           throw new ApiError(403, "حسابك مقيّد عن إضافة التقييمات.");
         }
         if (!user.university_id) throw new ApiError(400, "اختر جامعتك أولًا.");
+        if(body.pledged!==true) throw new ApiError(400,"وافق على تعهّد التقييم أولًا.");
         const r = validateReview(body);
         const result = await db("rpc/miyar_submit_google_review", {
           method: "POST",
@@ -179,6 +184,7 @@ export function createHandler({ db, env, authenticate }) {
             p_treatment: r.scores[1],
             p_grading: r.scores[2],
             p_comment: r.comment,
+            p_tags: r.tags,
           },
         });
         return respond(result, 201);
@@ -191,10 +197,10 @@ export function createHandler({ db, env, authenticate }) {
       if (operation === "queue") {
         const [doctors, reviews] = await Promise.all([
           db(
-            "miyar_doctors?status=eq.pending&select=id,name,major_id,submitted_by_account,created_at&order=created_at.asc&limit=100",
+            "miyar_doctors?status=eq.pending&select=id,name,major_id,submitted_by_account,submitted_by_guest,created_at&order=created_at.asc&limit=100",
           ),
           db(
-            "miyar_reviews?status=eq.pending&select=id,doctor_id,account_id,subject,comment,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
+            "miyar_reviews?status=eq.pending&select=id,doctor_id,account_id,guest_id,subject,comment,tags,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
           ),
         ]);
         const extra = await db("rpc/miyar_community_queue", {method:"POST",body:{}});
@@ -202,12 +208,13 @@ export function createHandler({ db, env, authenticate }) {
         return respond({
           edits: extra?.edits || [], reports: extra?.reports || [],
           doctors: doctors.map((
-            { id, name, major_id, submitted_by_account, created_at },
+            { id, name, major_id, submitted_by_account, submitted_by_guest, created_at },
           ) => ({
             id,
             name,
             major_id,
-            submitted_by: submitted_by_account,
+            submitted_by: submitted_by_account || submitted_by_guest,
+            identity_type: submitted_by_guest ? "guest" : "google",
             created_at,
           })),
           reviews: reviews.map((
@@ -215,8 +222,10 @@ export function createHandler({ db, env, authenticate }) {
               id,
               doctor_id,
               account_id,
+              guest_id,
               subject,
               comment,
+              tags,
               explanation,
               treatment,
               grading,
@@ -225,9 +234,11 @@ export function createHandler({ db, env, authenticate }) {
           ) => ({
             id,
             doctor_id,
-            user_id: account_id,
+            user_id: account_id || guest_id,
+            identity_type: guest_id ? "guest" : "google",
             subject,
             comment,
+            tags: tags || [],
             explanation,
             treatment,
             grading,
@@ -324,7 +335,9 @@ export function createHandler({ db, env, authenticate }) {
         if (!["active", "restricted", "banned"].includes(body.status)) {
           throw new ApiError(400, "حالة المستخدم غير صالحة.");
         }
-        const found = await db(`miyar_accounts?auth_id=eq.${target}`, {
+        if(body.identityType && !["google","guest"].includes(body.identityType))throw new ApiError(400,"نوع الحساب غير صالح.");
+        const targetPath=body.identityType==="guest" ? `miyar_guest_sessions?id=eq.${target}` : `miyar_accounts?auth_id=eq.${target}`;
+        const found = await db(targetPath, {
           method: "PATCH",
           body: { status: body.status },
         });

@@ -78,7 +78,8 @@ export async function signOutGoogle() {
 }
 export async function api(action, data = {}) {
   if (!configured) throw new Error("لم يتم ربط قاعدة البيانات بعد.");
-  const isPublic = action === "catalogue" || action === "reviews" || action === "doctor.summary";
+  const isGuest = action.startsWith("guest.");
+  const isPublic = isGuest || action === "catalogue" || action === "reviews" || action === "doctor.summary";
   const session = isPublic ? cachedSession : await getGoogleSession();
   if (!isPublic && !session) {
     throw new Error("سجّل الدخول باستخدام Google لإكمال العملية.");
@@ -87,11 +88,13 @@ export async function api(action, data = {}) {
     "Content-Type": "application/json",
     apikey: publishableKey,
   };
+  if(isGuest && readGuestToken()) headers["x-miyar-guest"]=readGuestToken();
   if (session?.access_token) {
     headers.Authorization = `Bearer ${session.access_token}`;
   }
   const response = await fetch(`${projectUrl}/functions/v1/miyar`, {
     method: "POST",
+    keepalive: action === "guest.presence",
     headers,
     body: JSON.stringify({ ...data, action }),
     signal: AbortSignal.timeout(20000),
@@ -105,7 +108,27 @@ export async function api(action, data = {}) {
     if (response.status === 404) {
       throw new Error("المنصة قيد التجهيز؛ خدمة التقييمات لم تُفعّل بعد.");
     }
-    throw new Error(result.error || "تعذّر إكمال الطلب.");
+    const error = new Error(result.error || "تعذّر إكمال الطلب.");
+    error.status=response.status;
+    throw error;
   }
   return result;
+}
+
+let guestTokenMemory='';
+let guestSessionPromise=null;
+function readGuestToken(){try{return localStorage.getItem('miyar-guest-token')||guestTokenMemory;}catch{return guestTokenMemory;}}
+function writeGuestToken(token){guestTokenMemory=token;try{localStorage.setItem('miyar-guest-token',token);}catch{}}
+export async function ensureGuestSession(){
+ if(guestSessionPromise)return guestSessionPromise;
+ const open=async()=>{
+  const token=readGuestToken();
+  if(token){try{return await api('guest.me');}catch(error){if(error.status!==401)throw error;writeGuestToken('');}}
+  const profile=await api('guest.start');
+  if(!/^[a-f0-9]{64}$/.test(profile.token||''))throw new Error('تعذّر إنشاء جلسة الزائر. أعد المحاولة.');
+  writeGuestToken(profile.token);
+  return {id:profile.id,university_id:profile.university_id,status:profile.status};
+ };
+ guestSessionPromise=(async()=>{if(navigator.locks?.request)return navigator.locks.request('miyar-guest-session',open);return open();})().finally(()=>{guestSessionPromise=null;});
+ return guestSessionPromise;
 }

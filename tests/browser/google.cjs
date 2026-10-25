@@ -140,6 +140,8 @@ const server = http.createServer((req, res) => {
     const own={id:501,doctor_id:17,doctor_name:"أحمد محمد العتيبي",subject:"ميكانيكا",comment:"التقييم القديم المنشور",explanation:80,treatment:80,grading:80,status:"published",edit_status:null};
     let pendingEdits=[], pendingReports=[], notifyPublished=false;
     const requestHistory=[],requestEvents=[];
+    const guest={id:"44444444-4444-4444-8444-444444444444",university_id:null,status:"active"};
+    const guestToken="ab".repeat(32);
     let googleEnabled = false,
       fail = false,
       failBulk = true,
@@ -188,9 +190,15 @@ const server = http.createServer((req, res) => {
           calls.push({
             ...body,
             authorization: request.headers().authorization,
+            guest_token: request.headers()["x-miyar-guest"],
           });
           let result = { ok: true };
           if (body.action === "catalogue") result = catalogue;
+          if (body.action === "guest.start") result={...guest,token:guestToken};
+          if (body.action === "guest.me") result={...guest};
+          if (body.action === "guest.university") {guest.university_id=body.universityId;result={...guest};}
+          if (body.action === "guest.presence") result={online:7};
+          if (body.action === "guest.submit") result={id:99,status:"pending"};
           if (body.action === "me") result = me;
           if (body.action === "reviews") result = body.doctor===17 ? publicReviews.filter((row)=>!body.subject||row.subject===body.subject) : [];
           if (body.action === "mine") result=[own];
@@ -370,11 +378,38 @@ const server = http.createServer((req, res) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
 
     await page.locator("#new-review").click();
+    await page.locator('#university-choice select').selectOption('3');
+    await page.locator('#university-choice button').click();
+    await page.locator('#accept-review-pledge').waitFor();
+    assert.match(await page.locator('.pledge-card').innerText(),/مخافة الله/);
+    assert.equal(await page.locator('#review-form').count(),0);
+    assert.equal(await page.locator('#google-signin').count(),0);
+    await page.locator('#accept-review-pledge').click();
+    await page.locator('#review-form').waitFor();
+    assert.equal(await page.locator('#review-form [name=comment]').getAttribute('required'),null);
+    await page.locator('[data-rating-tag="محاضرة ممتعة"]').click();
+    await page.locator('[data-rating-tag="محاضرة مملة"]').click();
+    assert.equal(await page.locator('[data-rating-tag="محاضرة ممتعة"]').getAttribute('aria-pressed'),'false');
+    await page.locator('[data-rating-tag="محاضرة مملة"]').click();
+    await page.locator('[data-rating-tag="يوصل المعلومة"]').click();
+    await page.locator('#review-form [name=doctor]').fill('أحمد محمد العتيبي');
+    await page.locator('#review-form [name=subject]').fill('مادة زائر');
+    await page.locator('#review-form [name=grade]').fill('90');
+    await page.locator('#review-form [type=range]').first().evaluate((input)=>{input.value='75';input.dispatchEvent(new Event('input'));});
+    await page.locator('.submit-review').click();
+    await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    const guestReview=calls.find((call)=>call.action==='guest.submit');
+    assert.equal(guestReview.comment,'');assert.deepEqual(guestReview.tags,['يوصل المعلومة']);assert.equal(guestReview.pledged,true);
+    assert.equal(guestReview.authorization,undefined);assert.equal(guestReview.guest_token,guestToken);
+    await page.waitForFunction(()=>document.querySelector('[data-online-count]').textContent.includes((7).toLocaleString('ar')));
+    assert.match(await page.locator('.semester').innerText(),/الأول ١٤٤٨/);
+    assert.equal(calls.filter((call)=>call.action==='exchange').length,0);
+    await page.locator('#google-account').click();
     await page.locator("#google-signin").waitFor();
     await page.locator("#google-signin").click();
     await page.getByText("تسجيل الدخول باستخدام Google لم يُفعّل بعد. جرّب لاحقًا.")
       .waitFor();
-    assert.equal(page.url(), url + "#review");
+    assert.equal(page.url(), url);
     googleEnabled = true;
     await page.locator("#google-signin").click();
     await page.waitForURL("**/auth/v1/authorize?**");
@@ -414,6 +449,7 @@ const server = http.createServer((req, res) => {
     );
 
     await page.locator("#new-review").click();
+    await page.locator("#accept-review-pledge").click();
 
     assert.equal(new URL(page.url()).hash, "#review");
     assert.equal(await page.locator(".main-wrap").evaluate((el) => el.inert), true);
@@ -556,6 +592,7 @@ const server = http.createServer((req, res) => {
     await page.locator('#open-settings').click();
     await page.locator('#my-reviews-settings').click();
     await page.locator('[data-edit-review="501"]').click();
+    await page.locator("#accept-review-pledge").click();
     await page.locator('#edit-review-form [name=comment]').fill('التقييم الجديد المقترح');
     await page.locator('#edit-review-form [type=submit]').click();
     await page.getByText('وصل طلب التعديل. يبقى تقييمك القديم كما هو إلى أن توافق الإدارة على البديل.').waitFor();
@@ -573,6 +610,7 @@ const server = http.createServer((req, res) => {
     await page.getByText('لا توجد بلاغات معلّقة.').waitFor();
     await page.locator('#open-settings').click();await page.locator('#my-reviews-settings').click();
     await page.locator('[data-edit-review="501"]').click();
+    await page.locator("#accept-review-pledge").click();
     await page.locator('#edit-review-form [name=comment]').fill('التقييم البديل المعتمد');
     await page.locator('#edit-review-form [type=submit]').click();
     await page.getByText('وصل طلب التعديل. يبقى تقييمك القديم كما هو إلى أن توافق الإدارة على البديل.').waitFor();
@@ -754,7 +792,7 @@ const server = http.createServer((req, res) => {
     await page.locator('.connection-banner.live').waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: Grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
+      "PASS: Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
     );
   } finally {
     await browser.close();

@@ -43,6 +43,7 @@ const env = {
   ALLOWED_ORIGINS: "https://barqstudy.github.io",
 };
 const review = {
+  pledged: true,
   college: "كلية الهندسة",
   major: "الهندسة المدنية",
   name: "أحمد محمد العتيبي",

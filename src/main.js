@@ -1,3 +1,4 @@
+import { REVIEW_TAGS } from "../supabase/functions/miyar/tags.js";
 import { createDoctorCard } from "./doctor-card.js";
 import { setupPwa, installPlatform } from "./pwa.js";
 import "./style.css";
@@ -5,12 +6,15 @@ import { readJSON, storage } from "./storage.js";
 import {
   api,
   configured,
+  ensureGuestSession,
   getGoogleSession,
   initializeAuth,
   signInGoogle,
   signOutGoogle,
 } from "./cloud.js";
 let googleSession = null;
+let guestProfile = null, presenceCount = null, presenceBusy = false;
+const presenceTabId = crypto.randomUUID();
 let compareIds = [];
 let savedUpdates = [];
 let requestUpdates = [];
@@ -231,7 +235,7 @@ function render() {
         : ""
     }<button class="icon-btn settings-trigger" id="open-settings" aria-label="الإعدادات" title="الإعدادات">${
       ic("settings")
-    }</button><span class="semester"><i></i> الفصل الدراسي الثاني ١٤٤٧</span><button class="icon-btn" id="notice" aria-label="الإشعارات">${
+    }</button><span class="semester"><i></i> الفصل الدراسي الأول ١٤٤٨ هـ</span><button class="icon-btn" id="notice" aria-label="الإشعارات">${
       ic("bell")
     }${notificationBadge()}</button><button class="icon-btn mobile-theme" aria-label="تبديل المظهر">${
       ic("moon")
@@ -321,19 +325,20 @@ function home() {
 function needsUniversity() {
   return Boolean(googleSession && cloudMe && cloudCatalogue?.universities?.length && !cloudMe.university_id);
 }
+function currentUniversityId() { return googleSession ? cloudMe?.university_id : guestProfile?.university_id; }
 function selectedUniversity() {
-  return cloudCatalogue?.universities?.find((university) => university.id === cloudMe?.university_id);
+  return cloudCatalogue?.universities?.find((university) => university.id === currentUniversityId());
 }
 function studentMajors() {
   const data = cloudCatalogue;
   if (!data) return [];
-  const collegeIds = new Set(data.colleges.filter((college) => !cloudMe?.university_id || college.university_id === cloudMe.university_id).map((college) => college.id));
+  const collegeIds = new Set(data.colleges.filter((college) => !currentUniversityId() || college.university_id === currentUniversityId()).map((college) => college.id));
   return data.majors.filter((major) => collegeIds.has(major.college_id));
 }
 function scopeCatalogue() {
   if (!cloudCatalogue) return;
   const data = cloudCatalogue;
-  const visibleColleges = data.colleges.filter((college) => !cloudMe?.university_id || college.university_id === cloudMe.university_id);
+  const visibleColleges = data.colleges.filter((college) => !currentUniversityId() || college.university_id === currentUniversityId());
   const collegeIds = new Set(visibleColleges.map((college) => college.id));
   const majorIds = new Set(data.majors.filter((major) => collegeIds.has(major.college_id)).map((major) => major.id));
   colleges = [...new Set(visibleColleges.map((college) => college.name))];
@@ -343,9 +348,9 @@ function scopeCatalogue() {
   if (!colleges.includes(activeCollege)) activeCollege = colleges[0] || "";
   if (!majors.includes(activeMajor)) activeMajor = "الكل";
 }
-function openUniversityChoice(required = false) {
+function openUniversityChoice(required = false, onSelected) {
   const universities = cloudCatalogue?.universities || [];
-  modal("اختر جامعتك", `<form id="university-choice"><p>اختر جامعتك لنعرض لك كلياتها ودكاترتها فقط. يمكنك تغييرها لاحقًا من الإعدادات.</p><label>الجامعة<select name="university" required><option value="">اختر الجامعة</option>${universities.map((university) => `<option value="${university.id}" ${university.id === cloudMe?.university_id ? "selected" : ""}>${escapeHtml(university.name)}${university.city ? ` · ${escapeHtml(university.city)}` : ""}</option>`).join("")}</select></label><p class="form-error" role="alert"></p><button class="primary" type="submit">حفظ الجامعة والمتابعة</button></form>`);
+  modal("اختر جامعتك", `<form id="university-choice"><p>اختر جامعتك لنعرض لك كلياتها ودكاترتها فقط. يمكنك تغييرها لاحقًا من الإعدادات.</p><label>الجامعة<select name="university" required><option value="">اختر الجامعة</option>${universities.map((university) => `<option value="${university.id}" ${university.id === currentUniversityId() ? "selected" : ""}>${escapeHtml(university.name)}${university.city ? ` · ${escapeHtml(university.city)}` : ""}</option>`).join("")}</select></label><p class="form-error" role="alert"></p><button class="primary" type="submit">حفظ الجامعة والمتابعة</button></form>`);
   if (required) {
     document.querySelector(".modal").classList.add("mandatory-university");
     document.querySelector(".close-modal").remove();
@@ -358,8 +363,13 @@ function openUniversityChoice(required = false) {
     button.disabled = true;
     try {
       const universityId = Number(new FormData(event.target).get("university"));
-      await api("university", { universityId });
-      cloudMe = { ...cloudMe, university_id: universityId, major_id: null };
+      if(googleSession){
+        await api("university", { universityId });
+        cloudMe = { ...cloudMe, university_id: universityId, major_id: null };
+      } else {
+        guestProfile = await ensureGuestSession();
+        guestProfile = await api("guest.university", { universityId });
+      }
       if (studentProfile) studentProfile.major = "";
       query = ""; activeMajor = "الكل"; savedOnly = false; collegeSelected = false;
       scopeCatalogue();
@@ -368,6 +378,7 @@ function openUniversityChoice(required = false) {
       render();
       refreshSavedUpdates();
       toast("تم اختيار " + selectedUniversity().name);
+      if(onSelected) onSelected();
     } catch (error) {
       event.target.querySelector(".form-error").textContent = error.message;
       button.disabled = false;
@@ -703,10 +714,19 @@ function labelScore(v) {
 function reviewPage() {
   return `<section class="review-landing"><div class="page-title"><div class="eyebrow">مساحة لتجربتك</div><h1>أضف تقييمًا</h1><p>تجربة واحدة منك تساعد زملاءك في الاختيار.</p></div><div class="panel review-intro">${ic("star")}<h2>شارك تجربتك بمعيارك</h2><p>قيّم الشرح والتعامل والمساعدة بالدرجات بكل خصوصية.</p><button class="primary" id="new-review">ابدأ التقييم</button></div></section>`;
 }
-function reviewForm(id) {
+async function reviewForm(id, pledged = false) {
   setPage("review");
   render();
-  if (configured && !requireCloudAccount(() => reviewForm(id))) return;
+  if(configured){
+    if(googleSession){if(!requireCloudAccount(()=>reviewForm(id)))return;}
+    else {
+      try{if(!pledged || !guestProfile) guestProfile=await ensureGuestSession();scopeCatalogue();}
+      catch(error){modal("تعذّر بدء التقييم",`<p role="alert">${escapeHtml(error.message)}</p><button class="primary" id="retry-guest-review">إعادة المحاولة</button>`);document.querySelector('#retry-guest-review').onclick=()=>reviewForm(id);return;}
+      if(!guestProfile.university_id){openUniversityChoice(true,()=>reviewForm(id));return;}
+      if(guestProfile.status!=='active'){toast('جلسة الزائر مقيّدة عن إضافة التقييمات.');return;}
+    }
+  }
+  if(!pledged){reviewPledge(()=>reviewForm(id,true));return;}
   window.scrollTo({ top: 0, behavior: "smooth" });
   const selectedDoctor = doctors.find((d) => d.id === id);
   const reviewCollege = selectedDoctor?.college || activeCollege || colleges[0];
@@ -742,14 +762,15 @@ function reviewForm(id) {
           scoreColor(80)
         }"><span class="range-labels"><small>٠ · سيئ</small><small>١٠٠ · ممتاز</small></span></label>`
       ).join("")
-    }</div><label>تعليقك عن الدكتور<textarea name="comment" rows="3" maxlength="600" required placeholder="كيف كانت تجربتك؟ شارك رأيك بموضوعية واحترام…"></textarea></label><small class="muted">نرحّب بالنقد البنّاء. تُرفض العبارات المسيئة، ولا تُنشر معلومات شخصية.</small><div class="form-error" role="alert"></div><button class="primary submit-review">${
+    }</div>${ratingTagPicker()}<label>تعليقك عن الدكتور (اختياري)<textarea name="comment" rows="3" maxlength="600" placeholder="كيف كانت تجربتك؟ شارك رأيك بموضوعية واحترام…"></textarea></label><small class="muted">نرحّب بالنقد البنّاء. تُرفض العبارات المسيئة، ولا تُنشر معلومات شخصية.</small><div class="form-error" role="alert"></div><button class="primary submit-review">${
       ic("plus")
     } إرسال التقييم</button><p class="local-note">${
       configured
-        ? "يُرسل تقييمك للمراجعة قبل النشر. خمسة تقييمات يوميًا كحد أقصى، وتقييم واحد لكل دكتور ومادة."
+        ? (googleSession ? "يُرسل تقييمك للمراجعة قبل النشر. خمسة تقييمات يوميًا كحد أقصى، وتقييم واحد لكل دكتور ومادة." : "يمكنك التقييم كزائر دون Google. يرتبط التقييم بجلسة هذا المتصفح ويُرسل للمراجعة قبل النشر. خمسة تقييمات يوميًا كحد أقصى.")
         : "نسخة تجريبية: يُحفظ تقييمك على هذا الجهاز فقط. الدكتور الجديد يُرسل للمراجعة المحلية."
     }</p></form>`,
   );
+  bindRatingTags(document.querySelector("#review-form"));
   document.querySelector("#review-form [name=college]").addEventListener(
     "change",
     (e) => {
@@ -793,12 +814,14 @@ function reviewForm(id) {
       comment,
       scores,
       date: new Date().toISOString(),
+      tags: chosenRatingTags(e.target),
+      pledged: true,
     };
     if (configured) {
       const button = e.target.querySelector(".submit-review");
       button.disabled = true;
       try {
-        await api("submit", { ...data, grade: Number(f.get("grade")) });
+        await api(googleSession ? "submit" : "guest.submit", { ...data, grade: Number(f.get("grade")) });
         document.body.classList.remove("modal-open");
         setPage("home");
         render();
@@ -1186,7 +1209,7 @@ function openSettings() {
     };
   modal(
     "إعداداتك في مِعيار",
-    `<form id="settings-form"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button>${configured && cloudMe && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
+    `<form id="settings-form"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button>${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
       ic("users")
     }</span><div><h3>مساحتك، على طريقتك</h3><p>خصّص بياناتك وتجربة القراءة بما يناسبك.</p></div></div><label>اسم الطالب<input name="name" required maxlength="60" autocomplete="name" placeholder="كيف تحب أن نناديك؟" value="${
       escapeHtml(profile.name)
@@ -1220,7 +1243,7 @@ function openSettings() {
         ? `<p class="cloud-identity">${
           cloudMe
             ? "معرّف حسابك: " + cloudMe.id
-            : "تعديل الملف يتطلب تسجيل الدخول باستخدام Google."
+            : "تسجيل الدخول اختياري لحفظ ملفك ومتابعة طلباتك."
         }</p>`
         : ""
     }<button class="primary settings-save">${
@@ -1415,7 +1438,7 @@ function connectionBanner() {
       }<button id="retry-cloud">إعادة المحاولة</button></div>`;
   }
   return notice +
-    `<div class="connection-banner live"><span></span>${escapeHtml(selectedUniversity()?.name || "تقييمات مشتركة بين الطلاب")} · تُراجع المشاركات قبل النشر</div>`;
+    `<div class="connection-banner live"><span></span>${escapeHtml(selectedUniversity()?.name || "مِعيار")} · <span data-online-count title="جلسات المنصة النشطة في جميع الجامعات خلال آخر ٩٠ ثانية">${onlineCountText()}</span></div>`;
 }
 async function refreshCloudCatalogue() {
   const data = await api("catalogue");
@@ -1439,6 +1462,8 @@ async function loadCloud() {
   try {
     await refreshCloudCatalogue();
     if (googleSession) await connectCloudAccount(false);
+    try{guestProfile=await ensureGuestSession();if(!googleSession)scopeCatalogue();}catch{presenceCount=null;}
+    refreshPresence();
   } catch (error) {
     cloudStatus = "error";
     cloudError = error.message;
@@ -1510,7 +1535,7 @@ function openGoogleMessage() {
     "الدخول إلى مِعيار",
     `<div class="login-explainer"><span class="settings-avatar">${
       ic("shield")
-    }</span><h3>تجربتك تبدأ بخطوة بسيطة</h3><p>سجّل الدخول بحساب Google لتشارك تقييمك وتحفظ ملفك. لا يظهر اسمك أو بريدك مع تقييماتك.</p><button class="google-signin-button" id="google-signin"><span class="google-g" aria-hidden="true">G</span>الدخول باستخدام Google</button><p class="google-login-error form-error" role="alert"></p><small class="muted">يمكنك تصفّح الدكاترة دون تسجيل الدخول.</small></div>`,
+    }</span><h3>تجربتك تبدأ بخطوة بسيطة</h3><p>يمكنك التقييم كزائر. سجّل الدخول بحساب Google لحفظ ملفك ومتابعة طلباتك. لا يظهر اسمك أو بريدك مع التقييمات.</p><button class="google-signin-button" id="google-signin"><span class="google-g" aria-hidden="true">G</span>الدخول باستخدام Google</button><p class="google-login-error form-error" role="alert"></p><small class="muted">يمكنك تصفّح الدكاترة دون تسجيل الدخول.</small></div>`,
   );
   document.querySelector("#google-signin").onclick = startGoogleLogin;
 }
@@ -1549,7 +1574,7 @@ async function cloudDoctorDetail(id, subject = "") {
   try {
     const [rows, summary] = await Promise.all([api("reviews", {doctor:id, ...(subject ? {subject} : {})}), api("doctor.summary", {doctor:id, ...(subject ? {subject} : {})}).catch(() => null)]);
     if (!loading.isConnected) return;
-    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}">${escapeHtml(doctor.initials)}</span><div><h2>د. ${escapeHtml(doctor.name)} ${doctor.verified?'<span class="verified" title="موثق من الإدارة">✓</span>':""}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p><small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
+    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}">${escapeHtml(doctor.initials)}</span><div><h2>د. ${escapeHtml(doctor.name)} ${doctor.verified?'<span class="verified" title="موثق من الإدارة">✓</span>':""}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
     document.querySelector("#review-subject-filter").onchange = (event) => cloudDoctorDetail(id,event.target.value);
     document.querySelectorAll("[data-report-review]").forEach((button) => button.onclick = () => reportReview(Number(button.dataset.reportReview)));
     document.querySelector("#detail-rate").onclick = () => reviewForm(id);
@@ -1601,7 +1626,7 @@ function cloudAdmin() {
         )
       }</small></span><button class="danger" data-cloud-operation="major.delete" data-id="${m.id}">حذف</button></div>`
     ).join("")
-  }</div></section><section class="panel"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>اسم الدكتور الثلاثي<input name="name" required minlength="8" maxlength="100"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${adminDirectoryControls()}<div class="admin-record-list admin-doctor-list" role="region" aria-label="قائمة الدكاترة" tabindex="0">${adminDoctorRows()}</div><h2>إدارة المستخدمين</h2><form id="cloud-user-status"><label>معرّف حساب الطالب<input name="userId" required placeholder="UUID الظاهر مع الطلب"><select name="status"><option value="banned">حظر</option><option value="restricted">تقييد الإرسال</option><option value="active">فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق</button></form></section><section class="panel moderation-panel"><h2>طلبات إضافة دكتور</h2>${
+  }</div></section><section class="panel"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>اسم الدكتور الثلاثي<input name="name" required minlength="8" maxlength="100"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${adminDirectoryControls()}<div class="admin-record-list admin-doctor-list" role="region" aria-label="قائمة الدكاترة" tabindex="0">${adminDoctorRows()}</div><h2>إدارة المستخدمين</h2><form id="cloud-user-status"><label>معرّف حساب الطالب<input name="userId" required placeholder="UUID الظاهر مع الطلب"><select name="identityType" aria-label="نوع الحساب"><option value="google">حساب Google</option><option value="guest">جلسة زائر</option></select><select name="status"><option value="banned">حظر</option><option value="restricted">تقييد الإرسال</option><option value="active">فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق</button></form></section><section class="panel moderation-panel"><h2>طلبات إضافة دكتور</h2>${
     !queue
       ? '<p class="muted">جارٍ التحميل…</p>'
       : queue.error
@@ -1612,7 +1637,7 @@ function cloudAdmin() {
           escapeHtml(
             records.majors.find((m) => m.id === d.major_id)?.name || "",
           )
-        } · الطالب ${
+        } · ${d.identity_type === "guest" ? "زائر" : "الطالب"} ${
           escapeHtml(d.submitted_by || "حساب سابق")
         }</small></span><div><button data-cloud-operation="doctor.approve" data-id="${d.id}">قبول</button><button class="danger" data-cloud-operation="doctor.reject" data-id="${d.id}">رفض</button></div></div>`
       ).join("")
@@ -1628,11 +1653,11 @@ function cloudAdmin() {
               )?.name ||
               "دكتور غير متاح",
           )
-        }</b><small>المادة: ${escapeHtml(r.subject)} · الطالب ${
+        }</b><small>المادة: ${escapeHtml(r.subject)} · ${r.identity_type === "guest" ? "زائر" : "الطالب"} ${
           escapeHtml(r.user_id || "حساب سابق")
         }</small><p>${
           escapeHtml(r.comment)
-        }</p><span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div><button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
+        }</p>${reviewTagLabels(r.tags)}<span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div><button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
       ).join("")
       : '<p class="muted">لا توجد تقييمات بانتظار المراجعة.</p>'
   }</section>${communityAdminPanel(queue)}</div>`;
@@ -1775,17 +1800,19 @@ async function myReviews(doctorId) {
   try {
     const rows=await api('mine');if(!loading.isConnected)return;
     const list=doctorId?rows.filter((row)=>row.doctor_id===doctorId):rows;
-    modal('تقييماتي وطلبات التعديل',`<p class="muted">التعديل يُرسل للإدارة، ويظل تقييمك المنشور كما هو حتى الموافقة.</p>${list.length?list.map((row)=>`<article class="my-review"><h3>د. ${escapeHtml(row.doctor_name)}</h3><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p><small>${reviewStatus[row.status]||''}${row.edit_status==='pending'?' · طلب تعديل قيد المراجعة':row.edit_status==='rejected'?' · رُفض طلب التعديل السابق':row.edit_status==='approved'?' · تمت الموافقة على التعديل':''}</small>${row.status==='published'?`<button class="secondary" data-edit-review="${row.id}" ${row.edit_status==='pending'?'disabled':''}>${row.edit_status==='pending'?'التعديل بانتظار الإدارة':'طلب تعديل التقييم'}</button>`:''}</article>`).join(''):'<p class="empty">لا توجد تقييمات لك في جامعتك الحالية.</p>'}`);
+    modal('تقييماتي وطلبات التعديل',`<p class="muted">التعديل يُرسل للإدارة، ويظل تقييمك المنشور كما هو حتى الموافقة.</p>${list.length?list.map((row)=>`<article class="my-review"><h3>د. ${escapeHtml(row.doctor_name)}</h3><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>${reviewStatus[row.status]||''}${row.edit_status==='pending'?' · طلب تعديل قيد المراجعة':row.edit_status==='rejected'?' · رُفض طلب التعديل السابق':row.edit_status==='approved'?' · تمت الموافقة على التعديل':''}</small>${row.status==='published'?`<button class="secondary" data-edit-review="${row.id}" ${row.edit_status==='pending'?'disabled':''}>${row.edit_status==='pending'?'التعديل بانتظار الإدارة':'طلب تعديل التقييم'}</button>`:''}</article>`).join(''):'<p class="empty">لا توجد تقييمات لك في جامعتك الحالية.</p>'}`);
     document.querySelectorAll('[data-edit-review]').forEach((button)=>button.onclick=()=>editReview(list.find((row)=>row.id===Number(button.dataset.editReview))));
   } catch(error) {if(loading.isConnected)modal('تعذّر تحميل تقييماتك',`<p role="alert">${escapeHtml(error.message)}</p>`);}
 }
-function editReview(row) {
+function editReview(row, pledged = false) {
   if(!row)return;
-  modal('طلب تعديل التقييم',`<p>سيبقى التقييم القديم ظاهرًا حتى توافق الإدارة على التعديل الجديد.</p><form id="edit-review-form"><label>المادة<input name="subject" required minlength="2" maxlength="120" value="${escapeHtml(row.subject)}"></label>${['الشرح','التعامل','المساعدة بالدرجات'].map((label,index)=>`<label class="slider-label"><span>${label}<output>${row[['explanation','treatment','grading'][index]]}</output></span><input aria-label="${label}" name="score${index}" type="range" min="0" max="100" value="${row[['explanation','treatment','grading'][index]]}" style="--range-color:${scoreColor(Number(row[['explanation','treatment','grading'][index]]))}"></label>`).join('')}<label>التعليق الجديد<textarea name="comment" required minlength="3" maxlength="600" rows="4">${escapeHtml(row.comment)}</textarea></label><p class="form-error" role="alert"></p><button class="primary" type="submit">إرسال التعديل للمراجعة</button></form>`);
+  if(!pledged){reviewPledge(()=>editReview(row,true));return;}
+  modal('طلب تعديل التقييم',`<p>سيبقى التقييم القديم ظاهرًا حتى توافق الإدارة على التعديل الجديد.</p><form id="edit-review-form"><label>المادة<input name="subject" required minlength="2" maxlength="120" value="${escapeHtml(row.subject)}"></label>${['الشرح','التعامل','المساعدة بالدرجات'].map((label,index)=>`<label class="slider-label"><span>${label}<output>${row[['explanation','treatment','grading'][index]]}</output></span><input aria-label="${label}" name="score${index}" type="range" min="0" max="100" value="${row[['explanation','treatment','grading'][index]]}" style="--range-color:${scoreColor(Number(row[['explanation','treatment','grading'][index]]))}"></label>`).join('')}${ratingTagPicker(row.tags)}<label>التعليق الجديد (اختياري)<textarea name="comment" maxlength="600" rows="4">${escapeHtml(row.comment)}</textarea></label><p class="form-error" role="alert"></p><button class="primary" type="submit">إرسال التعديل للمراجعة</button></form>`);
+  bindRatingTags(document.querySelector("#edit-review-form"));
   document.querySelectorAll('#edit-review-form input[type=range]').forEach((input)=>input.oninput=()=>{input.closest('label').querySelector('output').textContent=input.value;input.style.setProperty('--range-color',scoreColor(Number(input.value)));});
   document.querySelector('#edit-review-form').onsubmit=(event)=>{
     event.preventDefault();const form=event.target;const data=new FormData(form);
-    submitCommunityForm(form,'edit',{review:row.id,subject:data.get('subject'),comment:data.get('comment'),scores:[0,1,2].map((index)=>Number(data.get('score'+index)))},'وصل طلب التعديل. يبقى تقييمك القديم كما هو إلى أن توافق الإدارة على البديل.');
+    submitCommunityForm(form,'edit',{review:row.id,subject:data.get('subject'),comment:data.get('comment'),tags:chosenRatingTags(form),pledged:true,scores:[0,1,2].map((index)=>Number(data.get('score'+index)))},'وصل طلب التعديل. يبقى تقييمك القديم كما هو إلى أن توافق الإدارة على البديل.');
   };
 }
 function reportReview(id) {
@@ -1797,7 +1824,7 @@ function communityAdminPanel(queue) {
   const edits=queue?.edits||[],reports=queue?.reports||[];
   const scores=(row,prefix='')=>`${row[prefix+'explanation']} · ${row[prefix+'treatment']} · ${row[prefix+'grading']}`;
   const reasons={abuse:'إساءة',personal:'معلومات شخصية',irrelevant:'محتوى غير مرتبط'};
-  return `<section class="panel community-admin-panel"><h2>طلبات تعديل التقييمات</h2><p class="muted">موافقتك تستبدل المحتوى المنشور بالجديد. الرفض يُبقي القديم.</p>${edits.length?edits.map((edit)=>`<article class="moderation-review"><h3>د. ${escapeHtml(edit.doctor_name)}</h3><div class="edit-diff"><div><b>التقييم الحالي · ${escapeHtml(edit.old_subject)}</b><p>${escapeHtml(edit.old_comment)}</p><small>الشرح · التعامل · الدرجات: ${scores(edit,'old_')}</small></div><div><b>التعديل المقترح · ${escapeHtml(edit.subject)}</b><p>${escapeHtml(edit.comment)}</p><small>الشرح · التعامل · الدرجات: ${scores(edit)}</small></div></div><div class="review-tools"><button class="primary" data-cloud-operation="edit.approve" data-id="${edit.id}">موافقة واستبدال القديم</button><button class="secondary danger" data-cloud-operation="edit.reject" data-id="${edit.id}">رفض التعديل</button></div></article>`).join(''):'<p class="muted">لا توجد طلبات تعديل معلّقة.</p>'}<h2>بلاغات التقييمات</h2>${reports.length?reports.map((report)=>`<article class="moderation-review"><h3>د. ${escapeHtml(report.doctor_name)}</h3><b>${reasons[report.reason]||''} · ${escapeHtml(report.subject)}</b><p>${escapeHtml(report.comment)}</p>${report.details?`<p class="muted">تفاصيل البلاغ: ${escapeHtml(report.details)}</p>`:''}<div class="review-tools"><button class="secondary danger" data-cloud-operation="report.remove" data-id="${report.id}">إخفاء التقييم</button><button class="secondary" data-cloud-operation="report.dismiss" data-id="${report.id}">رفض البلاغ وإبقاء التقييم</button></div></article>`).join(''):'<p class="muted">لا توجد بلاغات معلّقة.</p>'}</section>`;
+  return `<section class="panel community-admin-panel"><h2>طلبات تعديل التقييمات</h2><p class="muted">موافقتك تستبدل المحتوى المنشور بالجديد. الرفض يُبقي القديم.</p>${edits.length?edits.map((edit)=>`<article class="moderation-review"><h3>د. ${escapeHtml(edit.doctor_name)}</h3><div class="edit-diff"><div><b>التقييم الحالي · ${escapeHtml(edit.old_subject)}</b><p>${escapeHtml(edit.old_comment)}</p>${reviewTagLabels(edit.old_tags)}<small>الشرح · التعامل · الدرجات: ${scores(edit,'old_')}</small></div><div><b>التعديل المقترح · ${escapeHtml(edit.subject)}</b><p>${escapeHtml(edit.comment)}</p>${reviewTagLabels(edit.tags)}<small>الشرح · التعامل · الدرجات: ${scores(edit)}</small></div></div><div class="review-tools"><button class="primary" data-cloud-operation="edit.approve" data-id="${edit.id}">موافقة واستبدال القديم</button><button class="secondary danger" data-cloud-operation="edit.reject" data-id="${edit.id}">رفض التعديل</button></div></article>`).join(''):'<p class="muted">لا توجد طلبات تعديل معلّقة.</p>'}<h2>بلاغات التقييمات</h2>${reports.length?reports.map((report)=>`<article class="moderation-review"><h3>د. ${escapeHtml(report.doctor_name)}</h3><b>${reasons[report.reason]||''} · ${escapeHtml(report.subject)}</b><p>${escapeHtml(report.comment)}</p>${report.details?`<p class="muted">تفاصيل البلاغ: ${escapeHtml(report.details)}</p>`:''}<div class="review-tools"><button class="secondary danger" data-cloud-operation="report.remove" data-id="${report.id}">إخفاء التقييم</button><button class="secondary" data-cloud-operation="report.dismiss" data-id="${report.id}">رفض البلاغ وإبقاء التقييم</button></div></article>`).join(''):'<p class="muted">لا توجد بلاغات معلّقة.</p>'}</section>`;
 }
 function bookmarkKey(){return 'miyar-bookmark-times-'+(googleSession?.user.id||'guest');}
 function bookmarkTimes(){const value=readJSON(bookmarkKey(),{});return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}
@@ -1852,7 +1879,7 @@ async function openNotifications(){
 function summaryPanel(summary){
  if(!summary||!Array.isArray(summary.themes))return '';
  const count=Number(summary.reviewCount||0),total=Number(summary.totalPublished||0);
- return `<section class="doctor-summary"><h3>ملخص تجربة الدكتور</h3><p class="muted">${total>count?`يستند إلى أحدث ${count} تقييمات من أصل ${total}`:`يستند إلى ${count} تقييمات منشورة`} · عبارات متكررة في التعليقات</p>${summary.insufficient?'<p>نحتاج ثلاث تجارب منشورة على الأقل لإظهار ملخص.</p>':summary.themes.length?`<div class="summary-themes">${summary.themes.map((theme)=>`<span>${escapeHtml(theme.label)}<small>وردت في ${Number(theme.count)} تقييمات</small></span>`).join('')}</div>`:'<p>لا توجد عبارات متكررة بما يكفي لإظهار نقاط واضحة حتى الآن.</p>'}</section>`;
+ return `<section class="doctor-summary"><h3>ملخص تجربة الدكتور</h3><p class="muted">${total>count?`يستند إلى أحدث ${count} تقييمات من أصل ${total}`:`يستند إلى ${count} تقييمات منشورة`} · أوصاف متكررة في التجارب</p>${summary.insufficient?'<p>نحتاج ثلاث تجارب منشورة على الأقل لإظهار ملخص.</p>':summary.themes.length?`<div class="summary-themes">${summary.themes.map((theme)=>`<span>${escapeHtml(theme.label)}<small>وردت في ${Number(theme.count)} تقييمات</small></span>`).join('')}</div>`:'<p>لا توجد عبارات متكررة بما يكفي لإظهار نقاط واضحة حتى الآن.</p>'}</section>`;
 }
 function decisionSeenKey(){return 'miyar-seen-decisions-'+(googleSession?.user.id||'guest');}
 function requestsPage(){
@@ -1966,6 +1993,39 @@ function bindAdminDirectory(){
  bindAdminChecks();
 }
 
+function reviewPledge(next){
+ modal('تنبيه!',`<div class="pledge-copy"><p>نرجو مخافة الله في التقييم.</p><p>تتم مراجعة التقييم قبل نشره.</p><p>التقييمات غير الملائمة تعرّض صاحبها للحظر أو التقييد.</p><p class="muted">أتعهد بأن تقييمي يعبّر عن تجربتي بصدق واحترام، دون إساءة أو معلومات شخصية.</p><button class="primary" type="button" id="accept-review-pledge">موافق وأتعهّد</button></div>`);
+ document.querySelector('.modal').classList.add('pledge-card');
+ document.querySelector('#accept-review-pledge').onclick=next;
+}
+function ratingTagPicker(selected=[]){
+ return `<fieldset class="rating-tag-picker"><legend>أوصاف تجربتك (اختياري)</legend><p class="muted">اختر حتى ستة أوصاف تعبّر عن تجربتك.</p><div class="rating-tag-options">${REVIEW_TAGS.map((tag)=>`<button type="button" class="rating-tag-choice" data-rating-tag="${escapeHtml(tag.label)}" data-tone="${tag.tone}" aria-pressed="${Array.isArray(selected)&&selected.includes(tag.label)}"><i aria-hidden="true"></i><span>${tag.label}</span></button>`).join('')}</div><small class="tag-count" aria-live="polite"></small></fieldset>`;
+}
+function chosenRatingTags(form){return [...form.querySelectorAll('[data-rating-tag][aria-pressed=true]')].map((button)=>button.dataset.ratingTag);}
+function bindRatingTags(form){
+ const update=()=>{const count=chosenRatingTags(form).length;form.querySelector('.tag-count').textContent=`${count} / ٦ أوصاف`;};
+ form.querySelectorAll('[data-rating-tag]').forEach((button)=>button.onclick=()=>{
+  const selected=button.getAttribute('aria-pressed')==='true';
+  if(!selected&&chosenRatingTags(form).length>=6){toast('اختر ستة أوصاف كحد أقصى.');return;}
+  if(!selected&&['محاضرة ممتعة','محاضرة مملة'].includes(button.dataset.ratingTag))form.querySelectorAll('[data-rating-tag]').forEach((other)=>{if(other!==button&&['محاضرة ممتعة','محاضرة مملة'].includes(other.dataset.ratingTag))other.setAttribute('aria-pressed','false');});
+  button.setAttribute('aria-pressed',String(!selected));update();
+ });update();
+}
+function reviewTagLabels(tags){
+ return Array.isArray(tags)&&tags.length?`<div class="published-tags">${REVIEW_TAGS.filter((tag)=>tags.includes(tag.label)).map((tag)=>`<span data-tone="${tag.tone}"><i aria-hidden="true"></i>${tag.label}</span>`).join('')}</div>`:'';
+}
+function onlineCountText(){return presenceCount===null?(presenceBusy?'جارٍ حساب المتصلين…':'عدد المتصلين غير متاح حاليًا'):`عدد المتصلين حاليًا ${presenceCount.toLocaleString('ar')}`;}
+async function refreshPresence(visible=!document.hidden){
+ if(!configured||presenceBusy||(!visible&&!guestProfile))return;
+ presenceBusy=true;
+ try{
+  if(!guestProfile)guestProfile=await ensureGuestSession();
+  const result=await api('guest.presence',{tabId:presenceTabId,visible});
+  presenceCount=Number.isSafeInteger(result.online)&&result.online>=0?result.online:null;
+ }catch{presenceCount=null;}
+ finally{presenceBusy=false;document.querySelectorAll('[data-online-count]').forEach((element)=>element.textContent=onlineCountText());}
+}
+
 window.addEventListener("miyar-auth", async ({ detail }) => {
   const previous = googleSession;
   googleSession = detail.session;
@@ -1997,8 +2057,10 @@ window.addEventListener("popstate", () => {
   page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home";
   render();
 });
-window.addEventListener("focus", () => { if (!document.hidden) refreshSavedUpdates(); });
-document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshSavedUpdates(); });
+window.addEventListener("focus", () => { if (!document.hidden) {refreshSavedUpdates();refreshPresence();} });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshSavedUpdates();refreshPresence(); });
+window.addEventListener("pagehide",()=>refreshPresence(false));
+setInterval(()=>{if(!document.hidden)refreshPresence();},30000);
 setInterval(() => { if (!document.hidden) refreshSavedUpdates(); }, 60000);
 window.addEventListener("resize", updateCarouselControls);
 document.addEventListener("keydown", (e) => {

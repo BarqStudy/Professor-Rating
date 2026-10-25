@@ -14,6 +14,7 @@ test('summary counts independent published comments conservatively, ignores nega
  assert.ok(!summary.themes.some((theme)=>theme.label.includes('اختبارات')));
  assert.equal(buildReviewSummary(sample.slice(0,2)).insufficient,true);
  assert.deepEqual(buildReviewSummary(sample.slice(0,2)).themes,[]);
+ assert.equal(buildReviewSummary(Array.from({length:3},()=>({comment:"",tags:["يوصل المعلومة"]}))).themes[0].count,3);
 });
 test('request decisions preserve reasons and ownership, bulk actions are atomic, and summary inputs include only published reviews',async()=>{
  const db=new PGlite();try{

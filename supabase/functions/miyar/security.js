@@ -1,3 +1,4 @@
+import { REVIEW_TAGS } from "./tags.js";
 export class ApiError extends Error {
   constructor(status, message) {
     super(message);
@@ -35,7 +36,7 @@ export function validateReview(data) {
     major: text(data.major, 2, 100, "التخصص"),
     name: text(data.name, 8, 100, "اسم الدكتور"),
     subject: text(data.subject, 2, 120, "المادة"),
-    comment: text(data.comment, 3, 600, "التعليق"),
+    comment: text(data.comment == null ? "" : data.comment, 0, 600, "التعليق"),
     grade: integer(data.grade, 0, 100, "الدرجة"),
   };
   if (result.name.split(/\s+/).length < 3) {
@@ -45,6 +46,10 @@ export function validateReview(data) {
     throw new ApiError(400, "أكمل مؤشرات التقييم الثلاثة.");
   }
   result.scores = data.scores.map((v) => integer(v, 0, 100, "التقييم"));
+  const tags=data.tags??[];
+  if(!Array.isArray(tags)||tags.length>6||tags.some((tag)=>!REVIEW_TAGS.some((item)=>item.label===tag)))throw new ApiError(400,"اختر حتى ستة أوصاف من الخيارات المتاحة.");
+  result.tags=[...new Set(tags)];
+  if(result.tags.includes('محاضرة ممتعة')&&result.tags.includes('محاضرة مملة'))throw new ApiError(400,'اختر وصفًا واحدًا لطبيعة المحاضرة.');
   const normalized = result.comment.normalize("NFKD").replace(
     /[\u064b-\u065f\u0670\u0640]/g,
     "",
