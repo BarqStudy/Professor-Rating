@@ -1,9 +1,59 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { createHandler } from '../supabase/functions/miyar/handler.js';
+import { ApiError } from '../supabase/functions/miyar/security.js';
 const account = '11111111-1111-4111-8111-111111111111';
+test('only administrators can delete universities, with valid IDs, missing-row detection and linked-data errors',async()=>{
+ const admin='22222222-2222-4222-8222-222222222222';let actor=account;
+ const remaining=new Set([3,8]),calls=[];
+ const handle=createHandler({env:{ADMIN_AUTH_IDS:admin},authenticate:async()=>({id:actor}),db:async(path,options={})=>{
+  calls.push({path,...options});
+  if(path.startsWith('miyar_accounts'))return[{auth_id:actor,status:'active',university_id:3}];
+  if(options.method==='DELETE'){
+   const id=Number(path.match(/id=eq\.(\d+)/)?.[1]);
+   if(id===3)throw new ApiError(409,'Foreign key reference');
+   return remaining.delete(id)?[{id}]:[];
+  }
+  return[];
+ }});
+ const request=(id)=>new Request('https://test',{method:'POST',body:JSON.stringify({action:'admin',operation:'university.delete',id,isAdmin:true})});
+ assert.equal((await handle(request(8))).status,403);assert.equal(calls.filter((call)=>call.method==='DELETE').length,0);
+ actor=admin;
+ for(const id of [0,-1,'8',null])assert.equal((await handle(request(id))).status,400);
+ assert.equal((await handle(request(999))).status,404);
+ assert.equal((await handle(request(8))).status,200);assert.ok(!remaining.has(8));
+ assert.equal((await handle(request(8))).status,404);
+ const blocked=await handle(request(3));assert.equal(blocked.status,409);assert.match((await blocked.json()).error,/لا يمكن حذف الجامعة/);assert.ok(remaining.has(3));
+});
+test('university deletion never cascades through colleges, account selections, visitor sessions, ambassadors or proposal history',async()=>{
+ const db=new PGlite();try{
+  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);');
+  const dir=new URL('../supabase/migrations/',import.meta.url);
+  for(const file of (await readdir(dir)).filter((name)=>name.endsWith('.sql')).sort())await db.exec(await readFile(new URL(file,dir),'utf8'));
+  const university=async(name)=>(await db.query('insert into miyar_universities(name) values($1) returning id',[name])).rows[0].id;
+  const remove=(id)=>db.query('delete from miyar_universities where id=$1 returning id',[id]);
+  const empty=await university('جامعة قابلة للحذف');assert.equal((await remove(empty)).rows.length,1);
+  const linked=await university('جامعة مرتبطة');
+  await db.query('insert into auth.users values($1,$2)',[account,'student@example.test']);
+  await db.query("insert into miyar_accounts(auth_id,name,university_id) values($1,'طالب',$2)",[account,linked]);
+  await assert.rejects(remove(linked),/foreign key constraint/);
+  await db.query('update miyar_accounts set university_id=3 where auth_id=$1',[account]);
+  const visitor=(await db.query("select miyar_open_guest($1,null) as data",['f'.repeat(64)])).rows[0].data;
+  await db.query('update miyar_guest_sessions set university_id=$1 where id=$2',[linked,visitor.id]);
+  await assert.rejects(remove(linked),/foreign key constraint/);
+  await db.query('update miyar_guest_sessions set university_id=null where id=$1',[visitor.id]);
+  await db.query('insert into miyar_ambassadors(account_id,university_id,granted_by) values($1,$2,$1)',[account,linked]);
+  await assert.rejects(remove(linked),/foreign key constraint/);
+  await db.query('delete from miyar_ambassadors where account_id=$1',[account]);
+  await db.query("insert into miyar_catalogue_requests(account_id,university_id,kind,name,ambassador,status) values($1,$2,'college.add','كلية مقترحة',true,'rejected')",[account,linked]);
+  await assert.rejects(remove(linked),/foreign key constraint/);
+  await assert.rejects(remove(3),/foreign key constraint/);
+  assert.equal((await db.query('select count(*)::int as n from miyar_colleges')).rows[0].n,1);
+  for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(remove(linked),/permission denied/);await db.exec('reset role');}
+ }finally{await db.close();}
+});
 test('university migration preserves Najran records, scopes duplicate college names and enforces profile/review university', async () => {
   const db = new PGlite();
   try {

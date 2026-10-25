@@ -1640,7 +1640,7 @@ function cloudAdmin() {
   const queue = cloudQueue;
   const allDoctors = records.doctors || [];
   initAdminFilters();
-  return `<div class="page-title"><div class="eyebrow">إدارة مِعيار</div><h1>لوحة التحكم</h1><p>المشاركات لا تُنشر تلقائيًا. راجع التعليقات وطلبات الدكاترة من هنا.</p><button class="secondary" id="refresh-cloud-admin">تحديث الطلبات</button></div><div class="admin-grid"><section class="panel academic-management"><h2>الجامعات والكليات والتخصصات</h2><p class="admin-context-hint">نحتفظ بآخر جامعة وكلية اخترتها لتكمل الإضافة دون إعادة الاختيار.</p><h3 class="admin-step-title"><span>١</span> الجامعات</h3><form id="cloud-add-university"><label>إضافة جامعة<input name="name" required minlength="2" maxlength="100" placeholder="اسم الجامعة"></label><button class="primary">إضافة جامعة</button></form><h3 class="admin-step-title"><span>٢</span> الكليات</h3><form id="cloud-add-college"><label>إضافة كلية<select name="universityId" required><option value="">اختر الجامعة</option>${(records.universities || []).map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")}</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم الكلية"></label><button class="primary">إضافة الكلية</button></form><div class="admin-record-list" aria-label="الكليات المضافة">${
+  return `<div class="page-title"><div class="eyebrow">إدارة مِعيار</div><h1>لوحة التحكم</h1><p>المشاركات لا تُنشر تلقائيًا. راجع التعليقات وطلبات الدكاترة من هنا.</p><button class="secondary" id="refresh-cloud-admin">تحديث الطلبات</button></div><div class="admin-grid"><section class="panel academic-management"><h2>الجامعات والكليات والتخصصات</h2><p class="admin-context-hint">نحتفظ بآخر جامعة وكلية اخترتها لتكمل الإضافة دون إعادة الاختيار.</p><h3 class="admin-step-title"><span>١</span> الجامعات</h3><form id="cloud-add-university"><label>إضافة جامعة<input name="name" required minlength="2" maxlength="100" placeholder="اسم الجامعة"></label><button class="primary">إضافة جامعة</button></form><div class="admin-record-list" role="region" tabindex="0" aria-label="الجامعات المضافة">${(records.universities || []).map((university) => `<div class="admin-row"><span>${escapeHtml(university.name)}<small>${records.colleges.filter((college) => college.university_id === university.id).length.toLocaleString('ar')} كلية مضافة</small></span><button type="button" class="danger" data-cloud-operation="university.delete" data-id="${university.id}" aria-label="حذف ${escapeHtml(university.name)}">حذف الجامعة</button></div>`).join('') || '<p class="muted">لا توجد جامعات مضافة.</p>'}</div><h3 class="admin-step-title"><span>٢</span> الكليات</h3><form id="cloud-add-college"><label>إضافة كلية<select name="universityId" required><option value="">اختر الجامعة</option>${(records.universities || []).map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")}</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم الكلية"></label><button class="primary">إضافة الكلية</button></form><div class="admin-record-list" aria-label="الكليات المضافة">${
     records.colleges.map((c) =>
       `<div class="admin-row"><span>${
         escapeHtml(c.name)
@@ -1707,6 +1707,8 @@ async function cloudAdminAction(operation, data) {
     toast("تم حفظ التغيير في المنصة.");
     return true;
   } catch (error) {
+    const deleteError = document.querySelector('#delete-operation-error');
+    if (deleteError) deleteError.textContent = error.message;
     toast(error.message);
     return false;
   }
@@ -1783,15 +1785,17 @@ function bindCloudOperations(root = document) {
       if (["doctor.reject", "edit.reject", "catalogue.reject"].includes(operation)) {
         rejectionForm(operation, data.id);
       } else if (operation.endsWith(".delete")) {
+        const university = operation === 'university.delete' ? cloudCatalogue?.universities?.find((item) => item.id === data.id) : null;
         modal(
-          "تأكيد الإزالة",
-          `<p class="muted">هل تريد إزالة هذا السجل من المنصة؟ الكليات والتخصصات المرتبطة بسجلات أخرى لا تُحذف.</p><button class="primary" id="confirm-cloud-delete">تأكيد الإزالة</button>`,
+          university ? "تأكيد حذف الجامعة" : "تأكيد الإزالة",
+          `${university ? `<p>هل تريد حذف <strong>${escapeHtml(university.name)}</strong> من مِعيار؟</p><p class="muted">يُسمح بحذف الجامعة التي لا ترتبط بكليات أو حسابات أو طلبات. الحذف نهائي.</p>` : '<p class="muted">هل تريد إزالة هذا السجل من المنصة؟ الكليات والتخصصات المرتبطة بسجلات أخرى لا تُحذف.</p>'}<p class="form-error" id="delete-operation-error" role="alert"></p><button class="primary" id="confirm-cloud-delete">${university ? 'تأكيد الحذف' : 'تأكيد الإزالة'}</button>`,
         );
         document.querySelector("#confirm-cloud-delete").onclick = async () => {
-          document.querySelector("#confirm-cloud-delete").disabled = true;
-          document.body.classList.remove("modal-open");
-          await cloudAdminAction(operation, data);
-          document.querySelector("#modal-root").innerHTML = "";
+          const button = document.querySelector("#confirm-cloud-delete");
+          button.disabled = true;
+          document.querySelector('#delete-operation-error').textContent = '';
+          const deleted = await cloudAdminAction(operation, data);
+          if (!deleted && button.isConnected) button.disabled = false;
         };
       } else {
         b.disabled = true;
