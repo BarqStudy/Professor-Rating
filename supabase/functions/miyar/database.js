@@ -36,6 +36,7 @@ export function createDatabase(url, key, fetcher = fetch) {
       const reasons = {
         RATE_LIMIT: [429, "الحد الأقصى خمسة تقييمات في اليوم."],
         ACCOUNT_RESTRICTED: [403, "الحساب محظور أو مقيّد."],
+        INVALID_UNIVERSITY_MAJOR: [400, "التخصص لا يتبع جامعتك المختارة."],
         INVALID_MAJOR: [400, "التخصص لا يتبع الكلية المحددة."],
         DOCTOR_UNAVAILABLE: [409, "هذا الدكتور غير متاح للتقييم."],
         REQUEST_NOT_FOUND: [404, "الطلب غير موجود أو تمت مراجعته."],

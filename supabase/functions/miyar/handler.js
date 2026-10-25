@@ -98,7 +98,7 @@ export function createHandler({ db, env, authenticate }) {
       if (!authenticate) throw new ApiError(401, "سجّل الدخول باستخدام Google.");
       const identity = await authenticate(request);
       let rows = await db(
-        `miyar_accounts?auth_id=eq.${identity.id}&select=auth_id,name,major_id,level,status`,
+        `miyar_accounts?auth_id=eq.${identity.id}&select=auth_id,name,major_id,level,status,university_id`,
       );
       if (!rows.length) {
         rows = await db("miyar_accounts?on_conflict=auth_id", {
@@ -111,7 +111,7 @@ export function createHandler({ db, env, authenticate }) {
         });
         if (!rows?.length) {
           rows = await db(
-            `miyar_accounts?auth_id=eq.${identity.id}&select=auth_id,name,major_id,level,status`,
+            `miyar_accounts?auth_id=eq.${identity.id}&select=auth_id,name,major_id,level,status,university_id`,
           );
         }
       }
@@ -125,22 +125,31 @@ export function createHandler({ db, env, authenticate }) {
           id: identity.id,
           name: user.name,
           major_id: user.major_id,
+          university_id: user.university_id,
           level: user.level,
           status: user.status,
           isAdmin,
         });
       }
+      if (action === "university") {
+        const university = integer(body.universityId, 1, Number.MAX_SAFE_INTEGER, "الجامعة");
+        if (!(await db(`miyar_universities?id=eq.${university}&select=id`)).length) {
+          throw new ApiError(400, "الجامعة غير موجودة.");
+        }
+        await db(`miyar_accounts?auth_id=eq.${identity.id}`, {
+          method: "PATCH", body: { university_id: university, major_id: null },
+        });
+        return respond({ ok: true, university_id: university });
+      }
       if (action === "profile") {
         const name = text(body.name, 1, 60, "الاسم");
         const level = integer(body.level, 1, 12, "المستوى");
-        const major = integer(
-          body.majorId,
-          1,
-          Number.MAX_SAFE_INTEGER,
-          "التخصص",
-        );
-        const found = await db(`miyar_majors?id=eq.${major}&select=id`);
-        if (!found.length) throw new ApiError(400, "التخصص غير موجود.");
+        const major = body.majorId == null ? null : integer(body.majorId, 1, Number.MAX_SAFE_INTEGER, "التخصص");
+        if (!user.university_id) throw new ApiError(400, "اختر جامعتك أولًا.");
+        if (major !== null) {
+          const found = await db(`miyar_majors?id=eq.${major}&select=id,miyar_colleges!inner(university_id)&miyar_colleges.university_id=eq.${user.university_id}`);
+          if (!found.length) throw new ApiError(400, "التخصص لا يتبع جامعتك المختارة.");
+        }
         await db(`miyar_accounts?auth_id=eq.${identity.id}`, {
           method: "PATCH",
           body: { name, major_id: major, level },
@@ -151,6 +160,7 @@ export function createHandler({ db, env, authenticate }) {
         if (user.status !== "active") {
           throw new ApiError(403, "حسابك مقيّد عن إضافة التقييمات.");
         }
+        if (!user.university_id) throw new ApiError(400, "اختر جامعتك أولًا.");
         const r = validateReview(body);
         const result = await db("rpc/miyar_submit_google_review", {
           method: "POST",
@@ -217,10 +227,12 @@ export function createHandler({ db, env, authenticate }) {
           })),
         });
       }
-      if (operation === "college.add") {
+      if (operation === "university.add") {
+        await db("miyar_universities", { method: "POST", body: { name: text(body.name, 2, 100, "الجامعة") } });
+      } else if (operation === "college.add") {
         await db("miyar_colleges", {
           method: "POST",
-          body: { name: text(body.name, 2, 100, "الكلية") },
+          body: { name: text(body.name, 2, 100, "الكلية"), university_id: validId(body.universityId) },
         });
       } else if (operation === "college.delete") {
         await db(`miyar_colleges?id=eq.${validId(body.id)}`, {

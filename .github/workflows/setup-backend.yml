@@ -2,6 +2,11 @@ name: Set up Miyar backend
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/**"
+      - ".github/workflows/setup-backend.yml"
 
 permissions:
   contents: read
@@ -80,10 +85,14 @@ jobs:
           python3 - <<'PY'
           import json, os, urllib.request
           url = 'https://' + os.environ['SUPABASE_PROJECT_REF'] + '.supabase.co/functions/v1/miyar'
-          request = urllib.request.Request(url, data=b'{"action":"catalogue"}', headers={'Content-Type': 'application/json'})
+          request = urllib.request.Request(url, data=b'{"action":"catalogue"}', headers={'Content-Type': 'application/json', 'Origin': 'https://miyar.website'})
           with urllib.request.urlopen(request, timeout=30) as response:
               data = json.load(response)
-          if not all(isinstance(data.get(key), list) for key in ['colleges', 'majors', 'doctors']):
+          if not all(isinstance(data.get(key), list) for key in ['universities', 'colleges', 'majors', 'doctors']):
               raise SystemExit('Unexpected catalogue response.')
+          if not any(u.get('name') == 'جامعة نجران' for u in data['universities']):
+              raise SystemExit('University catalogue migration is missing.')
+          if any(not c.get('university_id') for c in data['colleges']):
+              raise SystemExit('A college is missing its university.')
           print('Backend is reachable. Public catalogue contains', len(data['colleges']), 'colleges.')
           PY

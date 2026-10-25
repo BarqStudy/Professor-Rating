@@ -70,6 +70,7 @@ function userDb(status = "active", calls = []) {
         auth_id: member,
         name: "طالب",
         status,
+        university_id: 3,
         major_id: null,
         level: null,
       }];

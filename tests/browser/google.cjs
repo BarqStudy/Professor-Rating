@@ -38,6 +38,7 @@ const session = {
   user: authUser,
 };
 const catalogue = {
+  universities: [{id:1,name:"جامعة الملك سعود",city:"الرياض"},{id:2,name:"جامعة الملك خالد",city:"أبها"},{id:3,name:"جامعة نجران",city:"نجران"}],
   colleges: [{ id: 1, name: "كلية الهندسة" }],
   majors: [{ id: 1, college_id: 1, name: "الهندسة المدنية" }],
   doctors: [{
@@ -87,6 +88,7 @@ for (
 for (const [id, score, count] of [[18, 92, 3], [19, 95, 2], [20, 95, 5]]) {
   Object.assign(catalogue.doctors.find((doctor) => doctor.id === id), { score, count });
 }
+for (const college of catalogue.colleges) college.university_id = 3;
 catalogue.doctors[0].subjects = ["ميكانيكا"];
 const mime = {
   ".html": "text/html",
@@ -139,6 +141,7 @@ const server = http.createServer((req, res) => {
         id: member,
         name: "سارة",
         major_id: 1,
+        university_id: null,
         level: 2,
         status: "active",
         isAdmin: true,
@@ -184,6 +187,10 @@ const server = http.createServer((req, res) => {
           if (body.action === "catalogue") result = catalogue;
           if (body.action === "me") result = me;
           if (body.action === "reviews") result = [];
+          if (body.action === "university") {
+            me = { ...me, university_id: body.universityId, major_id: null };
+            result = { ok: true, university_id: body.universityId };
+          }
           if (body.action === "profile") {
             me = {
               ...me,
@@ -336,6 +343,16 @@ const server = http.createServer((req, res) => {
         c.code_verifier
       ),
     );
+    await page.locator("#university-choice").waitFor();
+    assert.equal(await page.locator(".mandatory-university .close-modal").count(), 0);
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator("#university-choice").isVisible(), true);
+    await page.reload();
+    await page.locator("#university-choice").waitFor();
+    await page.locator('#university-choice select').selectOption("3");
+    await page.locator('#university-choice button').click();
+    await page.locator(".modal-backdrop").waitFor({state:"detached"});
+    assert.match(await page.locator(".connection-banner.live").innerText(), /جامعة نجران/);
     assert.equal(await page.locator("[data-page=admin]").count(), 1);
     assert.equal(await page.locator("#google-account").count(), 0);
     assert.equal(await page.locator("#open-settings").count(), 1);
@@ -421,6 +438,26 @@ const server = http.createServer((req, res) => {
     await page.locator('[data-appearance="light"]').click();
     await page.locator(".close-modal").click();
     await page.locator(".modal-backdrop").waitFor({ state: "detached" });
+    await page.locator("#open-settings").click();
+    await page.locator("#change-university").click();
+    await page.locator('#university-choice select').selectOption("1");
+    await page.locator('#university-choice button').click();
+    await page.locator(".modal-backdrop").waitFor({state:"detached"});
+    assert.equal(await page.locator(".doctor-card").count(),0);
+    assert.match(await page.locator("#doctor-grid").innerText(), /لم تُضف كليات جامعتك/);
+    await page.locator("#search").fill("أحمد محمد العتيبي");
+    assert.equal(await page.locator(".doctor-card").count(),0);
+    await page.locator("#clear-search").click();
+    await page.reload();
+    await page.locator(".connection-banner.live").waitFor();
+    assert.match(await page.locator(".connection-banner.live").innerText(),/جامعة الملك سعود/);
+    assert.equal(await page.locator("#university-choice").count(),0);
+    await page.locator("#open-settings").click();
+    assert.equal(await page.locator('#settings-form [name=major] option').count(),1);
+    await page.locator("#change-university").click();
+    await page.locator('#university-choice select').selectOption("3");
+    await page.locator('#university-choice button').click();
+    await page.locator(".modal-backdrop").waitFor({state:"detached"});
     await page.locator("[data-page=admin]").click();
     await page.getByText("لا توجد طلبات معلّقة.").waitFor();
     const batch = page.locator("#bulk-doctors");

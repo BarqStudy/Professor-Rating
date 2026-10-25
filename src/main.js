@@ -247,6 +247,7 @@ function render() {
         : developer()
     }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span>بُني بشغف لرحلتك الجامعية</span></footer></div><div id="modal-root"></div><div id="toast" role="status"></div>`;
   bind();
+  if (needsUniversity()) openUniversityChoice(true);
 }
 function home() {
   return `${connectionBanner()}<section class="welcome"><div><div class="eyebrow"><span></span> معك في كل خطوة جامعية</div><h1>أهلًا ${
@@ -290,7 +291,7 @@ function home() {
   }</b><span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${
     ic("star")
   }</span><div><b>+${
-    (configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length)
+    (configured ? (cloudMe?.university_id ? doctors.reduce((sum, doctor) => sum + doctor.count, 0) : (cloudCatalogue?.stats?.reviews || 0)) : 1240 + reviews.length)
       .toLocaleString("ar")
   }</b><span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${
     ic("users")
@@ -305,6 +306,60 @@ function home() {
   }</div><div><h3>مساحة آمنة. آراء صادقة. أثر حقيقي.</h3><p>نحترم خصوصيتك، ونؤمن أن النقد البنّاء هو بداية التطوير.</p></div><button id="privacy">تعرّف على معاييرنا ${
     ic("arrow")
   }</button></section>`;
+}
+function needsUniversity() {
+  return Boolean(googleSession && cloudMe && cloudCatalogue?.universities?.length && !cloudMe.university_id);
+}
+function selectedUniversity() {
+  return cloudCatalogue?.universities?.find((university) => university.id === cloudMe?.university_id);
+}
+function studentMajors() {
+  const data = cloudCatalogue;
+  if (!data) return [];
+  const collegeIds = new Set(data.colleges.filter((college) => !cloudMe?.university_id || college.university_id === cloudMe.university_id).map((college) => college.id));
+  return data.majors.filter((major) => collegeIds.has(major.college_id));
+}
+function scopeCatalogue() {
+  if (!cloudCatalogue) return;
+  const data = cloudCatalogue;
+  const visibleColleges = data.colleges.filter((college) => !cloudMe?.university_id || college.university_id === cloudMe.university_id);
+  const collegeIds = new Set(visibleColleges.map((college) => college.id));
+  const majorIds = new Set(data.majors.filter((major) => collegeIds.has(major.college_id)).map((major) => major.id));
+  colleges = [...new Set(visibleColleges.map((college) => college.name))];
+  majors = [...new Set(data.majors.filter((major) => majorIds.has(major.id)).map((major) => major.name))];
+  doctors = data.doctors.filter((doctor) => majorIds.has(doctor.major_id)).map((doctor) => ({ ...doctor, color: ["olive", "sand", "blue", "rose"][doctor.id % 4], initials: doctor.name.split(/\s+/).slice(0,2).map((word) => word[0]).join(" ") }));
+  if (!colleges.includes(activeCollege)) activeCollege = colleges[0] || "";
+  if (!majors.includes(activeMajor)) activeMajor = "الكل";
+}
+function openUniversityChoice(required = false) {
+  const universities = cloudCatalogue?.universities || [];
+  modal("اختر جامعتك", `<form id="university-choice"><p>اختر جامعتك لنعرض لك كلياتها ودكاترتها فقط. يمكنك تغييرها لاحقًا من الإعدادات.</p><label>الجامعة<select name="university" required><option value="">اختر الجامعة</option>${universities.map((university) => `<option value="${university.id}" ${university.id === cloudMe?.university_id ? "selected" : ""}>${escapeHtml(university.name)}${university.city ? ` · ${escapeHtml(university.city)}` : ""}</option>`).join("")}</select></label><p class="form-error" role="alert"></p><button class="primary" type="submit">حفظ الجامعة والمتابعة</button></form>`);
+  if (required) {
+    document.querySelector(".modal").classList.add("mandatory-university");
+    document.querySelector(".close-modal").remove();
+    document.querySelector(".modal-backdrop").onclick = null;
+    document.querySelector("#university-choice select").focus();
+  }
+  document.querySelector("#university-choice").onsubmit = async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector("button");
+    button.disabled = true;
+    try {
+      const universityId = Number(new FormData(event.target).get("university"));
+      await api("university", { universityId });
+      cloudMe = { ...cloudMe, university_id: universityId, major_id: null };
+      if (studentProfile) studentProfile.major = "";
+      query = ""; activeMajor = "الكل"; savedOnly = false; collegeSelected = false;
+      scopeCatalogue();
+      setPage("home");
+      document.body.classList.remove("modal-open");
+      render();
+      toast("تم اختيار " + selectedUniversity().name);
+    } catch (error) {
+      event.target.querySelector(".form-error").textContent = error.message;
+      button.disabled = false;
+    }
+  };
 }
 function universityRequestSection() {
   return `<section class="university-request panel"><div><span class="eyebrow">مِعيار يكبر بكم</span><h2>إضافة جامعة أو كلية جديدة</h2><p>جامعتك أو كليتك غير موجودة؟ أرسل لنا طلب إضافتها إلى مِعيار.</p></div><a class="primary email-request" href="mailto:info@miyar.website?subject=${encodeURIComponent('طلب إضافة جامعة أو كلية إلى معيار')}"><span>راسلنا عبر البريد</span><bdi>info@miyar.website</bdi>${ic("arrow")}</a></section>`;
@@ -464,7 +519,7 @@ function cards() {
         ic("arrow")
       }</button></article>`
     ).join("")
-    : `<div class="empty">${page === 'saved' ? 'لم تحفظ أي دكتور بعد. اضغط علامة الحفظ على بطاقة الدكتور ليظهر هنا.' : page === 'home' && !query ? 'ستظهر هنا أعلى تقييمات الدكاترة بعد نشر أول تقييمات الطلاب.' : 'لم نجد نتائج مطابقة. جرّب اسمًا آخر أو أضف الدكتور من نموذج التقييم.'}</div>`;
+    : `<div class="empty">${page === 'saved' ? 'لم تحفظ أي دكتور بعد. اضغط علامة الحفظ على بطاقة الدكتور ليظهر هنا.' : selectedUniversity() && !colleges.length ? 'لم تُضف كليات جامعتك بعد. يمكنك إرسال طلب الإضافة عبر البريد أو تغيير الجامعة من الإعدادات.' : page === 'home' && !query ? 'ستظهر هنا أعلى تقييمات الدكاترة بعد نشر أول تقييمات الطلاب.' : 'لم نجد نتائج مطابقة. جرّب اسمًا آخر أو أضف الدكتور من نموذج التقييم.'}</div>`;
 }
 function ratings() {
   return `${connectionBanner()}${listSection()}`;
@@ -518,7 +573,7 @@ function admin() {
 }
 function bulkDoctorForm() {
   const options = configured
-    ? (cloudCatalogue?.majors || []).map((m) => `<option value="${m.id}">${escapeHtml(m.name)} · ${escapeHtml(cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.name || "")}</option>`).join("")
+    ? (cloudCatalogue?.majors || []).map((m) => `<option value="${m.id}">${escapeHtml(m.name)} · ${escapeHtml(cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.name || "")} · ${escapeHtml(cloudCatalogue.universities?.find((u) => u.id === cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.university_id)?.name || "")}</option>`).join("")
     : majors.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
   return `<form id="bulk-doctors" class="bulk-doctors"><h3>إضافة دكاترة دفعة واحدة</h3><p class="muted">اختر التخصص واكتب اسم كل دكتور الثلاثي في سطر مستقل. يُضافون بدون تقييمات.</p><label>الكلية والتخصص<select name="major" required>${options}</select></label><label>أسماء الدكاترة<textarea name="names" rows="6" maxlength="10100" required placeholder="أحمد محمد العتيبي&#10;خالد عبدالله الحربي"></textarea></label><small>حتى ١٠٠ اسم في الدفعة. تُستبعد الأسماء المكررة في التخصص.</small><p class="bulk-result" role="status" aria-live="polite"></p><button class="primary" type="submit">${ic("plus")} إضافة الدفعة</button></form>`;
 }
@@ -537,7 +592,7 @@ function bindBulkDoctors() {
     }
     const majorName = configured ? cloudCatalogue.majors.find((m) => m.id === Number(major))?.name : major;
     const majorCollege = configured ? cloudCatalogue.colleges.find((c) => c.id === cloudCatalogue.majors.find((m) => m.id === Number(major))?.college_id)?.name : majorColleges[major];
-    const existing = new Set(doctors.filter((d) => d.major === majorName && d.college === majorCollege).map((d) => d.name.trim().replace(/\s+/g, " ")));
+    const existing = new Set((configured ? cloudCatalogue.doctors.filter((d) => d.major_id === Number(major)) : doctors.filter((d) => d.major === majorName && d.college === majorCollege)).map((d) => d.name.trim().replace(/\s+/g, " ")));
     const pending = names.filter((n) => !existing.has(n));
     const controls = [...form.querySelectorAll("input,select,textarea,button")];
     controls.forEach((el) => el.disabled = true);
@@ -599,6 +654,7 @@ function modal(title, body) {
   document.querySelector(".modal input,.modal button")?.focus();
 }
 function closeModal() {
+  if (document.querySelector(".mandatory-university")) return;
   const b = document.querySelector(".modal-backdrop");
   b?.classList.add("closing");
   setTimeout(() => {
@@ -1094,13 +1150,13 @@ function openSettings() {
     };
   modal(
     "إعداداتك في مِعيار",
-    `<form id="settings-form"><div class="settings-intro"><span class="settings-avatar">${
+    `<form id="settings-form">${configured && cloudMe && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
       ic("users")
     }</span><div><h3>مساحتك، على طريقتك</h3><p>خصّص بياناتك وتجربة القراءة بما يناسبك.</p></div></div><label>اسم الطالب<input name="name" required maxlength="60" autocomplete="name" placeholder="كيف تحب أن نناديك؟" value="${
       escapeHtml(profile.name)
-    }"></label><div class="form-grid"><label>التخصص<select name="major" required>${
+    }"></label><div class="form-grid"><label>التخصص<select name="major" ${!configured || studentMajors().length ? "required" : ""}>${
       configured
-        ? (cloudCatalogue?.majors || []).map((m) =>
+        ? (studentMajors().length ? studentMajors().map((m) =>
           `<option value="${m.id}" ${
             cloudMe?.major_id === m.id ? "selected" : ""
           }>${escapeHtml(m.name)} · ${
@@ -1109,7 +1165,7 @@ function openSettings() {
                 ?.name || "",
             )
           }</option>`
-        ).join("")
+        ).join("") : '<option value="">لم تُضف تخصصات لهذه الجامعة بعد</option>')
         : [...new Set([profile.major, ...majors])].filter(Boolean).map((m) =>
           `<option ${profile.major === m ? "selected" : ""}>${
             escapeHtml(m)
@@ -1149,6 +1205,7 @@ function openSettings() {
         }</small></div>`
     }</form>`,
   );
+  document.querySelector("#change-university")?.addEventListener("click", () => openUniversityChoice(false));
   document.querySelectorAll("[data-color-option]").forEach((button) => {
     button.onclick = () => {
       applyPlatformColor(button.dataset.colorOption);
@@ -1199,7 +1256,7 @@ function openSettings() {
         }
         if (!cloudMe) await connectCloudAccount(false);
         if (!cloudMe) throw new Error("تعذّر التحقق من حسابك.");
-        const majorId = Number(f.get("major"));
+        const majorId = f.get("major") ? Number(f.get("major")) : null;
         await api("profile", { name, majorId, level: Number(f.get("level")) });
         cloudMe = {
           ...cloudMe,
@@ -1290,7 +1347,7 @@ function renderSignedOut() {
 function majorBelongs(name, college) {
   return configured
     ? Boolean(
-      cloudCatalogue?.majors.some((m) =>
+      studentMajors().some((m) =>
         m.name === name &&
         cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.name ===
           college
@@ -1319,7 +1376,7 @@ function connectionBanner() {
       }<button id="retry-cloud">إعادة المحاولة</button></div>`;
   }
   return notice +
-    '<div class="connection-banner live"><span></span>تقييمات مشتركة بين الطلاب · تُراجع المشاركات قبل النشر</div>';
+    `<div class="connection-banner live"><span></span>${escapeHtml(selectedUniversity()?.name || "تقييمات مشتركة بين الطلاب")} · تُراجع المشاركات قبل النشر</div>`;
 }
 async function refreshCloudCatalogue() {
   const data = await api("catalogue");
@@ -1328,14 +1385,7 @@ async function refreshCloudCatalogue() {
     !Array.isArray(data.doctors)
   ) throw new Error("تعذّر قراءة دليل المنصة.");
   cloudCatalogue = data;
-  colleges = data.colleges.map((c) => c.name);
-  majors = [...new Set(data.majors.map((m) => m.name))];
-  doctors = data.doctors.map((d) => ({
-    ...d,
-    color: ["olive", "sand", "blue", "rose"][d.id % 4],
-    initials: d.name.split(/\s+/).slice(0, 2).map((s) => s[0]).join(" "),
-  }));
-  if (!colleges.includes(activeCollege)) activeCollege = colleges[0] || "";
+  scopeCatalogue();
   cloudStatus = "ready";
   cloudError = "";
 }
@@ -1356,7 +1406,7 @@ async function loadCloud() {
   }
   if (!document.querySelector(".modal-backdrop")) render();
   const id = Number(new URLSearchParams(location.search).get("doctor"));
-  if (doctors.some((d) => d.id === id)) detail(id);
+  if (!needsUniversity() && doctors.some((d) => d.id === id)) detail(id);
 }
 async function connectCloudAccount(update = true) {
   let session;
@@ -1377,6 +1427,7 @@ async function connectCloudAccount(update = true) {
       // Ignore responses for a session that was signed out or replaced while loading.
       if (googleSession?.user.id !== session.user.id) return null;
       cloudMe = me;
+      scopeCatalogue();
       const major = cloudCatalogue?.majors.find((m) => m.id === me.major_id);
       studentProfile = {
         name: me.name,
@@ -1423,6 +1474,7 @@ function openGoogleMessage() {
   document.querySelector("#google-signin").onclick = startGoogleLogin;
 }
 function requireCloudAccount(next) {
+  if (needsUniversity()) { openUniversityChoice(true); return false; }
   if (!googleSession) {
     openGoogleMessage();
     return false;
@@ -1524,31 +1576,32 @@ function cloudAdmin() {
   const majorOptions = records.majors.map((m) =>
     `<option value="${m.id}">${escapeHtml(m.name)} · ${
       escapeHtml(
-        records.colleges.find((c) => c.id === m.college_id)?.name || "",
+        (records.colleges.find((c) => c.id === m.college_id)?.name || "") + " · " + (records.universities?.find((u) => u.id === records.colleges.find((c) => c.id === m.college_id)?.university_id)?.name || ""),
       )
     }</option>`
   ).join("");
   const queue = cloudQueue;
-  return `<div class="page-title"><div class="eyebrow">إدارة مِعيار</div><h1>لوحة التحكم</h1><p>المشاركات لا تُنشر تلقائيًا. راجع التعليقات وطلبات الدكاترة من هنا.</p><button class="secondary" id="refresh-cloud-admin">تحديث الطلبات</button></div><div class="admin-grid"><section class="panel"><h2>الكليات والتخصصات</h2><form id="cloud-add-college"><label>إضافة كلية<input name="name" required minlength="2" maxlength="100" placeholder="اسم الكلية"></label><button class="primary">إضافة</button></form>${
+  const allDoctors = records.doctors || [];
+  return `<div class="page-title"><div class="eyebrow">إدارة مِعيار</div><h1>لوحة التحكم</h1><p>المشاركات لا تُنشر تلقائيًا. راجع التعليقات وطلبات الدكاترة من هنا.</p><button class="secondary" id="refresh-cloud-admin">تحديث الطلبات</button></div><div class="admin-grid"><section class="panel"><h2>الجامعات والكليات والتخصصات</h2><form id="cloud-add-university"><label>إضافة جامعة<input name="name" required minlength="2" maxlength="100" placeholder="اسم الجامعة"></label><button class="primary">إضافة جامعة</button></form><form id="cloud-add-college"><label>إضافة كلية<select name="universityId" required><option value="">اختر الجامعة</option>${(records.universities || []).map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")}</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم الكلية"></label><button class="primary">إضافة</button></form>${
     records.colleges.map((c) =>
       `<div class="admin-row"><span>${
         escapeHtml(c.name)
-      }</span><button class="danger" data-cloud-operation="college.delete" data-id="${c.id}">حذف</button></div>`
+      }<small>${escapeHtml(records.universities?.find((u) => u.id === c.university_id)?.name || "")}</small></span><button class="danger" data-cloud-operation="college.delete" data-id="${c.id}">حذف</button></div>`
     ).join("")
   }<form id="cloud-add-major"><label>إضافة تخصص<select name="collegeId" required>${
     records.colleges.map((c) =>
-      `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+      `<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(records.universities?.find((u) => u.id === c.university_id)?.name || "")}</option>`
     ).join("")
   }</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم التخصص"></label><button class="primary">إضافة</button></form>${
     records.majors.map((m) =>
       `<div class="admin-row"><span>${escapeHtml(m.name)}<small>${
         escapeHtml(
-          records.colleges.find((c) => c.id === m.college_id)?.name || "",
+          (records.colleges.find((c) => c.id === m.college_id)?.name || "") + " · " + (records.universities?.find((u) => u.id === records.colleges.find((c) => c.id === m.college_id)?.university_id)?.name || ""),
         )
       }</small></span><button class="danger" data-cloud-operation="major.delete" data-id="${m.id}">حذف</button></div>`
     ).join("")
   }</section><section class="panel"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>اسم الدكتور الثلاثي<input name="name" required minlength="8" maxlength="100"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${
-    doctors.map((d) =>
+    allDoctors.map((d) =>
       `<div class="admin-row"><span>د. ${escapeHtml(d.name)}<small>${
         escapeHtml(d.major)
       }</small></span><div><button data-cloud-operation="doctor.verify" data-id="${d.id}" data-verified="${!d
@@ -1577,7 +1630,7 @@ function cloudAdmin() {
       ? queue.reviews.map((r) =>
         `<div class="moderation-review"><b>د. ${
           escapeHtml(
-            doctors.find((d) => d.id === r.doctor_id)?.name ||
+            allDoctors.find((d) => d.id === r.doctor_id)?.name ||
               queue.doctors.find((d) =>
                 d.id === r.doctor_id
               )?.name ||
@@ -1610,6 +1663,7 @@ function bindCloudAdmin() {
   );
   for (
     const [selector, operation] of [
+      ["#cloud-add-university", "university.add"],
       ["#cloud-add-college", "college.add"],
       ["#cloud-add-major", "major.add"],
       ["#cloud-add-doctor", "doctor.add"],
@@ -1619,7 +1673,7 @@ function bindCloudAdmin() {
     document.querySelector(selector)?.addEventListener("submit", async (e) => {
       e.preventDefault();
       const values = Object.fromEntries(new FormData(e.target));
-      for (const field of ["collegeId", "majorId"]) {
+      for (const field of ["collegeId", "majorId", "universityId"]) {
         if (field in values) values[field] = Number(values[field]);
       }
       const button = e.target.querySelector("button");
@@ -1659,6 +1713,7 @@ window.addEventListener("miyar-auth", async ({ detail }) => {
   googleSession = detail.session;
   if (!detail.session) {
     cloudMe = null;
+    scopeCatalogue();
     cloudQueue = null;
     studentProfile = null;
     storage.removeItem("miyar-profile");
@@ -1667,6 +1722,7 @@ window.addEventListener("miyar-auth", async ({ detail }) => {
     }
   } else if (!previous || previous.user.id !== detail.session.user.id) {
     cloudMe = null;
+    scopeCatalogue();
     cloudQueue = null;
     studentProfile = null;
     signedOut = false;
