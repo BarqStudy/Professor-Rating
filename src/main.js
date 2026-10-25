@@ -4,6 +4,7 @@ import { createDoctorCard } from "./doctor-card.js";
 import { setupPwa, installPlatform } from "./pwa.js";
 import "./style.css";
 import "./interactions.css";
+import "./theme.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {

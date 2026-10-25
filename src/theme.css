@@ -1,0 +1,221 @@
+/* One palette for text, controls and surfaces across all four accent choices. */
+:root {
+  color-scheme: light;
+  --bg: #f4f6fa;
+  --surface: #fff;
+  --surface-raised: #fff;
+  --field: #fff;
+  --ink: #182337;
+  --muted: #506079;
+  --placeholder: #5b6b80;
+  --line: #d4dce7;
+  --control-border: #8190a6;
+  --green: #214b90;
+  --accent-solid: #214b90;
+  --accent-soft: #e7effd;
+  --soft: #edf2fa;
+  --on-accent: #fff;
+  --gold: #8f671f;
+  --danger: #ae3037;
+  --danger-soft: #fcecef;
+  --success: #146344;
+  --success-soft: #e6f3eb;
+  --warning: #765211;
+  --warning-soft: #faf0d8;
+  --glass: rgb(255 255 255 / .88);
+  --glass-strong: rgb(255 255 255 / .97);
+  --glass-edge: #d4dce7;
+  --glass-shadow: 0 8px 28px rgb(26 43 67 / .06);
+  color: var(--ink);
+  background-color: var(--bg);
+}
+:root[data-color=green] {
+  --green: #16664b;
+  --accent-solid: #16664b;
+  --accent-soft: #e1f1e9;
+  --soft: #edf5f0;
+}
+:root[data-color=pink] {
+  --green: #963b69;
+  --accent-solid: #963b69;
+  --accent-soft: #f7e6ef;
+  --soft: #faf0f5;
+}
+:root[data-color=apple] {
+  --green: #50671d;
+  --accent-solid: #50671d;
+  --accent-soft: #eaf0da;
+  --soft: #f1f5e8;
+}
+
+/* Keep reading surfaces neutral; the chosen color belongs to accents. */
+:root[data-theme=dark] {
+  color-scheme: dark;
+  --bg: #0e131b;
+  --surface: #181f2a;
+  --surface-raised: #202937;
+  --field: #111823;
+  --ink: #f4f7fb;
+  --muted: #b7c2d2;
+  --placeholder: #a2afc1;
+  --line: #364358;
+  --control-border: #6b7d96;
+  --green: #a9c8ff;
+  --accent-solid: #83b4ff;
+  --accent-soft: #23344f;
+  --soft: #252f3e;
+  --on-accent: #101a26;
+  --gold: #e6bc72;
+  --danger: #ffaaa7;
+  --danger-soft: #3d262e;
+  --success: #8adeb8;
+  --success-soft: #20382f;
+  --warning: #f2ce7c;
+  --warning-soft: #3b3322;
+  --glass: var(--surface);
+  --glass-strong: var(--surface-raised);
+  --glass-edge: var(--line);
+  --glass-shadow: 0 8px 28px #0002;
+}
+:root[data-theme=dark][data-color=green] {
+  --green: #85e2bc;
+  --accent-solid: #69d4aa;
+  --accent-soft: #20382f;
+}
+:root[data-theme=dark][data-color=pink] {
+  --green: #f6b5d2;
+  --accent-solid: #eda4c7;
+  --accent-soft: #392b38;
+}
+:root[data-theme=dark][data-color=apple] {
+  --green: #c6df8c;
+  --accent-solid: #b4cf6f;
+  --accent-soft: #30382a;
+}
+
+body { color: var(--ink); }
+h1, h2, h3, .doctor-name > button, .stats b, .rating-score,
+.detail-person > strong { color: var(--ink); }
+h1 em { color: var(--green); }
+.muted, .section-heading .eyebrow, .major-label, .rating-row div > small,
+.rating-score > small, .stats div div > span, .demo-data { color: var(--muted); }
+.modal label, .panel label, .directory-filters label { color: var(--ink); }
+input, select, textarea {
+  background-color: var(--field);
+  color: var(--ink);
+  border-color: var(--control-border);
+  caret-color: var(--green);
+}
+input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 1; }
+:is(.admin-grid .panel form, .admin-filter-grid, .admin-bulk-tools) :is(input, select, textarea) {
+  border-color: var(--control-border);
+}
+.search-input input { background: transparent; }
+:is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+.search-input input:focus-visible { outline: none; }
+.search-block:focus-within { outline: 2px solid var(--green); outline-offset: 3px; }
+select option { color: var(--ink); background: var(--field); }
+
+.primary, .quick-actions .rate-existing,
+[data-theme=dark] .primary, [data-theme=dark] .quick-actions .rate-existing {
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  border-color: var(--accent-solid);
+}
+.quick-actions .rate-existing :is(h2, p, .tiny-label, .icon),
+.primary > .icon { color: var(--on-accent); }
+.action-card :is(p, .tiny-label), .action-arrow { opacity: 1; }
+.quick-actions .rate-existing .action-icon {
+  color: var(--on-accent);
+  background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--on-accent) 25%, transparent);
+}
+.quick-actions .add-new-doctor { background: var(--surface-raised); }
+.quick-actions .add-new-doctor :is(p, .tiny-label) { color: var(--muted); }
+.quick-actions .add-new-doctor h2 { color: var(--ink); }
+.secondary, .compare-toggle, .chip, .filter-button { color: var(--green); }
+.secondary { background: var(--soft); border-color: var(--line); }
+.nav-item.active, .chip.selected, .college-tab.selected,
+[data-theme=dark] .nav-item.active, [data-theme=dark] .chip.selected {
+  color: var(--green);
+  background: var(--accent-soft);
+}
+.college-tab.selected .college-tab-icon { background: var(--soft); color: var(--green); }
+.color-option[aria-pressed=true], .appearance-modes button[aria-pressed=true],
+[data-theme=dark] .color-option[aria-pressed=true],
+[data-theme=dark] .appearance-modes button[aria-pressed=true] {
+  background: var(--accent-soft);
+  color: var(--green);
+  border-color: var(--green);
+}
+.avatar:is(.olive, .sand, .blue, .rose), .stat-icon, .subject-tags > span,
+.banner-symbol,
+[data-theme=dark] .stat-icon, [data-theme=dark] .subject-tags > span {
+  background: var(--accent-soft);
+  color: var(--green);
+}
+.save-button { color: var(--muted); }
+.save-button.is-saved { color: var(--green); }
+.is-saved .icon { fill: var(--accent-soft); }
+.stars, .art-stars, .wave, .small-star, .note-two .icon { color: var(--gold); }
+.verified, .notification-badge { background: var(--accent-solid); color: var(--on-accent); }
+.excellent { background: var(--accent-soft); color: var(--green); }
+.excellent[data-tier="ممتاز"], .excellent[data-tier="جيد جدًا"], .excellent[data-tier="جيد"] {
+  background: var(--success-soft); color: var(--success);
+}
+.excellent[data-tier="مقبول"] { background: var(--warning-soft); color: var(--warning); }
+.excellent[data-tier="سيئ"] { background: var(--danger-soft); color: var(--danger); }
+.excellent[data-tier="بدون تقييم"] { background: var(--soft); color: var(--muted); }
+.danger, .form-error, .logout-button { color: var(--danger) !important; }
+.connection-banner.error { color: var(--danger); background: var(--danger-soft); border-color: var(--danger); }
+.request-status[data-status=rejected] { color: var(--danger); }
+.color-option[data-color-option=blue] .color-swatch { background: #214b90; }
+.color-option[data-color-option=green] .color-swatch { background: #16664b; }
+.color-option[data-color-option=pink] .color-swatch { background: #963b69; }
+.color-option[data-color-option=apple] .color-swatch { background: #50671d; }
+.college-tabs, .doctor-carousel, .admin-record-list { scrollbar-color: var(--control-border) transparent; }
+
+[data-theme=dark] body { background: var(--bg); background-image: none; }
+[data-theme=dark] :is(aside, .panel, .doctor-card, .action-card, .search-block,
+    .developer-card, .side-note, .review-intro, .stats, .bottom-banner,
+    .directory-filters, .art-card, .float-note, .bulk-doctors, .assistant-panel) {
+  background: var(--surface);
+  background-image: none;
+  border-color: var(--line);
+}
+[data-theme=dark] .modal { background: var(--surface-raised); border-color: var(--line); }
+[data-theme=dark] aside nav { background: var(--surface-raised); }
+[data-theme=dark] header { background: rgb(24 31 42 / .96); border-color: var(--line); }
+[data-theme=dark] .assistant-launcher { background: var(--surface-raised); color: var(--green); }
+[data-theme=dark] :is(.icon-btn, .filter-button, .google-account-button, .user-avatar,
+    .color-option, .appearance-modes button, .action-icon) {
+  background: var(--soft);
+  border-color: var(--line);
+}
+[data-theme=dark] .icon-btn .icon { color: var(--green); }
+[data-theme=dark] .settings-avatar { background: var(--accent-soft); color: var(--green); }
+[data-theme=dark] .quick-actions .add-new-doctor { background: var(--surface); }
+[data-theme=dark] .quick-actions .add-new-doctor .action-decoration { color: var(--line); }
+[data-theme=dark] .quick-actions .rate-existing .action-icon {
+  background: rgb(16 26 38 / .1);
+  border-color: rgb(16 26 38 / .2);
+}
+[data-theme=dark] .art-card-icon { background: var(--accent-soft); color: var(--green); }
+[data-theme=dark] .art-lines b, [data-theme=dark] .art-lines i { background: var(--line); }
+[data-theme=dark] .big-star {
+  background: var(--accent-soft);
+  border-color: var(--line);
+  box-shadow: 9px 8px 0 var(--surface-raised);
+}
+[data-theme=dark] .big-star .icon { fill: var(--green); stroke: var(--green); }
+[data-theme=dark] .orbit { border-color: var(--line); background: none; }
+[data-theme=dark] .google-signin-button { background: var(--soft); color: var(--ink); border-color: var(--control-border); }
+[data-theme=dark] input, [data-theme=dark] select, [data-theme=dark] textarea {
+  background-color: var(--field);
+  border-color: var(--control-border);
+}
+[data-theme=dark] .search-input input { background: transparent; }
+::selection { background: var(--accent-solid); color: var(--on-accent); }
