@@ -267,7 +267,7 @@ function home() {
     ic("search")
   }<input id="search" placeholder="ابحث باسم الدكتور أو المادة…" aria-label="ابحث باسم الدكتور أو المادة" value="${
     escapeHtml(query)
-  }"></div><button class="filter-button" id="filter">${
+  }"><button type="button" id="clear-search" class="clear-search" aria-label="مسح البحث" title="مسح البحث" ${query ? "" : "hidden"}>${ic("close")}</button></div><button class="filter-button" id="filter">${
     ic("filter")
   }<span>${
     escapeHtml(collegeSelected ? activeCollege : "كل الكليات")
@@ -897,10 +897,18 @@ function bind() {
   );
   document.querySelector("#search")?.addEventListener("input", (e) => {
     query = e.target.value.trim();
+    const clear = document.querySelector("#clear-search");
+    if (clear) clear.hidden = !e.target.value;
     syncHomeSearch();
     document.querySelector("#doctor-grid").innerHTML = cards();
     bindCards();
     bindCarousel();
+  });
+  document.querySelector("#clear-search")?.addEventListener("click", () => {
+    const input = document.querySelector("#search");
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus({ preventScroll: true });
   });
   document.querySelectorAll("[data-college]").forEach((b) =>
     b.onclick = () => selectCollege(b.dataset.college)

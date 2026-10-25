@@ -236,7 +236,11 @@ const server = http.createServer((req, res) => {
       }
       await page.locator("#search").fill("لا يوجد دكتور مطابق");
       assert.equal(await page.locator(".search-block + .search-results .empty").count(), 1);
-      await page.locator("#search").fill("");
+      assert.equal(await page.locator("#clear-search").isVisible(), true);
+      await page.locator("#clear-search").click();
+      assert.equal(await page.locator("#search").inputValue(), "");
+      assert.equal(await page.locator("#clear-search").isVisible(), false);
+      assert.equal(await page.locator("#search").evaluate((el) => el === document.activeElement), true);
       assert.equal(await page.locator("#home-doctors-slot > .top-doctors").count(), 1);
       assert.equal(await page.locator(".doctor-card").count(), 3);
     }
