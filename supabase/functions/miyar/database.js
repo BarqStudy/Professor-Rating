@@ -34,6 +34,8 @@ export function createDatabase(url, key, fetcher = fetch) {
         );
       }
       const reasons = {
+        REASON_REQUIRED: [400, "اكتب سبب رفض الطلب."],
+        INVALID_BULK: [400, "حدد الدكاترة والإجراء المطلوب."],
         REVIEW_UNAVAILABLE: [409, "التقييم غير متاح لهذه العملية."],
         PENDING_EDIT: [409, "يوجد طلب تعديل لهذا التقييم قيد المراجعة."],
         ALREADY_REPORTED: [409, "سبق أن أرسلت بلاغًا عن هذا التقييم."],

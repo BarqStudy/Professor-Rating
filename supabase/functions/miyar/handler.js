@@ -1,4 +1,4 @@
-import { studentCommunity, adminCommunity } from "./community.js";
+import { studentCommunity, adminCommunity, publicSummary } from "./community.js";
 import {
   adminIds,
   ApiError,
@@ -76,6 +76,7 @@ export function createHandler({ db, env, authenticate }) {
           await db("rpc/miyar_catalogue", { method: "POST", body: {} }),
         );
       }
+      if (action === "doctor.summary") return respond(await publicSummary(body, db));
       if (action === "reviews") {
         const id = integer(body.doctor, 1, Number.MAX_SAFE_INTEGER, "الدكتور");
         const doctors = await db(

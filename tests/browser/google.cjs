@@ -96,6 +96,8 @@ const mime = {
   ".css": "text/css",
   ".svg": "image/svg+xml",
   ".otf": "font/otf",
+  ".png": "image/png",
+  ".webmanifest": "application/manifest+json",
 };
 const server = http.createServer((req, res) => {
   const relative = decodeURIComponent(new URL(req.url, "http://test").pathname)
@@ -137,6 +139,7 @@ const server = http.createServer((req, res) => {
     const publicReviews=[{id:501,subject:"ميكانيكا",comment:"التقييم القديم المنشور",scores:[80,80,80],date:new Date().toISOString()},{id:502,subject:"رياضيات",comment:"تجربة مادة الرياضيات",scores:[90,90,90],date:new Date().toISOString()}];
     const own={id:501,doctor_id:17,doctor_name:"أحمد محمد العتيبي",subject:"ميكانيكا",comment:"التقييم القديم المنشور",explanation:80,treatment:80,grading:80,status:"published",edit_status:null};
     let pendingEdits=[], pendingReports=[], notifyPublished=false;
+    const requestHistory=[],requestEvents=[];
     let googleEnabled = false,
       fail = false,
       failBulk = true,
@@ -191,12 +194,23 @@ const server = http.createServer((req, res) => {
           if (body.action === "me") result = me;
           if (body.action === "reviews") result = body.doctor===17 ? publicReviews.filter((row)=>!body.subject||row.subject===body.subject) : [];
           if (body.action === "mine") result=[own];
+          if (body.action === "requests") result=requestHistory;
+          if (body.action === "request.updates") result=requestEvents;
+          if (body.action === "doctor.summary") result={reviewCount:3,totalPublished:3,themes:[{label:"إشادة بالشرح",count:2}],insufficient:false};
           if (body.action === "notifications") result=notifyPublished&&body.doctors.includes(18)?[{review_id:601,doctor_id:18,doctor_name:"خالد محمد الحربي",published_at:new Date(Date.now()+10000).toISOString()}]:[];
-          if (body.action === "doctor.request") result={id:55,status:"pending",existing:false};
+          if (body.action === "doctor.request") {requestHistory.push({id:55,kind:"doctor",title:body.name,status:"pending",reason:null,created_at:new Date().toISOString(),university:"جامعة نجران"});result={id:55,status:"pending",existing:false};}
           if (body.action === "report") { pendingReports.push({id:701,review_id:body.review,reason:body.reason,details:body.details,doctor_name:own.doctor_name,subject:"رياضيات",comment:"تجربة مادة الرياضيات"});result={id:701,status:"pending"}; }
           if (body.action === "edit") {
-            pendingEdits.push({id:801,review_id:body.review,doctor_name:own.doctor_name,old_subject:own.subject,old_comment:own.comment,old_explanation:own.explanation,old_treatment:own.treatment,old_grading:own.grading,subject:body.subject,comment:body.comment,explanation:body.scores[0],treatment:body.scores[1],grading:body.scores[2]});
-            own.edit_status="pending";result={id:801,status:"pending"};
+            pendingEdits.push({id:801+requestHistory.filter((item)=>item.kind==="edit").length,review_id:body.review,doctor_name:own.doctor_name,old_subject:own.subject,old_comment:own.comment,old_explanation:own.explanation,old_treatment:own.treatment,old_grading:own.grading,subject:body.subject,comment:body.comment,explanation:body.scores[0],treatment:body.scores[1],grading:body.scores[2]});
+            requestHistory.push({id:pendingEdits.at(-1).id,kind:"edit",title:own.doctor_name,status:"pending",reason:null,created_at:new Date().toISOString(),university:"جامعة نجران"});
+            own.edit_status="pending";result={id:pendingEdits.at(-1).id,status:"pending"};
+          }
+          if (["edit.approve","edit.reject","doctor.approve","doctor.reject"].includes(body.operation)) {
+            const request=requestHistory.find((item)=>item.id===body.id&&item.kind===(body.operation.startsWith("edit")?"edit":"doctor"));
+            if(request){request.status=body.operation.endsWith("approve")?"approved":"rejected";request.reason=body.reason||"";request.decided_at=new Date().toISOString();requestEvents.push({...request,id:900+requestEvents.length,request_id:request.id});}
+          }
+          if (body.operation === "doctor.bulk") {
+            for(const id of body.ids){const doctor=catalogue.doctors.find((item)=>item.id===id);if(body.operationType==='archive')catalogue.doctors.splice(catalogue.doctors.indexOf(doctor),1);else doctor.verified=body.operationType==='verify';}result={updated:body.ids.length};
           }
           if (body.operation === "edit.approve") { const edit=pendingEdits[0];Object.assign(own,{subject:edit.subject,comment:edit.comment,explanation:edit.explanation,treatment:edit.treatment,grading:edit.grading,edit_status:"approved"});Object.assign(publicReviews[0],{subject:edit.subject,comment:edit.comment,scores:[edit.explanation,edit.treatment,edit.grading]});pendingEdits=[]; }
           if (body.operation === "edit.reject") {pendingEdits=[];own.edit_status="rejected";}
@@ -227,7 +241,7 @@ const server = http.createServer((req, res) => {
             }
             catalogue.doctors.push({ ...catalogue.doctors[0], id: 100 + catalogue.doctors.length, name: body.name, major_id: body.majorId });
           }
-          if (body.operation === "queue") result = { doctors: [], reviews: [], edits:pendingEdits, reports:pendingReports };
+          if (body.operation === "queue") result = { doctors: requestHistory.filter((item)=>item.kind==="doctor"&&item.status==="pending").map((item)=>({id:item.id,name:item.title,major_id:1,submitted_by:member})), reviews: [], edits:pendingEdits, reports:pendingReports };
           return route.fulfill({ json: result });
         }
         return route.fulfill({
@@ -248,6 +262,9 @@ const server = http.createServer((req, res) => {
         "تجارب حقيقية من زملائك",
       ),
     );
+    assert.equal(await page.locator(".quick-actions>button").first().getAttribute("data-page"),"ratings");
+    assert.equal(await page.locator(".quick-actions>button").first().locator("h2").innerText(),"تقييم دكتور");
+    assert.equal(await page.locator(".quick-actions>button").nth(1).locator("h2").innerText(),"إضافة دكتور بتقييم");
     assert.equal(await page.locator(".action-decoration svg").count(),1);
     assert.ok(!(await page.locator(".action-decoration").innerText()).includes("✳"));
     assert.equal(await page.locator("[data-college]").count(), 0);
@@ -478,6 +495,10 @@ const server = http.createServer((req, res) => {
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     assert.equal(await page.locator(".doctor-card").count(),0);
     assert.match(await page.locator("#doctor-grid").innerText(), /لم تُضف كليات جامعتك/);
+    assert.equal(await page.locator('.stats>div').nth(0).locator('b').innerText(), '+'+catalogue.stats.doctors.toLocaleString('ar'));
+    assert.equal(await page.locator('.stats>div').nth(1).locator('b').innerText(), '+'+catalogue.stats.reviews.toLocaleString('ar'));
+    assert.equal(await page.locator('.stats>div').nth(2).locator('b').innerText(), catalogue.colleges.length.toLocaleString('ar'));
+    assert.match(await page.locator('.stats .demo-data').innerText(), /جميع الجامعات/);
     await page.locator("#search").fill("أحمد محمد العتيبي");
     assert.equal(await page.locator(".doctor-card").count(),0);
     await page.locator("#clear-search").click();
@@ -510,6 +531,19 @@ const server = http.createServer((req, res) => {
     await page.locator('#search').fill('أحمد محمد العتيبي');
     await page.locator('.card-detail[data-doctor="17"]').click();
     await page.locator('#review-subject-filter').waitFor();
+    assert.match(await page.locator('.doctor-summary').innerText(),/إشادة بالشرح/);
+    assert.match(await page.locator('.doctor-summary').innerText(),/3 تقييمات/);
+    await page.locator('#share-doctor-card').click();
+    await page.locator('.share-card-preview').waitFor();
+    await page.waitForFunction(()=>document.querySelector('.share-card-preview').complete);
+    assert.equal(await page.locator('.share-card-preview').evaluate((image)=>image.naturalWidth),1080);
+    assert.equal(await page.locator('.share-card-preview').evaluate((image)=>image.naturalHeight),1350);
+    const downloadPromise=page.waitForEvent('download');
+    await page.locator('#download-doctor-card').click();
+    const download=await downloadPromise;await download.saveAs('/tmp/miyar-doctor-share.png');
+    assert.equal(fs.readFileSync('/tmp/miyar-doctor-share.png').subarray(1,4).toString(),'PNG');
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('.card-detail[data-doctor="17"]').click();
     await page.locator('#review-subject-filter').selectOption('رياضيات');
     await page.locator('#review-subject-filter').waitFor();
     assert.equal(await page.locator('#published-reviews .review-comment').count(),1);
@@ -528,8 +562,11 @@ const server = http.createServer((req, res) => {
     assert.equal(publicReviews[0].comment,'التقييم القديم المنشور');
     await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
     await page.locator("[data-page=admin]").click();
+    await page.locator('[data-cloud-operation="doctor.approve"]').click();
     await page.getByText("لا توجد طلبات معلّقة.").waitFor();
     await page.locator('[data-cloud-operation="edit.reject"]').click();
+    await page.locator('#request-rejection-form [name=reason]').fill('يرجى توضيح التجربة بتفاصيل أكثر');
+    await page.locator('#request-rejection-form [type=submit]').click();
     await page.getByText('لا توجد طلبات تعديل معلّقة.').waitFor();
     assert.equal(publicReviews[0].comment,'التقييم القديم المنشور');
     await page.locator('[data-cloud-operation="report.dismiss"]').click();
@@ -544,6 +581,31 @@ const server = http.createServer((req, res) => {
     await page.locator('[data-cloud-operation="edit.approve"]').click();
     await page.getByText('لا توجد طلبات تعديل معلّقة.').waitFor();
     assert.equal(publicReviews[0].comment,'التقييم البديل المعتمد');
+    await page.locator('#notice').click();
+    await page.locator('[data-open-requests]').first().waitFor();
+    assert.match(await page.locator('.modal').innerText(),/يرجى توضيح التجربة بتفاصيل أكثر/);
+    await page.locator('[data-open-requests]').first().click();
+    await page.locator('.request-history-card').first().waitFor();
+    assert.equal(new URL(page.url()).hash,'#requests');
+    assert.equal(await page.locator('.request-history-card').count(),3);
+    assert.match(await page.locator('.request-history').innerText(),/يرجى توضيح التجربة بتفاصيل أكثر/);
+    await page.locator('[data-page=admin]').click();
+    await page.locator('#admin-doctor-search').fill('خالد محمد الحربي');
+    assert.equal(await page.locator('.admin-doctor-list .admin-row').count(),1);
+    await page.locator('[data-admin-check="18"]').check();
+    await page.locator('#admin-apply-bulk').click();
+    await page.locator('#confirm-doctor-bulk').click();
+    await page.waitForFunction(()=>document.querySelector('#admin-selected-count').textContent.includes('0'));
+    assert.equal(catalogue.doctors.find((doctor)=>doctor.id===18).verified,true);
+    assert.equal(await page.locator('#admin-doctor-search').inputValue(),'خالد محمد الحربي');
+    await page.locator('#admin-doctor-search').fill('');
+    await page.locator('[data-admin-filter="college"]').selectOption('2');
+    assert.equal(await page.locator('.admin-doctor-list .admin-row').count(),1);
+    assert.match(await page.locator('.admin-doctor-list').innerText(),/محمد علي السالم/);
+    await page.locator('[data-admin-filter="university"]').selectOption('1');
+    assert.equal(await page.locator('.admin-doctor-list .admin-row').count(),0);
+    await page.locator('[data-admin-filter="university"]').selectOption('');
+
     const majorForm = page.locator("#cloud-add-major");
     await majorForm.locator('[name=collegeId]').selectOption("2");
     for (const name of ["الفلك", "الأحياء"]) {
@@ -679,9 +741,20 @@ const server = http.createServer((req, res) => {
     await page.getByText("تعذّر إكمال تسجيل الدخول باستخدام Google. حاول مجددًا.")
       .waitFor();
     assert.equal(await page.locator('script[src*="telegram"]').count(), 0);
+    const manifest=await page.evaluate(async()=>await (await fetch(new URL(document.querySelector('link[rel=manifest]').href))).json());
+    assert.equal(manifest.display,'standalone');assert.equal(manifest.name,'معيار');
+    assert.ok(manifest.icons.some((icon)=>icon.sizes==='512x512'&&icon.purpose==='maskable'));
+    await page.evaluate(()=>navigator.serviceWorker.ready);
+    await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+    const cacheKeys=await page.evaluate(async()=>{const keys=await caches.keys();const urls=[];for(const key of keys){const cache=await caches.open(key);urls.push(...(await cache.keys()).map((request)=>request.url));}return urls;});
+    assert.ok(!cacheKeys.some((url)=>url.includes('supabase.co')||url.includes('code=')||url.includes('error=')));
+    await context.setOffline(true);await page.reload();
+    await page.getByRole('heading',{name:'أنت غير متصل بالإنترنت'}).waitFor();
+    await context.setOffline(false);await page.reload();
+    await page.locator('.connection-banner.live').waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: Comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
+      "PASS: Grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
     );
   } finally {
     await browser.close();
