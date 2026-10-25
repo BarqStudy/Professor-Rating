@@ -18,6 +18,10 @@
 
 من مشروع OAuth المستخدم في تسجيل الدخول افتح **Google Auth Platform → Branding** واضبط **App name** على `مِعيار` و**Application home page** على `https://miyar.website` وبريد الدعم المناسب، ثم احفظ. أكمل نشر التطبيق أو مراجعة العلامة التجارية إذا طلبتهما Google؛ تغيير الاسم لا يضمن وحده تبدّل كل شاشات اختيار الحساب والموافقة، لأنها تخضع لحالة التحقق وإعدادات Google.
 
+رابط **Application privacy policy link** هو `https://miyar.website/privacy.html`؛ صفحة عامة مستقلة مرتبطة من تذييل المنصة ونافذة Google، وتعمل دون حساب أو JavaScript. لا تستخدم الصفحة الرئيسية بدل سياسة الخصوصية. توضح الصفحة البيانات الفعلية وبيانات Google والتقييمات والمساعد ومزوّدي المعالجة والتحكم والاحتفاظ ووسيلة طلب البيانات؛ يلزم تحديثها عند تغيير طريقة المعالجة.
+
+إذا رفضت Google التحقق لأن الموقع غير مسجل باسمك، افتح [Google Search Console](https://search.google.com/search-console/welcome) بالحساب الذي يدير مشروع OAuth، واختر **Domain** وأدخل `miyar.website`. انسخ سجل TXT الذي تعطيك Google وأضفه في IONOS: **DNS → Add record → TXT**، و**Host name = @** والقيمة كما تظهر في Search Console. ثم اضغط **Verify** وتأكد من نجاح إثبات الملكية. إضافة اسم الدومين إلى Authorized domains وحدها لا تثبت ملكيته. إذا طلبت شاشة رفض العلامة انتظار ٢٤ ساعة بعد إثبات الملكية، التزم بهذه المهلة قبل اختيار «لقد قمت بإصلاح المشاكل» وإعادة المحاولة.
+
 النطاق `bbnsorjxgehvoddluvyo.supabase.co` هو نطاق Supabase Auth المستخدم في رابط العودة، ويختلف عن اسم التطبيق. لإبداله بنطاق من مِعيار، يحتاج المشروع إعداد **Supabase Custom Domain** مثل `auth.miyar.website` والتحقق من DNS وHTTPS؛ قد يتطلب ذلك خطة أو إضافة مدفوعة حسب خيارات Supabase المتاحة. بعد تفعيله فقط، أضف `https://auth.miyar.website/auth/v1/callback` إلى Google OAuth Redirect URIs، ثم حدّث إعداد عنوان Supabase في الواجهة واختبر الدخول والخروج والعودة. أبقِ رابط العودة القديم أثناء الانتقال. لا تبدّل عنوان Supabase مباشرة إلى دومين GitHub Pages؛ يلزم أولًا نطاق مصادقة فعّال يدعم نقاط API نفسها. راجع [وثائق Supabase للنطاقات المخصصة](https://supabase.com/docs/guides/platform/custom-domains).
 
 تم وضع رابط مشروعك ومفتاحه العام في `src/config.js`:

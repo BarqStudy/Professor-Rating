@@ -133,6 +133,25 @@ const server = http.createServer((req, res) => {
     args: ["--no-sandbox"],
   });
   try {
+    const policyContext = await browser.newContext({ javaScriptEnabled: false });
+    const policyPage = await policyContext.newPage();
+    const policyRequests=[];
+    policyPage.on('request',(request)=>policyRequests.push(request.url()));
+    const policyResponse=await policyPage.goto(new URL('privacy.html',url).href);
+    assert.equal(policyResponse.status(),200);
+    assert.equal(await policyPage.locator('h1').innerText(),'سياسة الخصوصية');
+    assert.equal(await policyPage.locator('script').count(),0);
+    assert.ok((await policyPage.locator('a[href="mailto:info@miyar.website"]').count())>0);
+    assert.match(await policyPage.locator('body').innerText(),/Google API Services User Data Policy/);
+    assert.ok(!policyRequests.some((request)=>request.includes('supabase.co')||request.includes('googleapis.com')));
+    for(const width of [390,1440]){
+      await policyPage.setViewportSize({width,height:950});
+      assert.equal(await policyPage.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      await policyPage.screenshot({path:`/tmp/miyar-privacy-${width}.png`});
+    }
+    await policyPage.goto(url);
+    assert.equal(await policyPage.locator('noscript a[href$="privacy.html"]').count(),1);
+    await policyContext.close();
     const context = await browser.newContext();
     const page = await context.newPage();
     const errors = [], calls = [];
@@ -299,6 +318,7 @@ const server = http.createServer((req, res) => {
     );
     await page.goto(url);
     await page.locator(".connection-banner.live").waitFor();
+    assert.equal(await page.locator('footer a[href$="privacy.html"]').count(),1);
     assert.equal(await page.locator("[data-page=admin]").count(), 0);
     assert.equal(
       await page.locator(".student-summary,.profile-meta").count(),
@@ -475,6 +495,7 @@ const server = http.createServer((req, res) => {
     await page.locator('#page-close').click();
     await page.locator('#google-account').click();
     await page.locator("#google-signin").waitFor();
+    assert.equal(await page.locator('.modal a[href$="privacy.html"]').count(),1);
     await page.locator("#google-signin").click();
     await page.getByText("تسجيل الدخول باستخدام Google لم يُفعّل بعد. جرّب لاحقًا.")
       .waitFor();
