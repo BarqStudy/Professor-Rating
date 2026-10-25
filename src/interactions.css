@@ -1,13 +1,15 @@
-/* Motion belongs to the control being used, rather than every button at once. */
+/* Soft lighting follows the pointer while the layout stays still. */
 :root {
-  --interaction-edge: hsl(var(--brand-hue, 218) 42% 65% / .65);
-  --interaction-halo: hsl(var(--brand-hue, 218) 55% 50% / .13);
-  --interaction-shadow: 0 16px 34px hsl(var(--brand-hue, 218) 40% 25% / .12);
-  --interaction-ease: cubic-bezier(.2, .75, .25, 1);
+  --interaction-edge: hsl(var(--brand-hue, 218) 48% 62% / .55);
+  --interaction-halo: hsl(var(--brand-hue, 218) 56% 55% / .1);
+  --interaction-light: hsl(var(--brand-hue, 218) 75% 85% / .22);
+  --interaction-shadow: 0 12px 32px hsl(var(--brand-hue, 218) 35% 25% / .09);
+  --interaction-ease: cubic-bezier(.22, 1, .36, 1);
 }
 [data-theme=dark] {
-  --interaction-edge: hsl(var(--brand-hue, 218) 45% 65% / .65);
-  --interaction-shadow: 0 16px 34px #0004;
+  --interaction-edge: hsl(var(--brand-hue, 218) 46% 68% / .6);
+  --interaction-light: hsl(var(--brand-hue, 218) 65% 75% / .18);
+  --interaction-shadow: 0 12px 32px #0003;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -16,138 +18,125 @@
       .college-option, .carousel-control, .color-option, .filter-button,
       .rating-tag-choice, .assistant-launcher, .notification-row,
       .admin-row, .search-block, .assistant-sources a, .assistant-prompts button) {
-    transition: translate .28s var(--interaction-ease), scale .28s var(--interaction-ease),
-      border-color .25s, background-color .25s, color .25s, box-shadow .28s;
+    transition: border-color .45s var(--interaction-ease),
+      background-color .45s var(--interaction-ease), color .35s ease,
+      box-shadow .5s var(--interaction-ease);
   }
-  :is(.avatar, .action-icon, .action-arrow, .color-swatch, .action-decoration,
-      .nav-item .icon, .save-button .icon, .icon-btn .icon,
-      .compare-toggle .icon, .carousel-control .icon, .card-detail .icon,
-      .primary > .icon, .secondary > .icon, .filter-button .chevron,
-      .assistant-launcher svg, .appearance-modes .icon) {
-    transition: translate .3s var(--interaction-ease), scale .3s var(--interaction-ease),
-      rotate .4s var(--interaction-ease), fill .25s, color .25s, box-shadow .25s;
+  :is(.doctor-card, .action-card, .nav-item, .primary, .icon-btn) {
+    position: relative;
+    isolation: isolate;
   }
-
-  /* A lifted frame and a smaller profile movement keep the name easy to read. */
-  .doctor-card:hover {
-    translate: 0 -6px;
-    border-color: var(--interaction-edge);
-    box-shadow: var(--interaction-shadow);
+  /* A masked ring lets the light travel along rounded edges without a border jump. */
+  :is(.doctor-card, .action-card, .nav-item, .primary, .icon-btn, .assistant-launcher)::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: radial-gradient(180px circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
+      hsl(var(--brand-hue, 218) 68% 72% / .8), transparent 85%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .5s var(--interaction-ease);
   }
-  .doctor-card:hover .avatar { box-shadow: 0 0 0 4px var(--interaction-halo); }
-  .doctor-name button:hover { color: var(--green); }
-  .card-detail:hover { color: var(--green); }
-  .card-detail:hover > .icon { translate: -5px 0; }
-
-  /* The two home actions have deliberately different signatures. */
-  .action-card { isolation: isolate; }
-  .action-card:hover { border-color: var(--interaction-edge); }
-  .rate-existing { position: relative; overflow: hidden; }
-  .rate-existing::after {
+  :is(.doctor-card, .action-card, .nav-item, .primary, .icon-btn, .assistant-launcher):not(:disabled):not([aria-disabled=true]):hover::before {
+    opacity: 1;
+  }
+  :is(.doctor-card, .action-card)::after {
     content: "";
     position: absolute;
     inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(280px circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
+      var(--interaction-light), transparent 80%);
+    opacity: 0;
     pointer-events: none;
-    background: linear-gradient(110deg, transparent 28%, #fff2 48%, transparent 68%);
-    translate: 115% 0;
-    transition: translate .75s var(--interaction-ease);
+    transition: opacity .6s var(--interaction-ease);
   }
-  .rate-existing:hover::after { translate: -115% 0; }
-  .rate-existing:hover .action-icon { scale: 1.08; }
-  .rate-existing:hover .action-arrow { translate: -6px 0; }
-  .add-new-doctor:hover { translate: 0 -3px; box-shadow: var(--interaction-shadow); }
-  .add-new-doctor:hover .action-decoration { rotate: 30deg; scale: 1.05; }
-  .add-new-doctor:hover .action-icon { rotate: 90deg; }
-
-  :is(.primary, .secondary):not(:disabled):not([aria-disabled=true]):hover {
-    translate: 0 -2px;
-    box-shadow: 0 6px 20px var(--interaction-halo);
-  }
-  .secondary:not(:disabled):not([aria-disabled=true]):hover {
+  :is(.doctor-card, .action-card):hover::after { opacity: 1; }
+  :is(.doctor-card, .action-card):hover {
     border-color: var(--interaction-edge);
-    background-color: var(--soft);
+    box-shadow: var(--interaction-shadow);
   }
-  :is(.primary, .secondary):not(:disabled):hover > .icon { translate: -3px 0; }
-  .email-request:not([aria-disabled=true]):hover {
-    translate: 0 -2px;
-    box-shadow: 0 0 0 4px var(--interaction-halo), var(--interaction-shadow);
+  .rate-existing:hover { box-shadow: inset 0 0 32px #ffffff0c, var(--interaction-shadow); }
+  .doctor-card:hover .avatar { box-shadow: 0 0 0 3px var(--interaction-halo); }
+  .avatar, .action-icon, .color-swatch {
+    transition: box-shadow .5s var(--interaction-ease), background-color .45s ease;
   }
+  .action-card:hover .action-icon { box-shadow: inset 0 0 0 1px var(--interaction-edge); }
+  :is(.action-arrow, .card-detail > .icon, .carousel-control > .icon) {
+    transition: translate .5s var(--interaction-ease);
+  }
+  .action-card:hover .action-arrow, .card-detail:hover > .icon { translate: -3px 0; }
+  .doctor-name button:hover, .card-detail:hover { color: var(--green); }
+
+  :is(.primary, .secondary, .compare-toggle, .filter-button):not(:disabled):not([aria-disabled=true]):hover {
+    box-shadow: inset 0 0 0 1px var(--interaction-edge), 0 4px 16px var(--interaction-halo);
+  }
+  .secondary:not(:disabled):hover { background-color: var(--soft); }
   .email-request:hover bdi { text-decoration: underline; text-underline-offset: 5px; }
 
-  .nav-item:hover { background-color: var(--soft); color: var(--green); }
-  .nav-item:hover .icon { translate: 0 -3px; scale: 1.08; }
-  .save-button:hover { color: var(--green); }
-  .save-button:hover .icon { scale: 1.2; rotate: -8deg; }
-  .compare-toggle:hover { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
-  .compare-toggle:hover .icon { scale: 1.12; }
-
-  :is(.chip, .major-chip, .college-option, .rating-tag-choice):not(:disabled):hover {
-    border-color: var(--interaction-edge);
-    box-shadow: 0 0 0 3px var(--interaction-halo);
+  .nav-item:hover { color: var(--green); background-color: var(--soft); }
+  .nav-item::after {
+    content: "";
+    position: absolute;
+    bottom: 4px;
+    inset-inline: 28%;
+    height: 2px;
+    border-radius: 99px;
+    background: currentColor;
+    opacity: 0;
+    scale: .4 1;
+    transition: opacity .4s ease, scale .5s var(--interaction-ease);
+    pointer-events: none;
   }
-  .rating-tag-choice:not(:disabled):hover { translate: 0 -2px; }
-  .filter-button:hover { border-color: var(--interaction-edge); }
-  .filter-button:hover .chevron { translate: 0 3px; }
+  .nav-item:hover::after { opacity: .6; scale: 1 1; }
+  .save-button .icon { transition: fill .4s ease, color .4s ease; }
+  .save-button:hover { color: var(--green); }
+  .save-button:not(.is-saved):hover .icon { fill: var(--interaction-halo); }
+
+  :is(.chip, .major-chip, .college-option, .rating-tag-choice, .color-option):not(:disabled):hover {
+    border-color: var(--interaction-edge);
+    box-shadow: inset 0 0 0 1px var(--interaction-halo);
+  }
+  .color-option:hover .color-swatch { box-shadow: 0 0 0 4px var(--interaction-halo); }
+  .carousel-control:not(:disabled):hover { border-color: var(--interaction-edge); background-color: var(--soft); }
+  .carousel-control:not(:disabled):hover > .icon { translate: -2px 0; }
+  .carousel-control.previous:not(:disabled):hover > .icon { translate: 2px 0; }
+  .icon-btn:not(:disabled):hover { background-color: var(--soft); }
   .search-block:hover, .search-block:focus-within {
     border-color: var(--interaction-edge);
     box-shadow: 0 0 0 3px var(--interaction-halo);
   }
-
-  .carousel-control:not(:disabled):hover { background-color: var(--soft); border-color: var(--interaction-edge); }
-  .carousel-control:not(:disabled):hover .icon { translate: -3px 0; }
-  .carousel-control.previous:not(:disabled):hover .icon { translate: 3px 0; }
-  .icon-btn:not(:disabled):hover { box-shadow: 0 0 0 4px var(--interaction-halo); }
-  .settings-trigger:hover .icon { rotate: 60deg; }
-  :is(.theme-toggle, .mobile-theme):hover .icon { rotate: -20deg; scale: 1.1; }
-  #notice:hover .icon { animation: interaction-bell .55s ease both; transform-origin: 50% 15%; }
-
-  .color-option:hover { border-color: var(--interaction-edge); }
-  .color-option:hover .color-swatch { scale: 1.15; box-shadow: 0 0 0 4px var(--interaction-halo); }
-  .appearance-modes button:not(:disabled):hover .icon { rotate: 18deg; }
   .notification-row:hover, .admin-row:hover { background-color: var(--soft); }
-  .assistant-launcher:hover { box-shadow: 0 0 0 5px var(--interaction-halo), var(--interaction-shadow); }
-  .assistant-launcher:hover svg { rotate: 12deg; scale: 1.1; }
-  :is(.assistant-prompts button, .assistant-sources a):not(:disabled):hover {
-    border-color: var(--interaction-edge);
-    translate: 0 -2px;
+  .assistant-launcher:hover { border-color: var(--interaction-edge); box-shadow: var(--interaction-shadow); }
+  :is(.assistant-prompts button, .assistant-sources a):not(:disabled):hover { border-color: var(--interaction-edge); }
+  footer a {
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 5px;
+    transition: color .4s ease, text-decoration-color .4s ease;
   }
-  footer a { text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 5px; transition: color .2s, text-decoration-color .2s; }
   footer a:hover { color: var(--green); text-decoration-color: currentColor; }
-
   :is(.primary, .secondary, .action-card, .icon-btn, .carousel-control):not(:disabled):not([aria-disabled=true]):active {
-    translate: 0 0;
-    scale: .98;
+    box-shadow: inset 0 0 0 2px var(--interaction-edge);
   }
-  /* Night mode keeps solid surfaces; it uses a border glow instead of a sweep. */
-  [data-theme=dark] .rate-existing::after { display: none; }
-  [data-theme=dark] .rate-existing:hover { box-shadow: 0 0 0 3px var(--interaction-halo); }
+  /* Night surfaces stay solid: only the masked edge follows the pointer. */
+  [data-theme=dark] :is(.doctor-card, .action-card)::after { display: none; }
 }
 
-@keyframes interaction-bell {
-  0%, 100% { rotate: 0deg; }
-  25% { rotate: 14deg; }
-  50% { rotate: -10deg; }
-  75% { rotate: 5deg; }
-}
-
-/* Keyboard users get the same emphasis without having to use a mouse. */
 :is(.action-card, .compare-toggle, .color-option, .filter-button, .assistant-launcher):focus-visible {
   border-color: var(--green);
-  box-shadow: 0 0 0 4px var(--interaction-halo);
+  box-shadow: 0 0 0 3px var(--interaction-halo);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :is(.doctor-card, .action-card, .primary, .secondary, .nav-item, .icon-btn,
-      .save-button, .compare-toggle, .chip, .major-chip, .college-option,
-      .carousel-control, .color-option, .filter-button, .rating-tag-choice,
-      .assistant-launcher, .assistant-sources a, .assistant-prompts button),
-  :is(.doctor-card, .action-card, .primary, .secondary, .nav-item, .icon-btn,
-      .save-button, .compare-toggle, .carousel-control, .color-option,
-      .filter-button, .appearance-modes, .assistant-launcher) :is(.icon, .avatar, .color-swatch, .action-decoration, .action-arrow),
-  .rate-existing::after {
-    translate: none !important;
-    scale: none !important;
-    rotate: none !important;
-  }
-  .rate-existing::after { display: none; }
+  :is(.action-arrow, .card-detail > .icon, .carousel-control > .icon) { translate: none !important; }
+  :is(.doctor-card, .action-card, .nav-item, .primary, .icon-btn, .assistant-launcher)::before,
+  :is(.doctor-card, .action-card, .nav-item)::after { display: none; }
 }

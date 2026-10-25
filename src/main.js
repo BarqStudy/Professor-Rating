@@ -4,6 +4,7 @@ import { createDoctorCard } from "./doctor-card.js";
 import { setupPwa, installPlatform } from "./pwa.js";
 import "./style.css";
 import "./interactions.css";
+import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
   api,
@@ -2230,6 +2231,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });
 setupPwa();
+setupInteractions();
 render();
 if (configured) loadCloud();
 const sharedId = +new URLSearchParams(location.search).get("doctor");
