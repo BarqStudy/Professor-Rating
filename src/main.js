@@ -1586,7 +1586,7 @@ function cloudAdmin() {
         )
       }</small></span><button class="danger" data-cloud-operation="major.delete" data-id="${m.id}">حذف</button></div>`
     ).join("")
-  }</div></section><section class="panel"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>اسم الدكتور الثلاثي<input name="name" required minlength="8" maxlength="100"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${
+  }</div></section><section class="panel"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>اسم الدكتور الثلاثي<input name="name" required minlength="8" maxlength="100"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form><div class="admin-record-list admin-doctor-list" role="region" aria-label="قائمة الدكاترة" tabindex="0">${
     allDoctors.map((d) =>
       `<div class="admin-row"><span>د. ${escapeHtml(d.name)}<small>${
         escapeHtml(d.major)
@@ -1595,7 +1595,7 @@ function cloudAdmin() {
         d.verified ? "إلغاء التوثيق" : "توثيق"
       }</button><button class="danger" data-cloud-operation="doctor.delete" data-id="${d.id}">إزالة</button></div></div>`
     ).join("")
-  }<h2>إدارة المستخدمين</h2><form id="cloud-user-status"><label>معرّف حساب الطالب<input name="userId" required placeholder="UUID الظاهر مع الطلب"><select name="status"><option value="banned">حظر</option><option value="restricted">تقييد الإرسال</option><option value="active">فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق</button></form></section><section class="panel moderation-panel"><h2>طلبات إضافة دكتور</h2>${
+  }</div><h2>إدارة المستخدمين</h2><form id="cloud-user-status"><label>معرّف حساب الطالب<input name="userId" required placeholder="UUID الظاهر مع الطلب"><select name="status"><option value="banned">حظر</option><option value="restricted">تقييد الإرسال</option><option value="active">فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق</button></form></section><section class="panel moderation-panel"><h2>طلبات إضافة دكتور</h2>${
     !queue
       ? '<p class="muted">جارٍ التحميل…</p>'
       : queue.error
