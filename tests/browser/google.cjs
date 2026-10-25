@@ -286,6 +286,18 @@ const server = http.createServer((req, res) => {
     await page.locator("#page-close").click();
     await page.setViewportSize({ width: 390, height: 844 });
     assert.ok(await page.locator(".hero-art").isVisible());
+    const headerStyle = await page.locator("header").evaluate((el) => {
+      const css = getComputedStyle(el);
+      return { blur: css.backdropFilter, radius: css.borderTopLeftRadius, position: css.position };
+    });
+    assert.match(headerStyle.blur, /blur/);
+    assert.equal(headerStyle.radius, "27px");
+    assert.equal(headerStyle.position, "sticky");
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const topBar = await page.locator("header").boundingBox();
+    assert.ok(topBar.x >= 12 && topBar.x + topBar.width <= 390 - 12);
+    assert.ok(topBar.y >= 0 && topBar.y < 30);
+    await page.evaluate(() => window.scrollTo(0, 0));
     const art = await page.locator(".hero-art").boundingBox();
     assert.ok(art.x >= 0 && art.x + art.width <= 390);
     assert.equal(

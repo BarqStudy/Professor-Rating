@@ -82,3 +82,7 @@ h1,h2,h3,p{overflow-wrap:anywhere}h1{line-height:1.65}h2,h3{line-height:1.7}p{li
 .search-block + .search-results{margin-top:24px;margin-bottom:28px}.search-results .section-heading{margin-bottom:20px}
 
 .clear-search{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;padding:0;border-radius:12px;background:var(--soft);color:var(--green)}.clear-search .icon{width:18px;height:18px}.clear-search[hidden]{display:none}.clear-search:hover{background:var(--line)}
+/* Floating top bar mirrors the rounded bottom navigation. */
+header{position:sticky;top:calc(12px + env(safe-area-inset-top));z-index:30;margin:12px 20px 0;border:1px solid var(--glass-edge);border-radius:27px;background:hsl(var(--brand-hue,218) 35% 99% / .72);box-shadow:var(--glass-shadow);-webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%)}
+[data-theme=dark] header{background:hsl(var(--brand-hue,218) 25% 13% / .8);-webkit-backdrop-filter:blur(28px) saturate(160%);backdrop-filter:blur(28px) saturate(160%)}
+@media(max-width:650px){header{margin:12px 12px 0;padding:0 18px;min-height:76px;border-radius:27px}}
