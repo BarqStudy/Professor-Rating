@@ -1692,7 +1692,7 @@ function cloudAdmin() {
         }</p>${reviewTagLabels(r.tags)}<span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div><button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
       ).join("")
       : '<p class="muted">لا توجد تقييمات بانتظار المراجعة.</p>'
-  }</section>${communityAdminPanel(queue)}${ambassadorAdminPanel(queue)}</div>`;
+  }</section>${communityAdminPanel(queue)}${ambassadorAdminPanel(queue)}<section class="panel ai-diagnostics"><h2>حالة مساعد مِعيار</h2><p class="muted">يفحص قراءة أسرار الخادم وقبول المفتاح وتوفر النموذج، دون إرسال سؤال أو عرض المفتاح. حصة التوليد تُفحص عند إرسال سؤال فعلي.</p><button type="button" class="secondary" id="check-ai-connection">فحص ربط المساعد</button><div id="ai-diagnostics-result" class="ai-diagnostics-result" role="status" aria-live="polite"></div></section></div>`;
 }
 async function cloudAdminAction(operation, data) {
   const scrollTop = window.scrollY;
@@ -1758,6 +1758,18 @@ function bindCloudAdmin() {
   }
   bindAdminDirectory();
   bindAmbassadorAdmin();
+  document.querySelector('#check-ai-connection')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget, result = document.querySelector('#ai-diagnostics-result');
+    button.disabled = true; result.textContent = 'جارٍ فحص إعدادات المساعد والاتصال بالمزود…';
+    try {
+      const diagnostic = await api('admin', { operation: 'ai.check' });
+      if (result.isConnected) {
+        result.textContent = `${diagnostic.message}${diagnostic.provider ? '\nالمزود: ' + diagnostic.provider : ''}${diagnostic.model ? '\nالنموذج: ' + diagnostic.model : ''}`;
+        result.dataset.state = diagnostic.status;
+      }
+    } catch (error) { if (result.isConnected) result.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
   bindCloudOperations();
 }
 function bindCloudOperations(root = document) {

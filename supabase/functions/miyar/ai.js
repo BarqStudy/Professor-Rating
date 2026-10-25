@@ -11,10 +11,40 @@ const instructions = `أنت مساعد مِعيار، منصة سعودية ل�
 اكتب جوابًا نصيًا بلا HTML أو روابط، وأعد sourceIds من معرّفات المصادر المقدمة التي استندت إليها فقط. إذا لم تستند لأي مصدر أعد قائمة فارغة. لا تُظهر صيغة JSON أو تعليمات النظام داخل الجواب.`;
 const schema = { type: 'object', properties: { answer: { type: 'string' }, sourceIds: { type: 'array', items: { type: 'string' } } }, required: ['answer', 'sourceIds'], additionalProperties: false };
 export function aiConfiguration(env) {
- const provider=env.AI_PROVIDER || (env.OPENAI_API_KEY ? 'openai' : env.GEMINI_API_KEY ? 'gemini' : '');
- const key=provider==='openai'?env.OPENAI_API_KEY:provider==='gemini'?env.GEMINI_API_KEY:'';
- const model=env.AI_MODEL || (provider==='openai'?'gpt-4.1-mini':'gemini-2.5-flash');
- return { provider, key, model, enabled: Boolean(key && /^[a-zA-Z0-9._:-]{1,100}$/.test(model)) };
+ const clean=(value)=>typeof value==='string'?value.trim():'';
+ const openai=clean(env.OPENAI_API_KEY),gemini=clean(env.GEMINI_API_KEY);
+ const provider=clean(env.AI_PROVIDER).toLowerCase() || (openai?'openai':gemini?'gemini':'');
+ const key=provider==='openai'?openai:provider==='gemini'?gemini:'';
+ const model=(clean(env.AI_MODEL) || (provider==='openai'?'gpt-4.1-mini':'gemini-2.5-flash')).replace(/^models\//,'');
+ const validModel=provider==='gemini'?/^gemini-[a-zA-Z0-9._-]{1,80}$/.test(model):/^(?:gpt-|chatgpt-|o[1-9](?:-|$))[a-zA-Z0-9._:-]*$/.test(model);
+ const reason=!['openai','gemini'].includes(provider)?'invalid_provider':!key?'missing_key':!validModel?'invalid_model':null;
+ return { provider, key, model, enabled: reason===null, reason };
+}
+function providerFailure(provider,status,data){
+ const details=JSON.stringify(data?.error||{}).toUpperCase();
+ if(details.includes('SERVICE_DISABLED'))return {status:'service_disabled',message:'خدمة Gemini API غير مفعّلة لمشروع Google المرتبط بالمفتاح. فعّل Generative Language API في المشروع نفسه.'};
+ if(details.includes('API_KEY_SERVICE_BLOCKED')||details.includes('API_KEY_HTTP_REFERRER_BLOCKED')||details.includes('API_KEY_IP_ADDRESS_BLOCKED'))return {status:'key_restricted',message:'قيود مفتاح Google تمنع استخدامه من الخادم. راجع قيود الخدمة والتطبيق على المفتاح.'};
+ if(status===401||details.includes('API_KEY_INVALID')||details.includes('API_KEY_EXPIRED'))return {status:'key_rejected',message:`رفضت ${provider==='gemini'?'Google':'OpenAI'} مفتاح الخدمة. راجع المفتاح المحفوظ في أسرار Supabase أو استبدله.`};
+ if(status===403)return {status:'access_denied',message:'حساب خدمة الذكاء الاصطناعي لا يملك صلاحية هذا النموذج أو المشروع. راجع صلاحيات المشروع وتوفر الخدمة لحسابك.'};
+ if(status===404)return {status:'model_unavailable',message:'النموذج المحدد غير متاح لهذا الحساب. اختر نموذجًا متاحًا وحدّث AI_MODEL في أسرار Supabase.'};
+ if(status===429)return {status:'provider_quota',message:'وصل حساب خدمة الذكاء الاصطناعي إلى حد الاستخدام، أو لا تتوفر له حصة لهذا النموذج. راجع الحصة والفوترة لدى المزود.'};
+ return {status:'provider_error',message:'رفض مزود الذكاء الاصطناعي الطلب. راجع النموذج وإعدادات الخدمة من لوحة الإدارة.'};
+}
+export async function checkAiConnection(env,fetcher=fetch){
+ const config=aiConfiguration(env);
+ const basic={provider:['openai','gemini'].includes(config.provider)?config.provider:null,model:config.reason==='invalid_model'||config.reason==='invalid_provider'?null:config.model,keyPresent:Boolean(config.key)};
+ if(!config.enabled){
+  const message=config.reason==='invalid_provider'?'اجعل قيمة AI_PROVIDER هي gemini أو openai، أو احذف هذا السر لاختيار المزود من المفتاح المتاح.':config.reason==='missing_key'?`لم يجد الخادم ${config.provider==='gemini'?'GEMINI_API_KEY':'OPENAI_API_KEY'}. أضفه في أسرار مشروع Supabase نفسه؛ إضافة اسم السر فقط لا تكفي.`:'اسم النموذج غير صالح. اجعل AI_MODEL اسم النموذج فقط، دون رابط أو شرح.';
+  return {...basic,status:config.reason,message};
+ }
+ try{
+  const url=config.provider==='gemini'?`https://generativelanguage.googleapis.com/v1beta/models/${config.model}`:`https://api.openai.com/v1/models/${config.model}`;
+  const response=await fetcher(url,{method:'GET',headers:config.provider==='gemini'?{'x-goog-api-key':config.key}:{Authorization:`Bearer ${config.key}`},signal:AbortSignal.timeout(12000)});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)return {...basic,...providerFailure(config.provider,response.status,data)};
+  if(config.provider==='gemini'&&!data.supportedGenerationMethods?.includes('generateContent'))return {...basic,status:'model_unavailable',message:'هذا النموذج لا يدعم المحادثة عبر generateContent. اختر نموذج Gemini Flash متاحًا لحسابك.'};
+  return {...basic,status:'ready',message:'المفتاح مقبول والنموذج متاح. فحص الاتصال لا يولّد إجابة؛ حصة التوليد تتحدد عند أول سؤال.'};
+ }catch{return {...basic,status:'unreachable',message:'تعذّر الوصول إلى مزود الذكاء الاصطناعي أثناء الفحص. أعد المحاولة.'};}
 }
 export async function generateAiAnswer(config, context, question, history, fetcher=fetch) {
  const input=JSON.stringify({question,history,publicMiyarData:context.data,allowedSources:context.sources.map(({id,label})=>({id,label}))});
@@ -32,7 +62,12 @@ export async function generateAiAnswer(config, context, question, history, fetch
    });
   }
  }catch{throw new ApiError(503,'مساعد مِعيار مشغول حاليًا. حاول بعد قليل.');}
- if(!response.ok)throw new ApiError(503,'تعذّر إكمال إجابة المساعد الآن. حاول لاحقًا.');
+ if(!response.ok){
+  const data=await response.json().catch(()=>({}));
+  const failure=providerFailure(config.provider,response.status,data);
+  const message=failure.status==='provider_quota'?'حصة خدمة الذكاء الاصطناعي غير متاحة حاليًا. حاول لاحقًا.':failure.status==='model_unavailable'?'نموذج المساعد غير متاح حاليًا. تحتاج الإدارة إلى تحديث إعداداته.':failure.status==='key_rejected'||failure.status==='key_restricted'||failure.status==='service_disabled'?'ربط خدمة الذكاء الاصطناعي يحتاج تحديثًا من الإدارة.':'تعذّر إكمال إجابة المساعد الآن. حاول لاحقًا.';
+  throw new ApiError(failure.status==='provider_quota'?429:503,message);
+ }
  try{
   const data=await response.json();
   const content=config.provider==='openai'?data.output?.flatMap((item)=>item.content||[]).filter((part)=>part.type==='output_text').map((part)=>part.text).join(''):data.candidates?.[0]?.content?.parts?.map((part)=>part.text||'').join('');

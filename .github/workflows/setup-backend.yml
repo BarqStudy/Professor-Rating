@@ -114,5 +114,7 @@ jobs:
           if not isinstance(assistant.get('enabled'), bool):
               raise SystemExit('Assistant configuration endpoint failed.')
           print('Assistant provider:', 'configured' if assistant['enabled'] else 'waiting for a private provider API key')
+          from pathlib import Path
+          Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('Miyar assistant configuration: **' + ('enabled' if assistant['enabled'] else 'not enabled') + '**\n')
           print('Backend, guest sessions and live presence are reachable. Public catalogue contains', len(data['colleges']), 'colleges.')
           PY

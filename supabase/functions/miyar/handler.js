@@ -1,5 +1,5 @@
 import { handleGuest } from "./guest.js";
-import { handleAi } from "./ai.js";
+import { handleAi, checkAiConnection } from "./ai.js";
 import { catalogueProposal, ambassadorAdmin } from "./ambassadors.js";
 import { studentCommunity, adminCommunity, publicSummary } from "./community.js";
 import {
@@ -200,6 +200,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      if (operation === 'ai.check') return respond(await checkAiConnection(env, aiFetch));
       const ambassadorResult = await ambassadorAdmin(operation, body, identity.id, db);
       if (ambassadorResult) return respond(ambassadorResult);
       const communityResult = await adminCommunity(operation, body, db);

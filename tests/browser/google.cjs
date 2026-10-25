@@ -197,6 +197,7 @@ const server = http.createServer((req, res) => {
           let result = { ok: true };
           if (body.action === "catalogue") result = catalogue;
           if(body.action==='ai.status')result={enabled:aiEnabled};
+          if(body.operation==='ai.check')result={status:'ready',provider:'gemini',model:'gemini-2.5-flash',keyPresent:true,message:'المفتاح مقبول والنموذج متاح.'};
           if(body.action==='guest.ai.ask'){
             if(aiFails)return route.fulfill({status:429,json:{error:'وصلت للحد اليومي للمساعد.'}});
             result={answer:'اختر الدكتور من صفحة التقييمات ثم أضف تجربتك. <img src=x onerror="window.aiInjected=true">',sources:[{label:'إضافة تقييم',href:'#ratings'}],remaining:9};
@@ -660,6 +661,10 @@ const server = http.createServer((req, res) => {
     assert.equal(publicReviews[0].comment,'التقييم القديم المنشور');
     await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
     await page.locator("[data-page=admin]").click();
+    await page.locator('#check-ai-connection').click();
+    await page.locator('#ai-diagnostics-result[data-state=ready]').waitFor();
+    assert.match(await page.locator('#ai-diagnostics-result').innerText(),/المفتاح مقبول/);
+    assert.ok(calls.some((call)=>call.operation==='ai.check'&&call.authorization===`Bearer ${access}`));
     await page.locator('[data-cloud-operation="doctor.approve"]').click();
     await page.getByText("لا توجد طلبات معلّقة.").waitFor();
     await page.locator('[data-cloud-operation="edit.reject"]').click();
