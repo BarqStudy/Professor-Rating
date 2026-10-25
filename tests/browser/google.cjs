@@ -561,6 +561,22 @@ const server = http.createServer((req, res) => {
     assert.ok(!("initData" in submission));
     assert.equal(submission.grade, 92);
     await page.locator("#open-settings").click();
+    assert.equal(await page.locator('.short-account-id').innerText(),member.slice(0,8).toUpperCase());
+    assert.ok(!(await page.locator('.cloud-identity').innerText()).includes(member));
+    await page.evaluate(()=>{
+      window.accountClipboardDescriptor=Object.getOwnPropertyDescriptor(navigator,'clipboard');
+      Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(value)=>{window.copiedAccountId=value;}}});
+    });
+    await page.locator('#copy-account-id').click();
+    assert.equal(await page.evaluate(()=>window.copiedAccountId),member);
+    await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('Clipboard unavailable');}}}));
+    await page.locator('#copy-account-id').click();
+    assert.equal(await page.locator('#account-id-copy-fallback input').inputValue(),member);
+    assert.equal(await page.locator('#account-id-copy-fallback input').evaluate((input)=>input.selectionEnd-input.selectionStart),member.length);
+    await page.evaluate(()=>{
+      if(window.accountClipboardDescriptor)Object.defineProperty(navigator,'clipboard',window.accountClipboardDescriptor);else delete navigator.clipboard;
+      document.querySelector('#account-id-copy-fallback').hidden=true;
+    });
     const dayColors = new Set(), nightColors = new Set();
     for (const color of ["blue", "green", "pink", "apple"]) {
       await page.locator(`[data-color-option="${color}"]`).click();

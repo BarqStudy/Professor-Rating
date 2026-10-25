@@ -1262,11 +1262,11 @@ function openSettings() {
       Math.round(fontScale * 100).toLocaleString("ar")
     }٪</output><button type="button" id="font-larger" aria-label="تكبير الخط">+</button></div><div class="font-preview">مِعيار… لاختيارٍ أوضح وتجربةٍ أفضل.</div><button type="button" id="font-reset" class="text-button">استعادة الحجم الافتراضي</button></section><div class="form-error" role="alert"></div>${
       configured
-        ? `<p class="cloud-identity">${
+        ? `<div class="cloud-identity">${
           cloudMe
-            ? "معرّف حسابك: " + cloudMe.id
+            ? `<span>معرّف حسابك: <bdi class="short-account-id" dir="ltr">${escapeHtml(cloudMe.id.slice(0, 8).toUpperCase())}</bdi></span><button type="button" class="text-button" id="copy-account-id">نسخ المعرّف الكامل</button><div id="account-id-copy-fallback" hidden></div>`
             : "تسجيل الدخول اختياري لحفظ ملفك ومتابعة طلباتك."
-        }</p>`
+        }</div>`
         : ""
     }<button class="primary settings-save">${
       ic("check")
@@ -1287,6 +1287,20 @@ function openSettings() {
     }</form>`,
   );
   document.querySelector("#my-requests-settings")?.addEventListener("click", openRequests);
+  const accountId = cloudMe?.id;
+  document.querySelector('#copy-account-id')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(accountId);
+      toast('نُسخ معرّف الحساب الكامل.');
+    } catch {
+      const fallback = document.querySelector('#account-id-copy-fallback');
+      if (!fallback) return;
+      fallback.hidden = false;
+      fallback.innerHTML = `<label>انسخ المعرّف المحدد<input readonly dir="ltr" aria-label="معرّف الحساب الكامل" value="${escapeHtml(accountId)}"></label>`;
+      fallback.querySelector('input').focus();
+      fallback.querySelector('input').select();
+    }
+  });
   document.querySelector("#install-app")?.addEventListener("click", () => installPlatform(modal,toast));
   document.querySelector("#my-reviews-settings")?.addEventListener("click", () => myReviews());
   document.querySelector("#change-university")?.addEventListener("click", () => openUniversityChoice(false));

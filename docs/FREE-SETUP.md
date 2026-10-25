@@ -14,6 +14,12 @@
 - في Google Cloud، أضف `https://miyar.website` و`https://www.miyar.website` إلى **Authorized JavaScript origins**. اترك رابط إعادة التوجيه الخاص بـSupabase كما هو.
 - شغّل **Set up Miyar backend** مجددًا من GitHub Actions لتطبيق قائمة CORS المحدثة للدومين. لا تغيّر أسرار الدخول أو قاعدة البيانات.
 
+### اسم مِعيار في تسجيل Google
+
+من مشروع OAuth المستخدم في تسجيل الدخول افتح **Google Auth Platform → Branding** واضبط **App name** على `مِعيار` و**Application home page** على `https://miyar.website` وبريد الدعم المناسب، ثم احفظ. أكمل نشر التطبيق أو مراجعة العلامة التجارية إذا طلبتهما Google؛ تغيير الاسم لا يضمن وحده تبدّل كل شاشات اختيار الحساب والموافقة، لأنها تخضع لحالة التحقق وإعدادات Google.
+
+النطاق `bbnsorjxgehvoddluvyo.supabase.co` هو نطاق Supabase Auth المستخدم في رابط العودة، ويختلف عن اسم التطبيق. لإبداله بنطاق من مِعيار، يحتاج المشروع إعداد **Supabase Custom Domain** مثل `auth.miyar.website` والتحقق من DNS وHTTPS؛ قد يتطلب ذلك خطة أو إضافة مدفوعة حسب خيارات Supabase المتاحة. بعد تفعيله فقط، أضف `https://auth.miyar.website/auth/v1/callback` إلى Google OAuth Redirect URIs، ثم حدّث إعداد عنوان Supabase في الواجهة واختبر الدخول والخروج والعودة. أبقِ رابط العودة القديم أثناء الانتقال. لا تبدّل عنوان Supabase مباشرة إلى دومين GitHub Pages؛ يلزم أولًا نطاق مصادقة فعّال يدعم نقاط API نفسها. راجع [وثائق Supabase للنطاقات المخصصة](https://supabase.com/docs/guides/platform/custom-domains).
+
 تم وضع رابط مشروعك ومفتاحه العام في `src/config.js`:
 
 - معرّف المشروع: `bbnsorjxgehvoddluvyo`
@@ -107,6 +113,8 @@
 
 1. افتح الموقع واضغط **دخول Google**، واختر حسابك.
 2. من Supabase افتح **Authentication → Users**. اعثر على حسابك وانسخ **User UID**؛ يكون على هيئة UUID، وليس بريدك أو رقم الهاتف.
+
+   يمكنك أيضًا استخدام زر **نسخ المعرّف الكامل** من إعدادات مِعيار. تعرض الإعدادات أول ٨ خانات فقط للاختصار؛ صلاحيات الإدارة تتطلب المعرّف الكامل المنسوخ، لا النسخة المختصرة.
 3. في GitHub → **Settings → Secrets and variables → Actions → Variables** أضف:
 
    | الاسم | القيمة |
