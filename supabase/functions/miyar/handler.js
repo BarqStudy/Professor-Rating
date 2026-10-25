@@ -1,3 +1,4 @@
+import { studentCommunity, adminCommunity } from "./community.js";
 import {
   adminIds,
   ApiError,
@@ -82,7 +83,7 @@ export function createHandler({ db, env, authenticate }) {
         );
         if (!doctors.length) throw new ApiError(404, "الدكتور غير موجود.");
         const rows = await db(
-          `miyar_reviews?doctor_id=eq.${id}&status=eq.published&select=id,subject,comment,explanation,treatment,grading,created_at&order=created_at.desc&limit=100`,
+          `miyar_reviews?doctor_id=eq.${id}&status=eq.published${body.subject ? `&subject=eq.${encodeURIComponent(text(body.subject,2,120,"المادة"))}` : ""}&select=id,subject,comment,explanation,treatment,grading,created_at&order=created_at.desc&limit=100`,
         );
         return respond(
           rows.map((r) => ({
@@ -156,6 +157,8 @@ export function createHandler({ db, env, authenticate }) {
         });
         return respond({ ok: true });
       }
+      const community = await studentCommunity(action, body, user, identity.id, db);
+      if (community) return respond(community.data, community.status || 200);
       if (action === "submit") {
         if (user.status !== "active") {
           throw new ApiError(403, "حسابك مقيّد عن إضافة التقييمات.");
@@ -182,6 +185,8 @@ export function createHandler({ db, env, authenticate }) {
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      const communityResult = await adminCommunity(operation, body, db);
+      if (communityResult) return respond(communityResult);
       if (operation === "queue") {
         const [doctors, reviews] = await Promise.all([
           db(
@@ -191,8 +196,10 @@ export function createHandler({ db, env, authenticate }) {
             "miyar_reviews?status=eq.pending&select=id,doctor_id,account_id,subject,comment,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
           ),
         ]);
+        const extra = await db("rpc/miyar_community_queue", {method:"POST",body:{}});
         // Grade is deliberately excluded even from the moderation response.
         return respond({
+          edits: extra?.edits || [], reports: extra?.reports || [],
           doctors: doctors.map((
             { id, name, major_id, submitted_by_account, created_at },
           ) => ({

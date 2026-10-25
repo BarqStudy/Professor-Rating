@@ -34,7 +34,11 @@ export function createDatabase(url, key, fetcher = fetch) {
         );
       }
       const reasons = {
-        RATE_LIMIT: [429, "الحد الأقصى خمسة تقييمات في اليوم."],
+        REVIEW_UNAVAILABLE: [409, "التقييم غير متاح لهذه العملية."],
+        PENDING_EDIT: [409, "يوجد طلب تعديل لهذا التقييم قيد المراجعة."],
+        ALREADY_REPORTED: [409, "سبق أن أرسلت بلاغًا عن هذا التقييم."],
+        UNIVERSITY_REQUIRED: [400, "اختر جامعتك أولًا."],
+        RATE_LIMIT: [429, "وصلت للحد اليومي لهذه العملية. حاول لاحقًا."],
         ACCOUNT_RESTRICTED: [403, "الحساب محظور أو مقيّد."],
         INVALID_UNIVERSITY_MAJOR: [400, "التخصص لا يتبع جامعتك المختارة."],
         INVALID_MAJOR: [400, "التخصص لا يتبع الكلية المحددة."],

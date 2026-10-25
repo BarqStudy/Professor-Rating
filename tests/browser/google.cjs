@@ -134,6 +134,9 @@ const server = http.createServer((req, res) => {
     const context = await browser.newContext();
     const page = await context.newPage();
     const errors = [], calls = [];
+    const publicReviews=[{id:501,subject:"ميكانيكا",comment:"التقييم القديم المنشور",scores:[80,80,80],date:new Date().toISOString()},{id:502,subject:"رياضيات",comment:"تجربة مادة الرياضيات",scores:[90,90,90],date:new Date().toISOString()}];
+    const own={id:501,doctor_id:17,doctor_name:"أحمد محمد العتيبي",subject:"ميكانيكا",comment:"التقييم القديم المنشور",explanation:80,treatment:80,grading:80,status:"published",edit_status:null};
+    let pendingEdits=[], pendingReports=[], notifyPublished=false;
     let googleEnabled = false,
       fail = false,
       failBulk = true,
@@ -186,7 +189,18 @@ const server = http.createServer((req, res) => {
           let result = { ok: true };
           if (body.action === "catalogue") result = catalogue;
           if (body.action === "me") result = me;
-          if (body.action === "reviews") result = [];
+          if (body.action === "reviews") result = body.doctor===17 ? publicReviews.filter((row)=>!body.subject||row.subject===body.subject) : [];
+          if (body.action === "mine") result=[own];
+          if (body.action === "notifications") result=notifyPublished&&body.doctors.includes(18)?[{review_id:601,doctor_id:18,doctor_name:"خالد محمد الحربي",published_at:new Date(Date.now()+10000).toISOString()}]:[];
+          if (body.action === "doctor.request") result={id:55,status:"pending",existing:false};
+          if (body.action === "report") { pendingReports.push({id:701,review_id:body.review,reason:body.reason,details:body.details,doctor_name:own.doctor_name,subject:"رياضيات",comment:"تجربة مادة الرياضيات"});result={id:701,status:"pending"}; }
+          if (body.action === "edit") {
+            pendingEdits.push({id:801,review_id:body.review,doctor_name:own.doctor_name,old_subject:own.subject,old_comment:own.comment,old_explanation:own.explanation,old_treatment:own.treatment,old_grading:own.grading,subject:body.subject,comment:body.comment,explanation:body.scores[0],treatment:body.scores[1],grading:body.scores[2]});
+            own.edit_status="pending";result={id:801,status:"pending"};
+          }
+          if (body.operation === "edit.approve") { const edit=pendingEdits[0];Object.assign(own,{subject:edit.subject,comment:edit.comment,explanation:edit.explanation,treatment:edit.treatment,grading:edit.grading,edit_status:"approved"});Object.assign(publicReviews[0],{subject:edit.subject,comment:edit.comment,scores:[edit.explanation,edit.treatment,edit.grading]});pendingEdits=[]; }
+          if (body.operation === "edit.reject") {pendingEdits=[];own.edit_status="rejected";}
+          if (body.operation === "report.dismiss") pendingReports=[];
           if (body.action === "university") {
             me = { ...me, university_id: body.universityId, major_id: null };
             result = { ok: true, university_id: body.universityId };
@@ -213,7 +227,7 @@ const server = http.createServer((req, res) => {
             }
             catalogue.doctors.push({ ...catalogue.doctors[0], id: 100 + catalogue.doctors.length, name: body.name, major_id: body.majorId });
           }
-          if (body.operation === "queue") result = { doctors: [], reviews: [] };
+          if (body.operation === "queue") result = { doctors: [], reviews: [], edits:pendingEdits, reports:pendingReports };
           return route.fulfill({ json: result });
         }
         return route.fulfill({
@@ -234,6 +248,8 @@ const server = http.createServer((req, res) => {
         "تجارب حقيقية من زملائك",
       ),
     );
+    assert.equal(await page.locator(".action-decoration svg").count(),1);
+    assert.ok(!(await page.locator(".action-decoration").innerText()).includes("✳"));
     assert.equal(await page.locator("[data-college]").count(), 0);
     assert.equal(await page.locator(".doctor-card").count(), 3);
     assert.deepEqual(await page.locator(".doctor-card .doctor-name [data-doctor]").evaluateAll((buttons) => buttons.map((button) => Number(button.dataset.doctor))), [20, 19, 18]);
@@ -261,12 +277,23 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator("footer .icon").count(), 0);
     const email = page.locator('.university-request a[href^="mailto:"]');
     assert.match(await email.getAttribute("href"), /^mailto:info@miyar\.website/);
+    assert.equal(await page.locator(".stats + .university-request").count(),1);
+    for(const id of [20,19,18]) await page.locator(`[data-compare="${id}"]`).click();
+    await page.locator("#compare-now").click();
+    assert.equal(await page.locator(".comparison-table thead th").count(),4);
+    assert.match(await page.locator(".comparison-table").innerText(),/المساعدة بالدرجات/);
+    await page.locator(".close-modal").click();
+    await page.locator(".modal-backdrop").waitFor({state:"detached"});
+    await page.locator("#compare-clear").click();
     await page.locator("[data-page=ratings]").first().click();
     assert.equal(await page.locator("[data-college]").count(), 2);
     assert.equal(await page.locator("[data-major]").count(), 3);
     assert.equal(await page.locator(".doctor-card").count(), 4);
     await page.locator('[data-college="كلية الهندسة"]').click();
     assert.equal(await page.locator(".doctor-card").count(), 4);
+    for(const id of [17,18,19,21]) await page.locator(`[data-compare="${id}"]`).click();
+    assert.equal(await page.locator('[data-compare][aria-pressed="true"]').count(),3);
+    await page.locator("#compare-clear").click();
     assert.equal(await page.locator('[data-major="الفيزياء"]').count(), 0);
     await page.locator('[data-major="الهندسة الكهربائية"]').click();
     assert.equal(await page.locator(".doctor-card").count(), 1);
@@ -464,8 +491,59 @@ const server = http.createServer((req, res) => {
     await page.locator('#university-choice select').selectOption("3");
     await page.locator('#university-choice button').click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
+    await page.locator('[data-request-doctor]').click();
+    await page.locator('#doctor-request-form [name=name]').fill("زياد محمد الشهري");
+    await page.locator('#doctor-request-form [type=submit]').click();
+    await page.getByText("وصل طلب إضافة الدكتور إلى الإدارة دون إنشاء أي تقييم.").waitFor();
+    assert.ok(calls.some((call)=>call.action==='doctor.request'&&call.majorId===1&&!('scores' in call)));
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('[data-save="18"]').click();
+    await page.waitForFunction(()=>!!localStorage.getItem('miyar-bookmark-times-11111111-1111-4111-8111-111111111111'));
+    notifyPublished=true;
+    await page.locator('#notice').click();
+    await page.getByText('تقييم جديد للدكتور خالد محمد الحربي').waitFor();
+    await page.locator('#read-notifications').click();
+    await page.getByText('لا توجد تقييمات جديدة لدكاترتك المحفوظين حتى الآن.').waitFor();
+    assert.equal(await page.locator('.notification-badge').count(),0);
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('[data-save="18"]').click();
+    await page.locator('#search').fill('أحمد محمد العتيبي');
+    await page.locator('.card-detail[data-doctor="17"]').click();
+    await page.locator('#review-subject-filter').waitFor();
+    await page.locator('#review-subject-filter').selectOption('رياضيات');
+    await page.locator('#review-subject-filter').waitFor();
+    assert.equal(await page.locator('#published-reviews .review-comment').count(),1);
+    assert.match(await page.locator('#published-reviews').innerText(),/تجربة مادة الرياضيات/);
+    await page.locator('[data-report-review="502"]').click();
+    await page.locator('#report-review-form [name=reason]').selectOption('personal');
+    await page.locator('#report-review-form [type=submit]').click();
+    await page.getByText('وصل بلاغك إلى الإدارة لمراجعة التقييم.').waitFor();
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('#open-settings').click();
+    await page.locator('#my-reviews-settings').click();
+    await page.locator('[data-edit-review="501"]').click();
+    await page.locator('#edit-review-form [name=comment]').fill('التقييم الجديد المقترح');
+    await page.locator('#edit-review-form [type=submit]').click();
+    await page.getByText('وصل طلب التعديل. يبقى تقييمك القديم كما هو إلى أن توافق الإدارة على البديل.').waitFor();
+    assert.equal(publicReviews[0].comment,'التقييم القديم المنشور');
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
     await page.locator("[data-page=admin]").click();
     await page.getByText("لا توجد طلبات معلّقة.").waitFor();
+    await page.locator('[data-cloud-operation="edit.reject"]').click();
+    await page.getByText('لا توجد طلبات تعديل معلّقة.').waitFor();
+    assert.equal(publicReviews[0].comment,'التقييم القديم المنشور');
+    await page.locator('[data-cloud-operation="report.dismiss"]').click();
+    await page.getByText('لا توجد بلاغات معلّقة.').waitFor();
+    await page.locator('#open-settings').click();await page.locator('#my-reviews-settings').click();
+    await page.locator('[data-edit-review="501"]').click();
+    await page.locator('#edit-review-form [name=comment]').fill('التقييم البديل المعتمد');
+    await page.locator('#edit-review-form [type=submit]').click();
+    await page.getByText('وصل طلب التعديل. يبقى تقييمك القديم كما هو إلى أن توافق الإدارة على البديل.').waitFor();
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('#refresh-cloud-admin').click();
+    await page.locator('[data-cloud-operation="edit.approve"]').click();
+    await page.getByText('لا توجد طلبات تعديل معلّقة.').waitFor();
+    assert.equal(publicReviews[0].comment,'التقييم البديل المعتمد');
     const majorForm = page.locator("#cloud-add-major");
     await majorForm.locator('[name=collegeId]').selectOption("2");
     for (const name of ["الفلك", "الأحياء"]) {
@@ -603,7 +681,7 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator('script[src*="telegram"]').count(), 0);
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: Dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
+      "PASS: Comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
     );
   } finally {
     await browser.close();
