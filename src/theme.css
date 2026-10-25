@@ -161,7 +161,7 @@ select option { color: var(--ink); background: var(--field); }
 .save-button.is-saved { color: var(--green); }
 .is-saved .icon { fill: var(--accent-soft); }
 .stars, .art-stars, .wave, .small-star, .note-two .icon { color: var(--gold); }
-.verified, .notification-badge { background: var(--accent-solid); color: var(--on-accent); }
+.notification-badge { background: var(--accent-solid); color: var(--on-accent); }
 .excellent { background: var(--accent-soft); color: var(--green); }
 .excellent[data-tier="ممتاز"], .excellent[data-tier="جيد جدًا"], .excellent[data-tier="جيد"] {
   background: var(--success-soft); color: var(--success);
@@ -219,3 +219,9 @@ select option { color: var(--ink); background: var(--field); }
 }
 [data-theme=dark] .search-input input { background: transparent; }
 ::selection { background: var(--accent-solid); color: var(--on-accent); }
+
+/* A consistent blue verification seal, independent of the selected accent. */
+.verified { display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex:0 0 18px;vertical-align:-.18em;margin:0;color:#1d9bf0;line-height:0; }
+.verified-icon { display:block;width:100%;height:100%;overflow:visible; }
+.doctor-name .verified { align-self:center; }
+.detail-person h2 .verified { width:22px;height:22px;margin-inline-start:4px; }
