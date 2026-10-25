@@ -34,6 +34,10 @@ export function createDatabase(url, key, fetcher = fetch) {
         );
       }
       const reasons = {
+        GRADE_DOCTOR_NOT_FOUND: [404, "الدكتور غير متاح."],
+        GRADE_SUBJECT_CHANGED: [409, "تغيّرت مادة التقييم. أعد فتح مشاركة الدرجات وراجع اختيارك."],
+        GRADE_REVIEW_NOT_FOUND: [404, "المشاركة غير موجودة في حسابك أو جلستك الحالية."],
+        INVALID_GRADE_CONSENT: [400, "تحقق من الموافقة على مشاركة الدرجة إحصائيًا."],
         UNIVERSITY_NOT_FOUND: [404, "الجامعة غير موجودة أو حُذفت سابقًا."],
         UNIVERSITY_HAS_COLLEGES: [409, "لا يمكن حذف الجامعة لوجود كليات مرتبطة بها. تُحفظ الكليات والدكاترة والتقييمات."],
         UNIVERSITY_HAS_REQUESTS: [409, "لا يمكن حذف الجامعة لوجود سجل طلبات مرتبط بها. تُحفظ الطلبات وقراراتها."],

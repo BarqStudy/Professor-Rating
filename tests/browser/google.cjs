@@ -166,7 +166,7 @@ const server = http.createServer((req, res) => {
     let pendingEdits=[], pendingReports=[], notifyPublished=false;
     const requestHistory=[],requestEvents=[];
     let catalogueRequests=[],ambassadors=[];
-    let aiEnabled=false,aiFails=false;
+    let aiEnabled=false,aiFails=false,guestSharesGrade=true,memberSharesGrade=false;
     const guest={id:"44444444-4444-4444-8444-444444444444",university_id:null,status:"active"};
     const guestToken="ab".repeat(32);
     let googleEnabled = false,
@@ -232,6 +232,15 @@ const server = http.createServer((req, res) => {
           if (body.action === "guest.university") {guest.university_id=body.universityId;result={...guest};}
           if (body.action === "guest.presence") result={online:7};
           if (body.action === "guest.submit") result={id:99,status:"pending"};
+          if (body.action === 'doctor.grades') {
+            const available=body.subject==='ميكانيكا'&&body.doctor!==19;
+            result={minimum:10,available,subject:body.subject||null,subjects:['ميكانيكا','رياضيات'],...(available?{total:10,average:87.5,highPercent:60,bins:[{band:'90–100',count:6,percent:60},{band:'80–89',count:2,percent:20},{band:'70–79',count:1,percent:10},{band:'60–69',count:1,percent:10},{band:'0–59',count:0,percent:0}]}:{})};
+          }
+          if (body.action === 'guest.grade.participation') result={items:[{id:99,doctor_name:catalogue.doctors[0].name,subject:'مادة زائر',university:'جامعة نجران',status:'pending',share_grade:guestSharesGrade}],nextBefore:null};
+          if (body.action === 'grade.participation') result={items:body.before?[{id:400,doctor_name:'أحمد عبدالله الغامدي',subject:'مادة سابقة',university:'جامعة الملك خالد',status:'published',share_grade:false}]:[{id:501,doctor_name:catalogue.doctors[0].name,subject:'ميكانيكا',university:'جامعة نجران',status:'published',share_grade:memberSharesGrade}],nextBefore:body.before?null:501};
+          if (body.action === 'guest.grade.consent') {guestSharesGrade=body.shareGrade;result={ok:true,shareGrade:body.shareGrade};}
+          if (body.action === 'grade.consent') {memberSharesGrade=body.shareGrade;result={ok:true,shareGrade:body.shareGrade};}
+
           if (body.action === "me") result = me;
           if (body.action === "reviews") result = body.doctor===17 ? publicReviews.filter((row)=>!body.subject||row.subject===body.subject) : [];
           if (body.action === "mine") result=[own];
@@ -375,6 +384,12 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator(".comparison-table thead th").count(),4);
     assert.deepEqual(await page.locator('.comparison-table thead th').evaluateAll((cells)=>cells.slice(1).map((cell)=>cell.firstChild.textContent)), [20,19,18].map((id)=>catalogue.doctors.find((doctor)=>doctor.id===id).name));
     assert.match(await page.locator(".comparison-table").innerText(),/المساعدة بالدرجات/);
+    await page.locator('#grade-comparison .grade-subject').waitFor();
+    await page.locator('#grade-comparison .grade-subject').selectOption('ميكانيكا');
+    await page.locator('.grade-comparison-table').waitFor();
+    assert.match(await page.locator('.grade-comparison-table').innerText(),/بيانات غير كافية/);
+    assert.match(await page.locator('.grade-comparison-table').innerText(),/٦٠٪/);
+
     await page.locator(".close-modal").click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     await page.locator("#compare-clear").click();
@@ -455,6 +470,8 @@ const server = http.createServer((req, res) => {
     await page.locator('#accept-review-pledge').click();
     await page.locator('#review-form').waitFor();
     assert.equal(await page.locator('#review-form [name=comment]').getAttribute('required'),null);
+    assert.equal(await page.locator('#review-form [name=shareGrade]').isChecked(),false);
+    await page.locator('#review-form [name=shareGrade]').check();
     await page.locator('[data-rating-tag="محاضرة ممتعة"]').click();
     await page.locator('[data-rating-tag="محاضرة مملة"]').click();
     assert.equal(await page.locator('[data-rating-tag="محاضرة ممتعة"]').getAttribute('aria-pressed'),'false');
@@ -469,6 +486,15 @@ const server = http.createServer((req, res) => {
     const guestReview=calls.find((call)=>call.action==='guest.submit');
     assert.equal(guestReview.comment,'');assert.deepEqual(guestReview.tags,['يوصل المعلومة']);assert.equal(guestReview.pledged,true);
     assert.equal(guestReview.authorization,undefined);assert.equal(guestReview.guest_token,guestToken);
+    assert.equal(guestReview.shareGrade,true);
+    await page.locator('#open-settings').click();await page.locator('#grade-sharing-settings').click();
+    await page.locator('[data-grade-consent="99"]').waitFor();
+    assert.equal(await page.locator('[data-grade-consent="99"]').isChecked(),true);
+    await page.locator('[data-grade-consent="99"]').uncheck();
+    await page.getByText('سُحبت الموافقة واستُبعدت الدرجة من الإحصائيات.').waitFor();
+    assert.ok(calls.some(call=>call.action==='guest.grade.consent'&&call.shareGrade===false&&call.guest_token===guestToken&&!call.authorization));
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+
     await page.waitForFunction(()=>document.querySelector('[data-online-count]').textContent.includes((7).toLocaleString('ar')));
     assert.match(await page.locator('.semester').innerText(),/الأول ١٤٤٨/);
     assert.equal(calls.filter((call)=>call.action==='exchange').length,0);
@@ -591,6 +617,7 @@ const server = http.createServer((req, res) => {
     assert.equal(submission.authorization, `Bearer ${access}`);
     assert.ok(!("initData" in submission));
     assert.equal(submission.grade, 92);
+    assert.equal(submission.shareGrade,false);
     await page.locator("#open-settings").click();
     assert.equal(await page.locator('.short-account-id').innerText(),member.slice(0,8).toUpperCase());
     assert.ok(!(await page.locator('.cloud-identity').innerText()).includes(member));
@@ -684,6 +711,22 @@ const server = http.createServer((req, res) => {
     await page.locator('.card-detail[data-doctor="17"]').click();
     await page.locator('#review-subject-filter').waitFor();
     assert.equal((await page.locator('.detail-person h2').innerText()).trim(),catalogue.doctors.find((doctor)=>doctor.id===17).name);
+    await page.locator('#doctor-grade-map .grade-subject').waitFor();
+    await page.locator('#doctor-grade-map .grade-subject').selectOption('ميكانيكا');
+    await page.locator('.grade-metrics').waitFor();
+    assert.match(await page.locator('.grade-metrics').innerText(),/٦٠٪/);
+    assert.equal(await page.locator('.grade-distribution li').count(),5);
+    for(const width of [1440,390]){
+      await page.setViewportSize({width,height:1000});
+      assert.equal(await page.locator('#doctor-grade-map').evaluate(el=>el.scrollWidth>el.clientWidth),false);
+      await page.locator('#doctor-grade-map').screenshot({path:`/tmp/miyar-grade-map-${width}.png`});
+    }
+    await page.setViewportSize({width:1440,height:1000});
+    await page.locator('#doctor-grade-map .grade-subject').selectOption('رياضيات');
+    await page.locator('.grade-empty').waitFor();
+    assert.equal(await page.locator('.grade-metrics').count(),0);
+    assert.equal(await page.locator('.grade-distribution').count(),0);
+
     assert.match(await page.locator('.doctor-summary').innerText(),/إشادة بالشرح/);
     assert.match(await page.locator('.doctor-summary').innerText(),/3 تقييمات/);
     await page.locator('#share-doctor-card').click();
@@ -705,6 +748,17 @@ const server = http.createServer((req, res) => {
     await page.locator('#report-review-form [name=reason]').selectOption('personal');
     await page.locator('#report-review-form [type=submit]').click();
     await page.getByText('وصل بلاغك إلى الإدارة لمراجعة التقييم.').waitFor();
+    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('#open-settings').click();await page.locator('#grade-sharing-settings').click();
+    await page.locator('[data-grade-consent="501"]').waitFor();
+    await page.locator('[data-grade-consent="501"]').check();
+    await page.getByText('حُفظت موافقتك على المشاركة الإحصائية.').waitFor();
+    assert.ok(calls.some(call=>call.action==='grade.consent'&&call.review===501&&call.shareGrade===true&&call.subject==='ميكانيكا'&&call.authorization===`Bearer ${access}`));
+    await page.locator('[data-grade-more]').click();
+    await page.locator('[data-grade-consent="400"]').waitFor();
+    assert.equal(await page.locator('.grade-sharing-item').count(),2);
+    await page.locator('[data-grade-consent="501"]').uncheck();
+    await page.getByText('سُحبت الموافقة واستُبعدت الدرجة من الإحصائيات.').waitFor();
     await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
     await page.locator('#open-settings').click();
     await page.locator('#my-reviews-settings').click();
@@ -1014,7 +1068,7 @@ const server = http.createServer((req, res) => {
     await page.locator('.connection-banner.live').waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: AI availability gating, grounded chat UI with citations, escaped model output, guest session binding and quota error recovery, Scoped ambassador assignment/revocation, proposal moderation and persistence, student data corrections and history, responsive ambassador workspace, Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
+      "PASS: Opt-in grade maps and same-course comparisons, hidden small samples, guest/account consent and withdrawal, pagination, responsive grade charts; AI availability gating, grounded chat UI with citations, escaped model output, guest session binding and quota error recovery, Scoped ambassador assignment/revocation, proposal moderation and persistence, student data corrections and history, responsive ambassador workspace, Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
     );
   } finally {
     await browser.close();

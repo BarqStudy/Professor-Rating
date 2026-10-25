@@ -1,4 +1,5 @@
 import { handleGuest } from "./guest.js";
+import { gradeConsent, gradeParticipation, publicGrades } from "./grades.js";
 import { handleAi, checkAiConnection } from "./ai.js";
 import { catalogueProposal, ambassadorAdmin } from "./ambassadors.js";
 import { studentCommunity, adminCommunity, publicSummary } from "./community.js";
@@ -84,6 +85,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
         );
       }
       if (action === "doctor.summary") return respond(await publicSummary(body, db));
+      if (action === "doctor.grades") return respond(await publicGrades(body, db));
       if (action === "reviews") {
         const id = integer(body.doctor, 1, Number.MAX_SAFE_INTEGER, "الدكتور");
         const doctors = await db(
@@ -126,6 +128,11 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
         }
       }
       const user = rows[0];
+      // Owners can withdraw statistical sharing even while their account is restricted.
+      if (user && ['grade.participation','grade.consent'].includes(action)) {
+        const participation = await gradeParticipation(action, body, db, identity.id);
+        return respond(participation.data);
+      }
       if (!user || user.status === "banned") {
         throw new ApiError(403, "هذا الحساب محظور من المنصة.");
       }
@@ -193,6 +200,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
             p_grading: r.scores[2],
             p_comment: r.comment,
             p_tags: r.tags,
+            p_share_grade: gradeConsent(body.shareGrade),
           },
         });
         return respond(result, 201);

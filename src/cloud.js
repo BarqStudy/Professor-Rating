@@ -79,7 +79,7 @@ export async function signOutGoogle() {
 export async function api(action, data = {}) {
   if (!configured) throw new Error("لم يتم ربط قاعدة البيانات بعد.");
   const isGuest = action.startsWith("guest.");
-  const isPublic = isGuest || action === "catalogue" || action === "reviews" || action === "doctor.summary" || action === "ai.status";
+  const isPublic = isGuest || action === "catalogue" || action === "reviews" || action === "doctor.summary" || action === "doctor.grades" || action === "ai.status";
   const session = isPublic ? cachedSession : await getGoogleSession();
   if (!isPublic && !session) {
     throw new Error("سجّل الدخول باستخدام Google لإكمال العملية.");

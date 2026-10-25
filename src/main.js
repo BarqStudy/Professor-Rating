@@ -1,5 +1,7 @@
 import { REVIEW_TAGS } from "../supabase/functions/miyar/tags.js";
 import { createAssistant } from './assistant.js';
+import { createGradeMap } from "./grades.js";
+import "./grades.css";
 import { createDoctorCard } from "./doctor-card.js";
 import { setupPwa, installPlatform } from "./pwa.js";
 import "./style.css";
@@ -67,6 +69,7 @@ const icons = {
   share:
     '<circle cx="18" cy="5" r="3"/><circle cx="5" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8 11 7-4M8 13l7 4"/>',
   close: '<path d="m6 6 12 12M6 18 18 6"/>',
+  chart: '<path d="M4 3v18h17M8 16v-5m5 5V7m5 9v-8"/>',
   profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
   users:
     '<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m1-16a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 5"/>',
@@ -79,6 +82,7 @@ const ic = (n, c = "") =>
   `<svg class="icon ${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${
     icons[n] || icons.star
   }</svg>`;
+const gradeMap = createGradeMap({api,modal,ensureGuestSession:async()=>{guestProfile=await ensureGuestSession();},isMember:()=>!!googleSession,identityKey:()=>googleSession?.user.id||guestProfile?.id||null,configured:()=>configured,icon:ic});
 const logo =
   `<span class="miyar-mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M32 10v43M14 22h36M22 53h20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="m14 22-9 19h18l-9-19Zm36 0-9 19h18l-9-19Z" fill="currentColor" opacity=".22"/><path d="M5 41c3 8 15 8 18 0M41 41c3 8 15 8 18 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="m32 3 5 6-5 6-5-6Z" fill="#bf9354"/></svg></span><span class="logo-type">مِعيار<span>MIYAR</span></span>`;
 const initial = [{
@@ -566,7 +570,7 @@ function cards() {
         d.count ? labelScore(d.score) : "بدون تقييم"
       }</span></div><button class="compare-toggle" data-compare="${d.id}" aria-pressed="${compareIds.includes(d.id)}">${ic("users")} ${compareIds.includes(d.id) ? "مضاف للمقارنة" : "قارن الدكتور"}</button><button class="card-detail" data-doctor="${d.id}">استعرض التقييمات ${
         ic("arrow")
-      }</button></article>`
+      }</button>${configured?`<button type="button" class="grade-card-link" data-open-grades="${d.id}">خريطة الدرجات ${ic("chart")}</button>`:""}</article>`
     ).join("")
     : `<div class="empty">${page === 'saved' ? 'لم تحفظ أي دكتور بعد. اضغط علامة الحفظ على بطاقة الدكتور ليظهر هنا.' : selectedUniversity() && !colleges.length ? 'لم تُضف كليات جامعتك بعد. يمكنك إرسال طلب الإضافة عبر البريد أو تغيير الجامعة من الإعدادات.' : page === 'home' && !query ? 'ستظهر هنا أعلى تقييمات الدكاترة بعد نشر أول تقييمات الطلاب.' : 'لم نجد نتائج مطابقة. جرّب اسمًا آخر أو أضف الدكتور من نموذج التقييم.'}</div>`;
 }
@@ -779,9 +783,9 @@ async function reviewForm(id, pledged = false) {
       ic("shield")
     } لا تُعرض هويتك أو درجتك مع التقييم.<small>${
       configured
-        ? "تُحفظ الدرجة في قاعدة البيانات المحمية ولا تظهر للطلاب أو في شاشة المراجعة."
+        ? "تُحفظ درجتك بصورة محمية، ولا تظهر منفردة للطلاب أو في شاشة المراجعة. المشاركة في خريطة الدرجات اختيارية."
         : "في هذه النسخة التجريبية لا تُخزّن الدرجة."
-    }</small></div><div class="sliders">${
+    }</small></div>${configured?`<label class="grade-consent"><input type="checkbox" name="shareGrade"><span>أوافق على استخدام درجتي في إحصائيات المادة المجمّعة (اختياري)<small>تظهر النتائج بعد ١٠ مشاركات اختيارية معتمدة للمادة. لا تُعرض درجتك منفردة، ويمكنك سحب الموافقة من الإعدادات.</small></span></label>`:""}<div class="sliders">${
       ["الشرح", "التعامل", "المساعدة بالدرجات"].map((t, i) =>
         `<label class="slider-label"><span>${t}<output id="out-${i}">٨٠ <small>جيد</small></output></span><input type="range" name="score${i}" min="0" max="100" value="80" aria-valuetext="80 من 100، جيد" data-range="${i}" style="--range-color:${
           scoreColor(80)
@@ -841,6 +845,7 @@ async function reviewForm(id, pledged = false) {
       date: new Date().toISOString(),
       tags: chosenRatingTags(e.target),
       pledged: true,
+      shareGrade: f.get("shareGrade") === "on",
     };
     if (configured) {
       const button = e.target.querySelector(".submit-review");
@@ -1103,6 +1108,10 @@ function bindCards() {
     updateComparison();
   });
   updateComparison();
+  document.querySelectorAll('[data-open-grades]').forEach(button=>button.onclick=async()=>{
+    await detail(Number(button.dataset.openGrades));
+    document.querySelector('#doctor-grade-map')?.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  });
   document.querySelectorAll("[data-doctor]").forEach((b) =>
     b.onclick = () => detail(+b.dataset.doctor)
   );
@@ -1235,7 +1244,7 @@ function openSettings() {
     };
   modal(
     "إعداداتك في مِعيار",
-    `<form id="settings-form"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button>${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
+    `<form id="settings-form"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button>${configured?`<button type="button" class="secondary my-reviews-settings" id="grade-sharing-settings">${ic("chart")} مشاركة الدرجات</button>`:""}${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
       ic("users")
     }</span><div><h3>مساحتك، على طريقتك</h3><p>خصّص بياناتك وتجربة القراءة بما يناسبك.</p></div></div><label>اسم الطالب<input name="name" required maxlength="60" autocomplete="name" placeholder="كيف تحب أن نناديك؟" value="${
       escapeHtml(profile.name)
@@ -1306,6 +1315,7 @@ function openSettings() {
     }
   });
   document.querySelector("#install-app")?.addEventListener("click", () => installPlatform(modal,toast));
+  document.querySelector("#grade-sharing-settings")?.addEventListener("click",gradeMap.manage);
   document.querySelector("#my-reviews-settings")?.addEventListener("click", () => myReviews());
   document.querySelector("#change-university")?.addEventListener("click", () => openUniversityChoice(false));
   document.querySelectorAll("[data-color-option]").forEach((button) => {
@@ -1614,7 +1624,8 @@ async function cloudDoctorDetail(id, subject = "") {
   try {
     const [rows, summary] = await Promise.all([api("reviews", {doctor:id, ...(subject ? {subject} : {})}), api("doctor.summary", {doctor:id, ...(subject ? {subject} : {})}).catch(() => null)]);
     if (!loading.isConnected) return;
-    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?'<span class="verified" title="موثق من الإدارة">✓</span>':""}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
+    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?'<span class="verified" title="موثق من الإدارة">✓</span>':""}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<section id="doctor-grade-map" class="grade-map" aria-label="خريطة درجات الدكتور"></section><label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
+    void gradeMap.mount(document.querySelector('#doctor-grade-map'),id,subject);
     document.querySelector("#review-subject-filter").onchange = (event) => cloudDoctorDetail(id,event.target.value);
     document.querySelectorAll("[data-report-review]").forEach((button) => button.onclick = () => reportReview(Number(button.dataset.reportReview)));
     document.querySelector("#detail-rate").onclick = () => reviewForm(id);
@@ -1843,7 +1854,8 @@ function showComparison() {
   const selected=compareIds.map((id)=>doctors.find((doctor)=>doctor.id===id)).filter(Boolean);
   if(selected.length<2)return;
   const labels=['الشرح','التعامل','المساعدة بالدرجات','عدد التقييمات'];
-  modal('مقارنة الدكاترة',`<p class="muted">المؤشرات من تقييمات الطلاب المنشورة، وليست ضمانًا لتجربتك الشخصية.</p><div class="comparison-table-wrap"><table class="comparison-table"><caption>مقارنة مؤشرات الدكاترة</caption><thead><tr><th scope="col">المؤشر</th>${selected.map((doctor)=>`<th scope="col">${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></th>`).join('')}</tr></thead><tbody>${labels.map((label,index)=>`<tr><th scope="row">${label}</th>${selected.map((doctor)=>`<td>${index===3?doctor.count:doctor.count?`${Number(doctor.scores?.[index]||0)} / ١٠٠`:'بدون تقييم'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+  modal('مقارنة الدكاترة',`<p class="muted">المؤشرات من تقييمات الطلاب المنشورة، وليست ضمانًا لتجربتك الشخصية.</p><div class="comparison-table-wrap"><table class="comparison-table"><caption>مقارنة مؤشرات الدكاترة</caption><thead><tr><th scope="col">المؤشر</th>${selected.map((doctor)=>`<th scope="col">${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></th>`).join('')}</tr></thead><tbody>${labels.map((label,index)=>`<tr><th scope="row">${label}</th>${selected.map((doctor)=>`<td>${index===3?doctor.count:doctor.count?`${Number(doctor.scores?.[index]||0)} / ١٠٠`:'بدون تقييم'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${configured?'<section class="grade-comparison" id="grade-comparison"></section>':''}`);
+  if(configured)void gradeMap.comparison(document.querySelector("#grade-comparison"),selected);
 }
 async function submitCommunityForm(form,action,payload,message) {
   const button=form.querySelector('[type=submit]');button.disabled=true;
