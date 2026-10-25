@@ -64,7 +64,7 @@ catalogue.majors.push({ id: 2, college_id: 1, name: "الهندسة الكهرب
 for (
   const data of [{
     id: 18,
-    name: "خالد محمد الحربي",
+    name: "م. خالد محمد الحربي",
     major: "الهندسة المدنية",
     major_id: 1,
   }, {
@@ -238,7 +238,7 @@ const server = http.createServer((req, res) => {
           if (body.action === "requests") result=requestHistory;
           if (body.action === "request.updates") result=requestEvents;
           if (body.action === "doctor.summary") result={reviewCount:3,totalPublished:3,themes:[{label:"إشادة بالشرح",count:2}],insufficient:false};
-          if (body.action === "notifications") result=notifyPublished&&body.doctors.includes(18)?[{review_id:601,doctor_id:18,doctor_name:"خالد محمد الحربي",published_at:new Date(Date.now()+10000).toISOString()}]:[];
+          if (body.action === "notifications") result=notifyPublished&&body.doctors.includes(18)?[{review_id:601,doctor_id:18,doctor_name:catalogue.doctors.find((doctor)=>doctor.id===18).name,published_at:new Date(Date.now()+10000).toISOString()}]:[];
           if (body.action === "doctor.request") {requestHistory.push({id:55,kind:"doctor",title:body.name,status:"pending",reason:null,created_at:new Date().toISOString(),university:"جامعة نجران"});result={id:55,status:"pending",existing:false};}
           if (['doctor.correction','ambassador.propose'].includes(body.action)) {
             const kind=body.action==='doctor.correction'?'doctor.correct':body.kind;
@@ -344,6 +344,7 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator("[data-college]").count(), 0);
     assert.equal(await page.locator(".doctor-card").count(), 3);
     assert.deepEqual(await page.locator(".doctor-card .doctor-name [data-doctor]").evaluateAll((buttons) => buttons.map((button) => Number(button.dataset.doctor))), [20, 19, 18]);
+    assert.deepEqual(await page.locator('.doctor-card .doctor-name [data-doctor]').allTextContents(), [20,19,18].map((id)=>catalogue.doctors.find((doctor)=>doctor.id===id).name));
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 1000 });
       for (const term of ["أحمد محمد العتيبي", "ميكانيكا"]) {
@@ -372,6 +373,7 @@ const server = http.createServer((req, res) => {
     for(const id of [20,19,18]) await page.locator(`[data-compare="${id}"]`).click();
     await page.locator("#compare-now").click();
     assert.equal(await page.locator(".comparison-table thead th").count(),4);
+    assert.deepEqual(await page.locator('.comparison-table thead th').evaluateAll((cells)=>cells.slice(1).map((cell)=>cell.firstChild.textContent)), [20,19,18].map((id)=>catalogue.doctors.find((doctor)=>doctor.id===id).name));
     assert.match(await page.locator(".comparison-table").innerText(),/المساعدة بالدرجات/);
     await page.locator(".close-modal").click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
@@ -672,7 +674,7 @@ const server = http.createServer((req, res) => {
     await page.waitForFunction(()=>!!localStorage.getItem('miyar-bookmark-times-11111111-1111-4111-8111-111111111111'));
     notifyPublished=true;
     await page.locator('#notice').click();
-    await page.getByText('تقييم جديد للدكتور خالد محمد الحربي').waitFor();
+    await page.getByText('تقييم جديد: م. خالد محمد الحربي').waitFor();
     await page.locator('#read-notifications').click();
     await page.getByText('لا توجد تقييمات جديدة لدكاترتك المحفوظين حتى الآن.').waitFor();
     assert.equal(await page.locator('.notification-badge').count(),0);
@@ -681,6 +683,7 @@ const server = http.createServer((req, res) => {
     await page.locator('#search').fill('أحمد محمد العتيبي');
     await page.locator('.card-detail[data-doctor="17"]').click();
     await page.locator('#review-subject-filter').waitFor();
+    assert.equal((await page.locator('.detail-person h2').innerText()).trim(),catalogue.doctors.find((doctor)=>doctor.id===17).name);
     assert.match(await page.locator('.doctor-summary').innerText(),/إشادة بالشرح/);
     assert.match(await page.locator('.doctor-summary').innerText(),/3 تقييمات/);
     await page.locator('#share-doctor-card').click();

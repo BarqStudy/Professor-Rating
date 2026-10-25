@@ -8,7 +8,7 @@ import { aiConfiguration, generateAiAnswer, checkAiConnection } from '../supabas
 import { selectGeminiFlash, geminiGenerationConfig } from '../supabase/functions/miyar/ai-models.js';
 import { guestTokenHash } from '../supabase/functions/miyar/guest.js';
 const guest='11111111-1111-4111-8111-111111111111';
-const catalogue={universities:[{id:1,name:'جامعة الملك سعود'},{id:3,name:'جامعة نجران'}],colleges:[{id:1,name:'كلية الهندسة',university_id:3},{id:2,name:'كلية العلوم',university_id:1}],majors:[{id:1,name:'الهندسة المدنية',college_id:1},{id:2,name:'الفيزياء',college_id:2}],doctors:[{id:11,name:'أحمد محمد العتيبي',major_id:1,major:'الهندسة المدنية',college:'كلية الهندسة',score:90,count:3,scores:[80,90,100],subjects:['ميكانيكا']},{id:22,name:'أحمد محمد العتيبي',major_id:2,major:'الفيزياء',college:'كلية العلوم',score:99,count:10},{id:33,name:'خالد محمد الحربي',major_id:1,major:'الهندسة المدنية',college:'كلية الهندسة',score:0,count:0}],stats:{doctors:3,reviews:13}};
+const catalogue={universities:[{id:1,name:'جامعة الملك سعود'},{id:3,name:'جامعة نجران'}],colleges:[{id:1,name:'كلية الهندسة',university_id:3},{id:2,name:'كلية العلوم',university_id:1}],majors:[{id:1,name:'الهندسة المدنية',college_id:1},{id:2,name:'الفيزياء',college_id:2}],doctors:[{id:11,name:'م. أحمد محمد العتيبي',major_id:1,major:'الهندسة المدنية',college:'كلية الهندسة',score:90,count:3,scores:[80,90,100],subjects:['ميكانيكا']},{id:22,name:'أحمد محمد العتيبي',major_id:2,major:'الفيزياء',college:'كلية العلوم',score:99,count:10},{id:33,name:'خالد محمد الحربي',major_id:1,major:'الهندسة المدنية',college:'كلية الهندسة',score:0,count:0}],stats:{doctors:3,reviews:13}};
 test('retired Gemini models recover once using the key-visible Flash catalogue and cache the working selection',async()=>{
  const config=aiConfiguration({AI_PROVIDER:'gemini',GEMINI_API_KEY:'fallback-test-private'}),calls=[];
  const current='gemini-3.1-flash-lite';
@@ -80,11 +80,12 @@ test('AI connection diagnostics require a verified administrator and never expos
 test('AI grounding selects only public fields, scopes doctors to the server-selected university and excludes unrated ranking candidates',async()=>{
  const calls=[];
  const db=async(path)=>{calls.push(path);return path==='rpc/miyar_catalogue'?{...catalogue,account_id:'secret-account',grade:99}:[{subject:'ميكانيكا',comment:'شرح واضح',tags:['يوصل المعلومة'],grade:97,account_id:'private-author',guest_id:'private-guest'}];};
- const context=await buildAiContext(db,3,'كيف شرح أحمد محمد العتيبي؟');
+ const context=await buildAiContext(db,3,'كيف شرح م. أحمد محمد العتيبي؟');
  assert.equal(context.data.selectedUniversity,'جامعة نجران');assert.deepEqual(context.data.doctors.map((doctor)=>doctor.id),[11]);
  assert.ok(calls.some((path)=>path.includes('status=eq.published&select=subject,comment,tags')));
  const serialized=JSON.stringify(context);for(const privateValue of ['account_id','guest_id','private-author','private-guest','secret-account','grade'])assert.ok(!serialized.includes(privateValue));
  assert.ok(!context.sources.some((source)=>source.href==='?doctor=22'));
+ assert.equal(context.sources.find((source)=>source.href==='?doctor=11').label,'م. أحمد محمد العتيبي');
  const best=await buildAiContext(db,3,'من أعلى الدكاترة تقييمًا؟');
  assert.deepEqual(best.data.doctors.map((doctor)=>doctor.id),[11]);
  assert.equal(best.data.globalStatistics.doctors,3);assert.equal(best.data.scopeCollegeCount,1);

@@ -534,7 +534,7 @@ function cards() {
         saved.includes(d.id) ? "is-saved" : ""
       }" data-save="${d.id}" aria-label="حفظ الدكتور">${
         ic("bookmark")
-      }</button></div><div class="doctor-name"><button data-doctor="${d.id}">د. ${
+      }</button></div><div class="doctor-name"><button data-doctor="${d.id}">${
         escapeHtml(d.name)
       }</button>${
         d.verified
@@ -600,7 +600,7 @@ function admin() {
     ic("plus")
   } إضافة دكتور</button>${bulkDoctorForm()}${
     doctors.map((d) =>
-      `<div class="admin-row"><span>د. ${
+      `<div class="admin-row"><span>${
         escapeHtml(d.name)
       }</span><div><button data-verify="${d.id}">${
         d.verified ? "إلغاء التوثيق" : "توثيق"
@@ -620,7 +620,7 @@ function bulkDoctorForm() {
   const options = configured
     ? (cloudCatalogue?.majors || []).map((m) => `<option value="${m.id}">${escapeHtml(m.name)} · ${escapeHtml(cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.name || "")} · ${escapeHtml(cloudCatalogue.universities?.find((u) => u.id === cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.university_id)?.name || "")}</option>`).join("")
     : majors.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
-  return `<form id="bulk-doctors" class="bulk-doctors"><h3>إضافة دكاترة دفعة واحدة</h3><p class="muted">اختر التخصص واكتب اسم كل دكتور الثلاثي في سطر مستقل. يُضافون بدون تقييمات.</p><label>الكلية والتخصص<select name="major" required>${options}</select></label><label>أسماء الدكاترة<textarea name="names" rows="6" maxlength="10100" required placeholder="أحمد محمد العتيبي&#10;خالد عبدالله الحربي"></textarea></label><small>حتى ١٠٠ اسم في الدفعة. تُستبعد الأسماء المكررة في التخصص.</small><p class="bulk-result" role="status" aria-live="polite"></p><button class="primary" type="submit">${ic("plus")} إضافة الدفعة</button></form>`;
+  return `<form id="bulk-doctors" class="bulk-doctors"><h3>إضافة دكاترة دفعة واحدة</h3><p class="muted">اختر التخصص واكتب الاسم الثلاثي مع المسمى الذي تريده في سطر مستقل. يُضافون بدون تقييمات.</p><label>الكلية والتخصص<select name="major" required>${options}</select></label><label>أسماء الدكاترة<textarea name="names" rows="6" maxlength="10100" required placeholder="د. أحمد محمد العتيبي&#10;م. خالد عبدالله الحربي"></textarea></label><small>حتى ١٠٠ اسم في الدفعة. تُستبعد الأسماء المكررة في التخصص.</small><p class="bulk-result" role="status" aria-live="polite"></p><button class="primary" type="submit">${ic("plus")} إضافة الدفعة</button></form>`;
 }
 function bindBulkDoctors() {
   const form = document.querySelector("#bulk-doctors");
@@ -889,7 +889,7 @@ async function detail(id) {
     "تقييمات الدكتور",
     `<div class="detail-person"><span class="avatar ${d.color}">${
       escapeHtml(d.initials)
-    }</span><div><h2>د. ${escapeHtml(d.name)} ${
+    }</span><div><h2>${escapeHtml(d.name)} ${
       d.verified ? '<span class="verified">✓</span>' : ""
     }</h2><p>${
       escapeHtml(d.major)
@@ -924,7 +924,7 @@ async function detail(id) {
       (saved.includes(id) ? "محفوظ" : "حفظ");
   };
   document.querySelector("#share-doctor").onclick = () =>
-    share(`تعرّف على تقييمات د. ${escapeHtml(d.name)} في مِعيار`, id);
+    share(`تعرّف على تقييمات ${d.name} في مِعيار`, id);
 }
 function toggleSave(id) {
   const adding = !saved.includes(id);
@@ -1610,7 +1610,7 @@ async function cloudDoctorDetail(id, subject = "") {
   try {
     const [rows, summary] = await Promise.all([api("reviews", {doctor:id, ...(subject ? {subject} : {})}), api("doctor.summary", {doctor:id, ...(subject ? {subject} : {})}).catch(() => null)]);
     if (!loading.isConnected) return;
-    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}">${escapeHtml(doctor.initials)}</span><div><h2>د. ${escapeHtml(doctor.name)} ${doctor.verified?'<span class="verified" title="موثق من الإدارة">✓</span>':""}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
+    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}">${escapeHtml(doctor.initials)}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?'<span class="verified" title="موثق من الإدارة">✓</span>':""}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
     document.querySelector("#review-subject-filter").onchange = (event) => cloudDoctorDetail(id,event.target.value);
     document.querySelectorAll("[data-report-review]").forEach((button) => button.onclick = () => reportReview(Number(button.dataset.reportReview)));
     document.querySelector("#detail-rate").onclick = () => reviewForm(id);
@@ -1621,7 +1621,7 @@ async function cloudDoctorDetail(id, subject = "") {
     correction.onclick = () => doctorCorrectionForm(id);
     document.querySelector('.detail-actions').append(correction);
     document.querySelector("#share-doctor-card").onclick = () => shareDoctorCard(doctor);
-    document.querySelector("#share-doctor").onclick = () => share(`تعرّف على تقييمات د. ${doctor.name} في مِعيار`,id);
+    document.querySelector("#share-doctor").onclick = () => share(`تعرّف على تقييمات ${doctor.name} في مِعيار`,id);
     document.querySelector("#save-detail").onclick = (event) => { toggleSave(id); event.currentTarget.innerHTML=ic("bookmark")+(saved.includes(id)?" محفوظ":" حفظ"); };
   } catch(error) { if (loading.isConnected) modal("تعذّر تحميل التقييمات",`<p role="alert">${escapeHtml(error.message)}</p>`); }
 }
@@ -1672,7 +1672,7 @@ function cloudAdmin() {
         )
       }</small></span><button class="danger" data-cloud-operation="major.delete" data-id="${m.id}">حذف</button></div>`
     ).join("")
-  }</div></section><section class="panel"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>اسم الدكتور الثلاثي<input name="name" required minlength="8" maxlength="100"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${adminDirectoryControls()}<div class="admin-record-list admin-doctor-list" role="region" aria-label="قائمة الدكاترة" tabindex="0">${adminDoctorRows()}</div><h2>إدارة المستخدمين</h2><form id="cloud-user-status"><label>معرّف حساب الطالب<input name="userId" required placeholder="UUID الظاهر مع الطلب"><select name="identityType" aria-label="نوع الحساب"><option value="google">حساب Google</option><option value="guest">جلسة زائر</option></select><select name="status"><option value="banned">حظر</option><option value="restricted">تقييد الإرسال</option><option value="active">فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق</button></form></section><section class="panel moderation-panel"><h2>طلبات إضافة دكتور</h2>${
+  }</div></section><section class="panel"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>الاسم الثلاثي والمسمى<input name="name" required minlength="8" maxlength="100" placeholder="مثال: د. أحمد محمد العتيبي أو م. خالد عبدالله الحربي"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${adminDirectoryControls()}<div class="admin-record-list admin-doctor-list" role="region" aria-label="قائمة الدكاترة" tabindex="0">${adminDoctorRows()}</div><h2>إدارة المستخدمين</h2><form id="cloud-user-status"><label>معرّف حساب الطالب<input name="userId" required placeholder="UUID الظاهر مع الطلب"><select name="identityType" aria-label="نوع الحساب"><option value="google">حساب Google</option><option value="guest">جلسة زائر</option></select><select name="status"><option value="banned">حظر</option><option value="restricted">تقييد الإرسال</option><option value="active">فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق</button></form></section><section class="panel moderation-panel"><h2>طلبات إضافة دكتور</h2>${
     !queue
       ? '<p class="muted">جارٍ التحميل…</p>'
       : queue.error
@@ -1691,7 +1691,7 @@ function cloudAdmin() {
   }<h2>مراجعة التقييمات</h2>${
     queue?.reviews?.length
       ? queue.reviews.map((r) =>
-        `<div class="moderation-review"><b>د. ${
+        `<div class="moderation-review"><b>${
           escapeHtml(
             allDoctors.find((d) => d.id === r.doctor_id)?.name ||
               queue.doctors.find((d) =>
@@ -1839,7 +1839,7 @@ function showComparison() {
   const selected=compareIds.map((id)=>doctors.find((doctor)=>doctor.id===id)).filter(Boolean);
   if(selected.length<2)return;
   const labels=['الشرح','التعامل','المساعدة بالدرجات','عدد التقييمات'];
-  modal('مقارنة الدكاترة',`<p class="muted">المؤشرات من تقييمات الطلاب المنشورة، وليست ضمانًا لتجربتك الشخصية.</p><div class="comparison-table-wrap"><table class="comparison-table"><caption>مقارنة مؤشرات الدكاترة</caption><thead><tr><th scope="col">المؤشر</th>${selected.map((doctor)=>`<th scope="col">د. ${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></th>`).join('')}</tr></thead><tbody>${labels.map((label,index)=>`<tr><th scope="row">${label}</th>${selected.map((doctor)=>`<td>${index===3?doctor.count:doctor.count?`${Number(doctor.scores?.[index]||0)} / ١٠٠`:'بدون تقييم'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+  modal('مقارنة الدكاترة',`<p class="muted">المؤشرات من تقييمات الطلاب المنشورة، وليست ضمانًا لتجربتك الشخصية.</p><div class="comparison-table-wrap"><table class="comparison-table"><caption>مقارنة مؤشرات الدكاترة</caption><thead><tr><th scope="col">المؤشر</th>${selected.map((doctor)=>`<th scope="col">${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></th>`).join('')}</tr></thead><tbody>${labels.map((label,index)=>`<tr><th scope="row">${label}</th>${selected.map((doctor)=>`<td>${index===3?doctor.count:doctor.count?`${Number(doctor.scores?.[index]||0)} / ١٠٠`:'بدون تقييم'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
 }
 async function submitCommunityForm(form,action,payload,message) {
   const button=form.querySelector('[type=submit]');button.disabled=true;
@@ -1867,7 +1867,7 @@ async function myReviews(doctorId) {
   try {
     const rows=await api('mine');if(!loading.isConnected)return;
     const list=doctorId?rows.filter((row)=>row.doctor_id===doctorId):rows;
-    modal('تقييماتي وطلبات التعديل',`<p class="muted">التعديل يُرسل للإدارة، ويظل تقييمك المنشور كما هو حتى الموافقة.</p>${list.length?list.map((row)=>`<article class="my-review"><h3>د. ${escapeHtml(row.doctor_name)}</h3><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>${reviewStatus[row.status]||''}${row.edit_status==='pending'?' · طلب تعديل قيد المراجعة':row.edit_status==='rejected'?' · رُفض طلب التعديل السابق':row.edit_status==='approved'?' · تمت الموافقة على التعديل':''}</small>${row.status==='published'?`<button class="secondary" data-edit-review="${row.id}" ${row.edit_status==='pending'?'disabled':''}>${row.edit_status==='pending'?'التعديل بانتظار الإدارة':'طلب تعديل التقييم'}</button>`:''}</article>`).join(''):'<p class="empty">لا توجد تقييمات لك في جامعتك الحالية.</p>'}`);
+    modal('تقييماتي وطلبات التعديل',`<p class="muted">التعديل يُرسل للإدارة، ويظل تقييمك المنشور كما هو حتى الموافقة.</p>${list.length?list.map((row)=>`<article class="my-review"><h3>${escapeHtml(row.doctor_name)}</h3><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>${reviewStatus[row.status]||''}${row.edit_status==='pending'?' · طلب تعديل قيد المراجعة':row.edit_status==='rejected'?' · رُفض طلب التعديل السابق':row.edit_status==='approved'?' · تمت الموافقة على التعديل':''}</small>${row.status==='published'?`<button class="secondary" data-edit-review="${row.id}" ${row.edit_status==='pending'?'disabled':''}>${row.edit_status==='pending'?'التعديل بانتظار الإدارة':'طلب تعديل التقييم'}</button>`:''}</article>`).join(''):'<p class="empty">لا توجد تقييمات لك في جامعتك الحالية.</p>'}`);
     document.querySelectorAll('[data-edit-review]').forEach((button)=>button.onclick=()=>editReview(list.find((row)=>row.id===Number(button.dataset.editReview))));
   } catch(error) {if(loading.isConnected)modal('تعذّر تحميل تقييماتك',`<p role="alert">${escapeHtml(error.message)}</p>`);}
 }
@@ -1891,7 +1891,7 @@ function communityAdminPanel(queue) {
   const edits=queue?.edits||[],reports=queue?.reports||[];
   const scores=(row,prefix='')=>`${row[prefix+'explanation']} · ${row[prefix+'treatment']} · ${row[prefix+'grading']}`;
   const reasons={abuse:'إساءة',personal:'معلومات شخصية',irrelevant:'محتوى غير مرتبط'};
-  return `<section class="panel community-admin-panel"><h2>طلبات تعديل التقييمات</h2><p class="muted">موافقتك تستبدل المحتوى المنشور بالجديد. الرفض يُبقي القديم.</p>${edits.length?edits.map((edit)=>`<article class="moderation-review"><h3>د. ${escapeHtml(edit.doctor_name)}</h3><div class="edit-diff"><div><b>التقييم الحالي · ${escapeHtml(edit.old_subject)}</b><p>${escapeHtml(edit.old_comment)}</p>${reviewTagLabels(edit.old_tags)}<small>الشرح · التعامل · الدرجات: ${scores(edit,'old_')}</small></div><div><b>التعديل المقترح · ${escapeHtml(edit.subject)}</b><p>${escapeHtml(edit.comment)}</p>${reviewTagLabels(edit.tags)}<small>الشرح · التعامل · الدرجات: ${scores(edit)}</small></div></div><div class="review-tools"><button class="primary" data-cloud-operation="edit.approve" data-id="${edit.id}">موافقة واستبدال القديم</button><button class="secondary danger" data-cloud-operation="edit.reject" data-id="${edit.id}">رفض التعديل</button></div></article>`).join(''):'<p class="muted">لا توجد طلبات تعديل معلّقة.</p>'}<h2>بلاغات التقييمات</h2>${reports.length?reports.map((report)=>`<article class="moderation-review"><h3>د. ${escapeHtml(report.doctor_name)}</h3><b>${reasons[report.reason]||''} · ${escapeHtml(report.subject)}</b><p>${escapeHtml(report.comment)}</p>${report.details?`<p class="muted">تفاصيل البلاغ: ${escapeHtml(report.details)}</p>`:''}<div class="review-tools"><button class="secondary danger" data-cloud-operation="report.remove" data-id="${report.id}">إخفاء التقييم</button><button class="secondary" data-cloud-operation="report.dismiss" data-id="${report.id}">رفض البلاغ وإبقاء التقييم</button></div></article>`).join(''):'<p class="muted">لا توجد بلاغات معلّقة.</p>'}</section>`;
+  return `<section class="panel community-admin-panel"><h2>طلبات تعديل التقييمات</h2><p class="muted">موافقتك تستبدل المحتوى المنشور بالجديد. الرفض يُبقي القديم.</p>${edits.length?edits.map((edit)=>`<article class="moderation-review"><h3>${escapeHtml(edit.doctor_name)}</h3><div class="edit-diff"><div><b>التقييم الحالي · ${escapeHtml(edit.old_subject)}</b><p>${escapeHtml(edit.old_comment)}</p>${reviewTagLabels(edit.old_tags)}<small>الشرح · التعامل · الدرجات: ${scores(edit,'old_')}</small></div><div><b>التعديل المقترح · ${escapeHtml(edit.subject)}</b><p>${escapeHtml(edit.comment)}</p>${reviewTagLabels(edit.tags)}<small>الشرح · التعامل · الدرجات: ${scores(edit)}</small></div></div><div class="review-tools"><button class="primary" data-cloud-operation="edit.approve" data-id="${edit.id}">موافقة واستبدال القديم</button><button class="secondary danger" data-cloud-operation="edit.reject" data-id="${edit.id}">رفض التعديل</button></div></article>`).join(''):'<p class="muted">لا توجد طلبات تعديل معلّقة.</p>'}<h2>بلاغات التقييمات</h2>${reports.length?reports.map((report)=>`<article class="moderation-review"><h3>${escapeHtml(report.doctor_name)}</h3><b>${reasons[report.reason]||''} · ${escapeHtml(report.subject)}</b><p>${escapeHtml(report.comment)}</p>${report.details?`<p class="muted">تفاصيل البلاغ: ${escapeHtml(report.details)}</p>`:''}<div class="review-tools"><button class="secondary danger" data-cloud-operation="report.remove" data-id="${report.id}">إخفاء التقييم</button><button class="secondary" data-cloud-operation="report.dismiss" data-id="${report.id}">رفض البلاغ وإبقاء التقييم</button></div></article>`).join(''):'<p class="muted">لا توجد بلاغات معلّقة.</p>'}</section>`;
 }
 function bookmarkKey(){return 'miyar-bookmark-times-'+(googleSession?.user.id||'guest');}
 function bookmarkTimes(){const value=readJSON(bookmarkKey(),{});return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}
@@ -1933,7 +1933,7 @@ async function openNotifications(){
   if(updatesRequest) await updatesRequest;
   await refreshSavedUpdates();
   const count=savedUpdates.length+requestUpdates.length;
-  modal('الإشعارات',`${notificationError?`<p role="alert">${escapeHtml(notificationError)}</p><button class="secondary" id="retry-notifications">إعادة المحاولة</button>`:''}${count?`${requestUpdates.map((request)=>`<button class="notification-row" data-open-requests><span>طلب ${escapeHtml(requestKindName(request))} ${escapeHtml(request.title)} · ${request.status==='approved'?'تمت الموافقة':'تم الرفض'}${request.reason?`<small>السبب: ${escapeHtml(request.reason)}</small>`:''}</span>${ic('arrow')}</button>`).join('')}${savedUpdates.map((row)=>`<button class="notification-row" data-notice-doctor="${row.doctor_id}"><span>تقييم جديد للدكتور ${escapeHtml(row.doctor_name)}</span><small>${new Date(row.published_at).toLocaleDateString('ar')}</small>${ic('arrow')}</button>`).join('')}<button class="secondary" id="read-notifications">تحديد الكل كمقروء</button>`:'<p class="empty">لا توجد تقييمات جديدة لدكاترتك المحفوظين حتى الآن.</p><p class="muted">ستظهر هنا أيضًا قرارات الإدارة بشأن طلباتك.</p>'}`);
+  modal('الإشعارات',`${notificationError?`<p role="alert">${escapeHtml(notificationError)}</p><button class="secondary" id="retry-notifications">إعادة المحاولة</button>`:''}${count?`${requestUpdates.map((request)=>`<button class="notification-row" data-open-requests><span>طلب ${escapeHtml(requestKindName(request))} ${escapeHtml(request.title)} · ${request.status==='approved'?'تمت الموافقة':'تم الرفض'}${request.reason?`<small>السبب: ${escapeHtml(request.reason)}</small>`:''}</span>${ic('arrow')}</button>`).join('')}${savedUpdates.map((row)=>`<button class="notification-row" data-notice-doctor="${row.doctor_id}"><span>تقييم جديد: ${escapeHtml(row.doctor_name)}</span><small>${new Date(row.published_at).toLocaleDateString('ar')}</small>${ic('arrow')}</button>`).join('')}<button class="secondary" id="read-notifications">تحديد الكل كمقروء</button>`:'<p class="empty">لا توجد تقييمات جديدة لدكاترتك المحفوظين حتى الآن.</p><p class="muted">ستظهر هنا أيضًا قرارات الإدارة بشأن طلباتك.</p>'}`);
   document.querySelectorAll('[data-notice-doctor]').forEach((button)=>button.onclick=()=>cloudDoctorDetail(Number(button.dataset.noticeDoctor)));
   document.querySelectorAll('[data-open-requests]').forEach((button)=>button.onclick=openRequests);
   document.querySelector('#retry-notifications')?.addEventListener('click',openNotifications);
@@ -2103,7 +2103,7 @@ function adminDoctorRowsData(){
 function adminDoctorRows(){
  const rows=adminDoctorRowsData();
  adminChosen=new Set([...adminChosen].filter((id)=>rows.some((doctor)=>doctor.id===id)));
- return rows.length?rows.map((doctor)=>`<div class="admin-row"><label class="admin-select-doctor"><input type="checkbox" data-admin-check="${doctor.id}" aria-label="تحديد ${escapeHtml(doctor.name)}" ${adminChosen.has(doctor.id)?'checked':''}><span>د. ${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></span></label><div><button data-cloud-operation="doctor.verify" data-id="${doctor.id}" data-verified="${!doctor.verified}">${doctor.verified?'إلغاء التوثيق':'توثيق'}</button><button class="danger" data-cloud-operation="doctor.delete" data-id="${doctor.id}">إزالة</button></div></div>`).join(''):'<p class="empty">لا توجد أسماء مطابقة للفلاتر.</p>';
+ return rows.length?rows.map((doctor)=>`<div class="admin-row"><label class="admin-select-doctor"><input type="checkbox" data-admin-check="${doctor.id}" aria-label="تحديد ${escapeHtml(doctor.name)}" ${adminChosen.has(doctor.id)?'checked':''}><span>${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></span></label><div><button data-cloud-operation="doctor.verify" data-id="${doctor.id}" data-verified="${!doctor.verified}">${doctor.verified?'إلغاء التوثيق':'توثيق'}</button><button class="danger" data-cloud-operation="doctor.delete" data-id="${doctor.id}">إزالة</button></div></div>`).join(''):'<p class="empty">لا توجد أسماء مطابقة للفلاتر.</p>';
 }
 function adminFilterOptions(field){
  const data=cloudCatalogue;
