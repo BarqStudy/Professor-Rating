@@ -64,6 +64,7 @@ const icons = {
   share:
     '<circle cx="18" cy="5" r="3"/><circle cx="5" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8 11 7-4M8 13l7 4"/>',
   close: '<path d="m6 6 12 12M6 18 18 6"/>',
+  profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
   users:
     '<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m1-16a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 5"/>',
   cap: '<path d="m2 8 10-5 10 5-10 5ZM6 10v7c4 3 8 3 12 0v-7m4-2v9"/>',
@@ -528,8 +529,8 @@ function cards() {
   }
   return filtered.length
     ? filtered.map((d) =>
-      `<article class="doctor-card"><div class="card-top"><span class="avatar ${d.color}">${
-        escapeHtml(d.initials)
+      `<article class="doctor-card"><div class="card-top"><span class="avatar ${d.color}" aria-hidden="true">${
+        ic("profile")
       }</span><button class="save-button ${
         saved.includes(d.id) ? "is-saved" : ""
       }" data-save="${d.id}" aria-label="حفظ الدكتور">${
@@ -887,8 +888,8 @@ async function detail(id) {
   const rr = reviews.filter((r) => r.doctor === id);
   modal(
     "تقييمات الدكتور",
-    `<div class="detail-person"><span class="avatar ${d.color}">${
-      escapeHtml(d.initials)
+    `<div class="detail-person"><span class="avatar ${d.color}" aria-hidden="true">${
+      ic("profile")
     }</span><div><h2>${escapeHtml(d.name)} ${
       d.verified ? '<span class="verified">✓</span>' : ""
     }</h2><p>${
@@ -1610,7 +1611,7 @@ async function cloudDoctorDetail(id, subject = "") {
   try {
     const [rows, summary] = await Promise.all([api("reviews", {doctor:id, ...(subject ? {subject} : {})}), api("doctor.summary", {doctor:id, ...(subject ? {subject} : {})}).catch(() => null)]);
     if (!loading.isConnected) return;
-    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}">${escapeHtml(doctor.initials)}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?'<span class="verified" title="موثق من الإدارة">✓</span>':""}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
+    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?'<span class="verified" title="موثق من الإدارة">✓</span>':""}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
     document.querySelector("#review-subject-filter").onchange = (event) => cloudDoctorDetail(id,event.target.value);
     document.querySelectorAll("[data-report-review]").forEach((button) => button.onclick = () => reportReview(Number(button.dataset.reportReview)));
     document.querySelector("#detail-rate").onclick = () => reviewForm(id);
