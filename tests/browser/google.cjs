@@ -149,8 +149,14 @@ const server = http.createServer((req, res) => {
       assert.equal(await policyPage.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       await policyPage.screenshot({path:`/tmp/miyar-privacy-${width}.png`});
     }
+    const termsResponse=await policyPage.goto(new URL('terms.html',url).href);
+    assert.equal(termsResponse.status(),200);
+    assert.equal(await policyPage.locator('h1').innerText(),'شروط الاستخدام');
+    assert.equal(await policyPage.locator('script').count(),0);
+    assert.ok(await policyPage.locator('a[href="privacy.html"]').count()>0);
     await policyPage.goto(url);
     assert.equal(await policyPage.locator('noscript a[href$="privacy.html"]').count(),1);
+    assert.equal(await policyPage.locator('noscript a[href$="terms.html"]').count(),1);
     await policyContext.close();
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -319,6 +325,7 @@ const server = http.createServer((req, res) => {
     await page.goto(url);
     await page.locator(".connection-banner.live").waitFor();
     assert.equal(await page.locator('footer a[href$="privacy.html"]').count(),1);
+    assert.equal(await page.locator('footer a[href$="terms.html"]').count(),1);
     assert.equal(await page.locator("[data-page=admin]").count(), 0);
     assert.equal(
       await page.locator(".student-summary,.profile-meta").count(),
@@ -496,6 +503,7 @@ const server = http.createServer((req, res) => {
     await page.locator('#google-account').click();
     await page.locator("#google-signin").waitFor();
     assert.equal(await page.locator('.modal a[href$="privacy.html"]').count(),1);
+    assert.equal(await page.locator('.modal a[href$="terms.html"]').count(),1);
     await page.locator("#google-signin").click();
     await page.getByText("تسجيل الدخول باستخدام Google لم يُفعّل بعد. جرّب لاحقًا.")
       .waitFor();

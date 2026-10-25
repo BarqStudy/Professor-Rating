@@ -278,7 +278,7 @@ function render() {
         : page === "assistant"
         ? miyarAssistant.page()
         : developer()
-    }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a></span><span>بُني بشغف لرحلتك الجامعية</span></footer>${page !== 'assistant' ? `<button type="button" class="assistant-launcher" data-page="assistant" aria-label="مساعد مِعيار"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2Z"/></svg><span>مساعد مِعيار</span></button>` : ''}</div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
+    }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html">شروط الاستخدام</a></span><span>بُني بشغف لرحلتك الجامعية</span></footer>${page !== 'assistant' ? `<button type="button" class="assistant-launcher" data-page="assistant" aria-label="مساعد مِعيار"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2Z"/></svg><span>مساعد مِعيار</span></button>` : ''}</div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
   bind();
   if (page === 'assistant') miyarAssistant.bind();
   if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();
@@ -1571,7 +1571,7 @@ function openGoogleMessage() {
     "الدخول إلى مِعيار",
     `<div class="login-explainer"><span class="settings-avatar">${
       ic("shield")
-    }</span><h3>تجربتك تبدأ بخطوة بسيطة</h3><p>يمكنك التقييم كزائر. سجّل الدخول بحساب Google لحفظ ملفك ومتابعة طلباتك. لا يظهر اسمك أو بريدك مع التقييمات.</p><button class="google-signin-button" id="google-signin"><span class="google-g" aria-hidden="true">G</span>الدخول باستخدام Google</button><p class="google-login-error form-error" role="alert"></p><p class="local-note"><a href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener noreferrer">سياسة الخصوصية</a></p><small class="muted">يمكنك تصفّح الدكاترة دون تسجيل الدخول.</small></div>`,
+    }</span><h3>تجربتك تبدأ بخطوة بسيطة</h3><p>يمكنك التقييم كزائر. سجّل الدخول بحساب Google لحفظ ملفك ومتابعة طلباتك. لا يظهر اسمك أو بريدك مع التقييمات.</p><button class="google-signin-button" id="google-signin"><span class="google-g" aria-hidden="true">G</span>الدخول باستخدام Google</button><p class="google-login-error form-error" role="alert"></p><p class="local-note"><a href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener noreferrer">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html" target="_blank" rel="noopener noreferrer">شروط الاستخدام</a></p><small class="muted">يمكنك تصفّح الدكاترة دون تسجيل الدخول.</small></div>`,
   );
   document.querySelector("#google-signin").onclick = startGoogleLogin;
 }
