@@ -346,7 +346,7 @@ function home() {
     configured ? "كلية في مِعيار" : "طالب يصنعون الأثر"
   }</span></div></div><span class="demo-data">${
     configured ? "إحصائيات جميع الجامعات · تقييمات منشورة فقط" : "إحصاءات توضيحية"
-  }</span></section>${universityRequestSection()}<div id="home-doctors-slot">${topDoctorsSection()}</div><section class="bottom-banner"><div class="banner-symbol">${
+  }</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
     ic("shield")
   }</div><div><h3>مساحة آمنة. آراء صادقة. أثر حقيقي.</h3><p>نحترم خصوصيتك، ونؤمن أن النقد البنّاء هو بداية التطوير.</p></div><button id="privacy">تعرّف على معاييرنا ${
     ic("arrow")

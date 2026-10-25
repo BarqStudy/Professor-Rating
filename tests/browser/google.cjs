@@ -378,7 +378,7 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator("footer .icon").count(), 0);
     const email = page.locator('.university-request a[href^="mailto:"]');
     assert.match(await email.getAttribute("href"), /^mailto:info@miyar\.website/);
-    assert.equal(await page.locator(".stats + .university-request").count(),1);
+    assert.equal(await page.locator(".stats + #home-doctors-slot + .university-request").count(),1);
     for(const id of [20,19,18]) await page.locator(`[data-compare="${id}"]`).click();
     await page.locator("#compare-now").click();
     assert.equal(await page.locator(".comparison-table thead th").count(),4);
