@@ -87,6 +87,7 @@ for (
 for (const [id, score, count] of [[18, 92, 3], [19, 95, 2], [20, 95, 5]]) {
   Object.assign(catalogue.doctors.find((doctor) => doctor.id === id), { score, count });
 }
+catalogue.doctors[0].subjects = ["ميكانيكا"];
 const mime = {
   ".html": "text/html",
   ".js": "text/javascript",
@@ -223,6 +224,23 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator("[data-college]").count(), 0);
     assert.equal(await page.locator(".doctor-card").count(), 3);
     assert.deepEqual(await page.locator(".doctor-card .doctor-name [data-doctor]").evaluateAll((buttons) => buttons.map((button) => Number(button.dataset.doctor))), [20, 19, 18]);
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      for (const term of ["أحمد محمد العتيبي", "ميكانيكا"]) {
+        await page.locator("#search").fill(term);
+        assert.equal(await page.locator(".search-block + .search-results").count(), 1);
+        assert.equal(await page.locator(".doctor-card").count(), 1);
+        assert.match(await page.locator(".doctor-card").innerText(), /أحمد محمد العتيبي/);
+        assert.equal(await page.locator("#search").evaluate((el) => el === document.activeElement), true);
+        assert.ok(!(await page.locator(".search-results .section-heading").innerText()).includes("عند التعادل"));
+      }
+      await page.locator("#search").fill("لا يوجد دكتور مطابق");
+      assert.equal(await page.locator(".search-block + .search-results .empty").count(), 1);
+      await page.locator("#search").fill("");
+      assert.equal(await page.locator("#home-doctors-slot > .top-doctors").count(), 1);
+      assert.equal(await page.locator(".doctor-card").count(), 3);
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
     assert.equal(await page.locator("footer .icon").count(), 0);
     const email = page.locator('.university-request a[href^="mailto:"]');
     assert.match(await email.getAttribute("href"), /^mailto:info@miyar\.website/);

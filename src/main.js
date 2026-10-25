@@ -300,7 +300,7 @@ function home() {
     configured ? "كلية في مِعيار" : "طالب يصنعون الأثر"
   }</span></div></div><span class="demo-data">${
     configured ? "تقييمات منشورة فقط" : "إحصاءات توضيحية"
-  }</span></section>${topDoctorsSection()}<section class="bottom-banner"><div class="banner-symbol">${
+  }</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div><section class="bottom-banner"><div class="banner-symbol">${
     ic("shield")
   }</div><div><h3>مساحة آمنة. آراء صادقة. أثر حقيقي.</h3><p>نحترم خصوصيتك، ونؤمن أن النقد البنّاء هو بداية التطوير.</p></div><button id="privacy">تعرّف على معاييرنا ${
     ic("arrow")
@@ -311,6 +311,20 @@ function universityRequestSection() {
 }
 function topDoctorsSection() {
   return `<section class="doctors-section top-doctors"><div class="section-heading"><div><span class="eyebrow">بناءً على تقييمات الطلاب المنشورة</span><h2 id="home-doctors-title">${query ? "نتائج البحث" : "أعلى الدكاترة تقييمًا"} <span class="small-star">✦</span></h2><p>${query ? "اكتشف الدكتور أو المادة التي تبحث عنها." : "الأعلى في متوسط التقييم، وعند التعادل نقدّم الأكثر تقييمات."}</p></div><div class="section-tools"><button class="text-button" data-page="ratings">عرض جميع التقييمات ${ic("arrow")}</button><div class="carousel-controls"><button class="carousel-control previous" id="doctors-previous" aria-label="الدكاترة السابقون" aria-controls="doctor-grid">${ic("arrow")}</button><button class="carousel-control" id="doctors-next" aria-label="الدكاترة التاليون" aria-controls="doctor-grid">${ic("arrow")}</button></div></div></div><div class="doctor-carousel" id="doctor-grid" role="region" aria-label="بطاقات الدكاترة" tabindex="0">${cards()}</div></section>`;
+}
+function syncHomeSearch() {
+  if (page !== "home") return;
+  const section = document.querySelector(".top-doctors");
+  const search = document.querySelector(".search-block");
+  const slot = document.querySelector("#home-doctors-slot");
+  if (!section || !search || !slot) return;
+  const searching = Boolean(query.trim());
+  if (searching) search.after(section);
+  else slot.append(section);
+  section.classList.toggle("search-results", searching);
+  section.querySelector("h2").textContent = searching ? "نتائج البحث" : "أعلى الدكاترة تقييمًا ✦";
+  section.querySelector(".eyebrow").textContent = searching ? "الدكاترة والمواد المطابقة لبحثك" : "بناءً على تقييمات الطلاب المنشورة";
+  section.querySelector(".section-heading p").textContent = searching ? "اختر الدكتور لاستعراض تقييماته أو إضافة تجربتك." : "الأعلى في متوسط التقييم، وعند التعادل نقدّم الأكثر تقييمات.";
 }
 function listSection() {
   const expanded = collegeSelected || page === "ratings";
@@ -882,9 +896,8 @@ function bind() {
     () => reviewForm(),
   );
   document.querySelector("#search")?.addEventListener("input", (e) => {
-    query = e.target.value;
-    const title = document.querySelector("#home-doctors-title");
-    if (title) title.textContent = query ? "نتائج البحث" : "أعلى الدكاترة تقييمًا ✦";
+    query = e.target.value.trim();
+    syncHomeSearch();
     document.querySelector("#doctor-grid").innerHTML = cards();
     bindCards();
     bindCarousel();
@@ -936,6 +949,7 @@ function bind() {
   document.querySelectorAll("[data-university-request]").forEach((button) => {
     button.onclick = () => modal("أضف جامعتك أو كليتك لمِعيار", `<div class="university-request-message"><p>أرسل طلب إضافة جامعتك أو كليتك عبر الإيميل:</p><a class="primary email-request" href="mailto:info@miyar.website?subject=${encodeURIComponent('طلب إضافة جامعة أو كلية إلى معيار')}"><bdi>info@miyar.website</bdi>${ic("arrow")}</a><p class="muted">اذكر اسم الجامعة والكلية والتخصصات التي ترغب بإضافتها.</p></div>`);
   });
+  syncHomeSearch();
   bindAdmin();
   bindBulkDoctors();
 }
