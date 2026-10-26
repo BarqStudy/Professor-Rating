@@ -1,3 +1,4 @@
+import {createInstitutionMailer,institutionMailStatus} from './institution-mail.js';
 import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
 import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
@@ -15,7 +16,9 @@ import {
   validateReview,
 } from "./security.js";
 
-export function createHandler({ db, env, authenticate, aiFetch = fetch, storageFetch = fetch }) {
+export function createHandler({ db, env, authenticate, aiFetch = fetch, storageFetch = fetch, mailTransport, background }) {
+  const mailer=createInstitutionMailer({db,env,transportFactory:mailTransport});
+  const notifyInstitution=id=>{if(!id||!institutionMailStatus(env).configured)return;const task=mailer.deliver(id).catch(()=>{});if(background)background(task);return task;};
   const origins = (env.ALLOWED_ORIGINS || "https://barqstudy.github.io").split(
     ",",
   ).map((x) => x.trim());
@@ -105,7 +108,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       const aiResult = await handleAi(request, body, db, env, aiFetch);
       if (aiResult) return respond(aiResult);
       const guestResult = await handleGuest(request, body, db, env.GUEST_PEPPER);
-      if (guestResult) return respond(guestResult.data, guestResult.status || 200);
+      if (guestResult) {if(action==='guest.institution.request'){const task=notifyInstitution(guestResult.data?.id);if(!background)await task;}return respond(guestResult.data, guestResult.status || 200);}
       if(action==='study.plans')return respond(await db('rpc/miyar_uploaded_study_plans',{method:'POST',body:{}}));
       if (action === "catalogue") {
         return respond(
@@ -210,7 +213,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       const proposal = await catalogueProposal(action, body, user, identity.id, db);
       if (proposal) return respond(proposal.data, proposal.status);
       const community = await studentCommunity(action, body, user, identity.id, db);
-      if (community) return respond(community.data, community.status || 200);
+      if (community) {if(action==='institution.request'){const task=notifyInstitution(community.data?.id);if(!background)await task;}return respond(community.data, community.status || 200);}
       if (action === "submit") {
         if (user.status !== "active") {
           throw new ApiError(403, "حسابك مقيّد عن إضافة التقييمات.");
@@ -243,6 +246,10 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      if(typeof operation==='string'&&operation.startsWith('institution.mail.')){
+        if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
+        const result=await mailer.admin(operation,body);if(result!==null)return respond(result);
+      }
       if(operation==='university.enable'){
         if(typeof body.enabled!=='boolean')throw new ApiError(400,'اختر حالة الجامعة.');
         return respond(await db('rpc/miyar_set_university_enabled',{method:'POST',body:{p_id:integer(body.id,1,Number.MAX_SAFE_INTEGER,'الجامعة'),p_enabled:body.enabled}}));
@@ -270,11 +277,12 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
           db("rpc/miyar_community_queue", {method:"POST",body:{}}),
           db("rpc/miyar_catalogue_queue", {method:"POST",body:{}}),
           db("rpc/miyar_ambassador_list", {method:"POST",body:{}}),
-          db("miyar_institution_requests?status=eq.pending&select=id,name,colleges,contact_email,request_kind,account_id,guest_id,created_at&order=created_at.asc&limit=100"),
+          db("miyar_institution_requests?status=eq.pending&select=id,name,colleges,contact_email,request_kind,account_id,guest_id,created_at,miyar_institution_mail(status,attempts,last_error,sent_at,retry_after)&order=created_at.asc&limit=100"),
           db('rpc/miyar_assistant_list',{method:'POST',body:{}}),
         ]);
         // Grade is deliberately excluded even from the moderation response.
         return respond({
+          institutionMail:institutionMailStatus(env),
           edits: extra?.edits || [], reports: extra?.reports || [],
           catalogueRequests: catalogueRequests || [], ambassadors: ambassadors || [], assistants:Array.isArray(assistants)?assistants:[], institutionRequests:institutionRequests||[],
           doctors: doctors.map((

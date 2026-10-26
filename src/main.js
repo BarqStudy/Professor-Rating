@@ -3,7 +3,7 @@ import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
 import {createFileManager} from './files.js';
 import {createNavigation} from './navigation.js';
-import {openInstitutionRequest,institutionAdminPanel} from './institution-request.js';
+import {openInstitutionRequest,institutionAdminPanel,bindInstitutionMail} from './institution-request.js';
 import { createStudyImport } from './study-import.js';
 import { getStudyPlans, setUploadedStudyPlans } from './study-catalogue.js';
 import { createCourseAdvisor } from './course-advisor.js';
@@ -1799,6 +1799,7 @@ async function cloudAdminAction(operation, data) {
 }
 function bindCloudAdmin() {
   if (!cloudMe?.isAdmin) return;
+  bindInstitutionMail({api,refresh:async()=>{await loadCloudQueue(false);render();}});
   studyImport.bind();
   fileManager.bind();
   const key = `miyar-admin-selections-${cloudMe.id}`;
