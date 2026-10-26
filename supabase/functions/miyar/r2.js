@@ -50,6 +50,18 @@ export async function putR2File(config,key,file,fetcher=fetch){
  if(!response.ok){await response.body?.cancel();throw new ApiError(response.status===429?429:503,response.status===403?'رفض R2 الرفع. راجع صلاحية Object Read & Write للحاوية المحددة.':'تعذّر حفظ الملف في R2. راجع إعدادات الحاوية ثم أعد المحاولة.');}
  const etag=(response.headers.get('etag')||'').slice(0,256);await response.body?.cancel();return etag;
 }
+function providerFailure(body,config){
+ // Parse only bounded Code/Message fields, never entire XML/HTML or resources.
+ let code=body.match(/<(?:[\w]+:)?Code>\s*([A-Za-z]+)\s*<\/(?:[\w]+:)?Code>/)?.[1],message=body.match(/<(?:[\w]+:)?Message>([\s\S]*?)<\/(?:[\w]+:)?Message>/)?.[1]||'';
+ try{const data=JSON.parse(body),error=data?.errors?.[0]||data?.error;code=typeof error?.code==='string'?error.code:code;message=typeof error?.message==='string'?error.message:message;}catch{/* R2 normally sends XML. */}
+ message=message.replace(/^<!\[CDATA\[([\s\S]*)\]\]>$/,'$1').replace(/&#(x[0-9a-f]+|[0-9]+);/gi,(_,n)=>{const value=n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):Number(n);return value<=0x10ffff?String.fromCodePoint(value):'';}).replace(/&(lt|gt|quot|apos|amp);/g,(_,n)=>({lt:'<',gt:'>',quot:'"',apos:"'",amp:'&'})[n]);
+ for(const value of [config.secretKey,config.accessKey,config.account,config.bucket]){
+  if(!value)continue;
+  for(const variant of [value,encodeURIComponent(value)])message=message.replace(new RegExp(variant.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),'[محجوب]');
+ }
+ message=message.replace(/\b(?:cfat_[A-Za-z0-9_-]+|[a-f0-9]{32,}|[A-Za-z0-9_+\/-]{40,}={0,2})\b/gi,'[محجوب]').replace(/<[^>]*>/g,'').replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g,' ').replace(/\s+/g,' ').trim().slice(0,350);
+ return {code,message};
+}
 export async function checkR2(env,fetcher=fetch){
  const config=r2Configuration(env);
  if(!config.enabled)return {provider:'r2',configured:false,ready:false,missing:config.missing,message:config.missing.length?'أضف إعدادات R2 في أسرار Supabase: '+config.missing.join('، '):'إعدادات R2 غير صالحة. راجع معرّف الحساب واسم الحاوية والمفاتيح.'};
@@ -66,6 +78,9 @@ export async function checkR2(env,fetcher=fetch){
    NoSuchBucket:'حاوية R2 غير موجودة. راجع اسم الحاوية ومعرّف الحساب.',
    InvalidBucketName:'اسم حاوية R2 غير صحيح. استخدم اسم الحاوية فقط دون رابط.',
    AuthorizationHeaderMalformed:'بيانات توقيع R2 غير مقبولة. راجع معرّف الحساب وزوج مفاتيح S3.',
+   InvalidArgument:'رفض R2 أحد حقول الطلب. راجع التفاصيل المرفقة لتحديد الحقل.',
+   InvalidRequest:'صيغة طلب R2 غير مقبولة. راجع التفاصيل المرفقة.',
+   AccountProblem:'يوجد قيد على حساب Cloudflare. راجع تفعيل R2 وحالة الحساب في لوحة Cloudflare.',
    RequestTimeTooSkewed:'وقت خادم الطلب لا يطابق وقت R2. أعد الفحص، وإذا استمر الخطأ راجع وقت الخادم.',
    RequestExpired:'انتهت صلاحية توقيع الطلب. أعد فحص الاتصال.',
    ExpiredToken:'انتهت صلاحية مفتاح R2. أنشئ زوج مفاتيح S3 جديدًا للحاوية.',
@@ -73,12 +88,12 @@ export async function checkR2(env,fetcher=fetch){
    PermanentRedirect:'عنوان R2 لا يطابق موقع الحاوية. راجع S3 API endpoint والحساب وإعداد Jurisdiction في Cloudflare.',
    SlowDown:'R2 يطلب تقليل عدد الطلبات. انتظر قليلًا ثم أعد الفحص.',
   };
-  // Never reflect provider XML, filenames, credentials, or arbitrary error codes.
+  // Never reflect raw XML, resources, credentials, or arbitrary error codes.
   const reader=response.body?.getReader();let xml='',size=0;
   try{if(reader){const decoder=new TextDecoder();while(size<8192){const {done,value}=await reader.read();if(done)break;const part=value.subarray(0,8192-size);size+=part.length;xml+=decoder.decode(part,{stream:true});}}}finally{await reader?.cancel();}
-  const candidate=xml.match(/<Code>\s*([A-Za-z]+)\s*<\/Code>/)?.[1];
+  const {code:candidate,message:providerMessage}=providerFailure(xml,config);
   const errorCode=candidate&&Object.hasOwn(explanations,candidate)?candidate:null;
   const fallback=response.status===403?explanations.AccessDenied:response.status===404?explanations.NoSuchBucket:response.status>=300&&response.status<400?explanations.PermanentRedirect:response.status===429||response.status>=500?'خدمة R2 غير متاحة مؤقتًا. أعد الفحص لاحقًا.':'راجع معرّف الحساب واسم الحاوية وزوج مفاتيح S3؛ يجب أن يكون المفتاحان من عملية الإنشاء نفسها.';
-  return {provider:'r2',configured:true,ready:false,httpStatus:response.status,...(errorCode?{errorCode}:{}),message:`فشل فحص R2 (HTTP ${response.status}${errorCode?' · '+errorCode:''}). ${errorCode?explanations[errorCode]:fallback}`};
+  return {provider:'r2',configured:true,ready:false,httpStatus:response.status,...(errorCode?{errorCode}:{}),message:`فشل فحص R2 (HTTP ${response.status}${errorCode?' · '+errorCode:''}). ${errorCode?explanations[errorCode]:fallback}${providerMessage?' تفاصيل R2: '+providerMessage:''}`};
  }catch{return {provider:'r2',configured:true,ready:false,message:'تعذّر الاتصال بـR2 أثناء الفحص. أعد المحاولة.'};}
 }

@@ -43,6 +43,17 @@ test('R2 check explains provider failures without reflecting private XML or foll
  const network=await checkR2(env,async()=>{throw Error(env.R2_SECRET_ACCESS_KEY);});assert.equal(network.ready,false);assert.ok(!JSON.stringify(network).includes(env.R2_SECRET_ACCESS_KEY));
 });
 
+test('R2 surfaces bounded XML and JSON validation messages while masking credentials and account fields',async()=>{
+ const xml=await checkR2(env,async()=>new Response(`<Error><Code>InvalidArgument</Code><Message>Credential must contain 32 characters: ${env.R2_ACCESS_KEY_ID}. Secret: ${env.R2_SECRET_ACCESS_KEY}. Account: ${env.R2_ACCOUNT_ID}. Bucket: ${env.R2_BUCKET_NAME}</Message><Resource>private-file.pdf</Resource></Error>`,{status:400}));
+ assert.equal(xml.errorCode,'InvalidArgument');assert.match(xml.message,/Credential must contain 32 characters/);assert.match(xml.message,/محجوب/);assert.ok(!xml.message.includes('private-file.pdf'));
+ for(const value of Object.values(env).filter(value=>value!==admin))assert.ok(!xml.message.includes(value));
+ const numeric=[...env.R2_SECRET_ACCESS_KEY].map(c=>'&#'+c.charCodeAt(0)+';').join('');
+ const encoded=await checkR2(env,async()=>new Response(`<s3:Error><s3:Code>InvalidRequest</s3:Code><s3:Message>Wrong signature &quot;${numeric}&quot;</s3:Message></s3:Error>`,{status:400}));assert.equal(encoded.errorCode,'InvalidRequest');assert.ok(!encoded.message.includes(env.R2_SECRET_ACCESS_KEY));assert.match(encoded.message,/Wrong signature/);
+ const json=await checkR2(env,async()=>new Response(JSON.stringify({errors:[{code:10000,message:'Authentication error '+env.R2_SECRET_ACCESS_KEY+' cfat_'+'z'.repeat(40)}]}),{status:400}));assert.match(json.message,/Authentication error/);assert.ok(!json.message.includes(env.R2_SECRET_ACCESS_KEY));assert.ok(!json.message.includes('z'.repeat(40)));
+ const cdata=await checkR2(env,async()=>new Response('<Error><Code>InvalidArgument</Code><Message><![CDATA[Invalid header <script>alert(1)</script>]]></Message></Error>',{status:400}));assert.ok(!cdata.message.includes('<script>'));
+ const long=await checkR2(env,async()=>new Response('<Error><Code>InvalidArgument</Code><Message>'+('long detail '.repeat(500))+'</Message></Error>',{status:400}));assert.ok(long.message.length<600);
+});
+
 test('file metadata has private RLS, atomic retries, owner/hash binding and links original study files without exposing them publicly',async()=>{
  const db=await database();try{
   for(const id of [admin,student]){await db.query('insert into auth.users(id) values($1)',[id]);await db.query("insert into miyar_accounts(auth_id,name,university_id) values($1,'طالب',3)",[id]);}
