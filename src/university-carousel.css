@@ -1,0 +1,85 @@
+.university-orbit-directory .university-introduction{padding:38px 0 28px;gap:70px}
+.university-orbit-directory .university-introduction h1{font-size:clamp(38px,4.5vw,58px);margin:15px 0}
+.university-orbit-directory .university-journey{padding-block:0}
+.university-orbit-directory .journey-number{font-size:42px}
+.university-orbit-directory .university-journey h2{margin-top:12px;font-size:24px}
+.university-orbit-directory .university-journey p{margin-bottom:16px}
+.university-orbit-directory .journey-route{margin-bottom:15px}
+.uni-carousel{min-width:0;position:relative;margin-top:-14px}
+.uni-orbit-stage{height:460px;position:relative;perspective:1200px;overflow:hidden;touch-action:pan-y pinch-zoom;cursor:grab;outline-offset:-5px;border-radius:28px;isolation:isolate;-webkit-user-select:none;user-select:none}
+.uni-orbit-stage:focus-visible{outline:2px solid var(--accent-solid)}
+.uni-orbit-stage:before{content:"";position:absolute;left:50%;top:54%;width:min(1060px,140%);height:270px;transform:translate(-50%,-50%) rotateX(70deg);border:1px solid var(--line);border-radius:50%;pointer-events:none;opacity:.65}
+.uni-orbit-stage:after{content:"";position:absolute;left:50%;bottom:27px;width:min(300px,60%);height:22px;transform:translateX(-50%);background:var(--ink);filter:blur(24px);border-radius:50%;opacity:.1;pointer-events:none}
+.uni-orbit-track{position:absolute;inset:0;transform-style:preserve-3d;pointer-events:none}
+.uni-carousel .uni-card{position:absolute;left:50%;top:48%;width:min(410px,calc(100% - 86px));height:365px;min-height:0;padding:25px 30px 21px;border-radius:30px;animation:none;text-align:start;transform-origin:center;backface-visibility:hidden;opacity:0;visibility:hidden;transition:transform .62s cubic-bezier(.2,.8,.22,1),opacity .4s ease,filter .4s ease,border-color .3s ease,box-shadow .4s ease;will-change:transform;box-shadow:0 12px 28px rgb(24 35 55/.04);overflow:hidden;cursor:pointer}
+.uni-carousel .uni-card.is-front{border-color:var(--accent-solid);box-shadow:0 20px 48px rgb(24 35 55/.12)}
+.uni-carousel .uni-card.is-front:hover{box-shadow:0 22px 52px rgb(24 35 55/.16)}
+.uni-carousel .uni-card:focus-visible{outline:2px solid var(--accent-solid);outline-offset:4px}
+.uni-carousel .uni-card.is-open{background:var(--surface)}
+.uni-carousel .uni-card-state{font-size:12px;min-height:24px;padding-inline-end:30px}
+.uni-card-ordinal{position:absolute;top:27px;left:28px;font-size:15px;font-variant-numeric:tabular-nums;color:var(--muted);opacity:.5}
+.uni-carousel .uni-logo{min-height:0;height:142px;width:190px;max-width:100%;align-self:center;flex:0 0 142px;border-radius:22px;margin:20px auto 12px;background:#fff}
+.uni-carousel .uni-logo img{height:132px;max-width:180px;padding:8px;pointer-events:none}
+.uni-carousel .uni-logo img.uni-university-mark{height:158px;max-width:170px;clip-path:inset(0 0 18% 0);margin-bottom:-23px}
+.uni-carousel .uni-logo-fallback{width:90px;height:90px}
+.uni-carousel .uni-logo-fallback .icon{width:66px;height:66px}
+.uni-carousel .uni-card>strong{font-size:23px;line-height:1.65;min-height:0;flex:1;display:flex;align-items:center;justify-content:center;text-align:center;width:100%;margin:2px 0 15px;overflow-wrap:anywhere}
+.uni-carousel .uni-card-city{width:100%;padding-top:14px;font-size:14px;margin-top:auto;flex-shrink:0}
+.uni-carousel.is-dragging .uni-card{transition:none;cursor:grabbing}
+.uni-carousel.is-dragging .uni-orbit-stage{cursor:grabbing}
+.uni-carousel-navigation{width:min(410px,calc(100% - 40px));margin:-2px auto 10px;position:relative}
+.uni-carousel-navigation[hidden]{display:none}
+.uni-carousel-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--muted);font-size:12px;min-height:25px}
+.uni-carousel-counter{font-variant-numeric:tabular-nums;font-size:13px;color:var(--ink)}
+.uni-carousel-progress{height:2px;background:var(--line);margin:10px 0 20px;border-radius:5px;overflow:hidden}
+.uni-carousel-progress span{display:block;height:100%;background:var(--accent-solid);border-radius:inherit;transition:width .4s ease}
+.uni-carousel-actions{display:flex;gap:12px;align-items:stretch;justify-content:center}
+.uni-carousel-arrow{display:grid;place-items:center;width:52px;min-height:52px;flex-shrink:0;border:1px solid var(--line);border-radius:17px;background:var(--surface);color:var(--accent-solid)}
+.uni-carousel-arrow:hover{background:var(--accent-soft);border-color:var(--control-border)}
+.uni-carousel-previous .icon{transform:rotate(180deg)}
+.uni-carousel-confirm{flex:1;min-width:0;justify-content:center;border-radius:17px;gap:12px}
+.uni-carousel-arrow:disabled{opacity:.35;cursor:default}
+.uni-carousel-live{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.uni-carousel.is-empty .uni-orbit-stage{height:auto;min-height:220px;padding:20px 0}
+.uni-carousel.is-empty .uni-orbit-track{position:relative}
+.uni-carousel.is-empty .uni-orbit-stage:before,.uni-carousel.is-empty .uni-orbit-stage:after{display:none}
+.uni-carousel.is-empty .university-no-results{padding:30px 20px}
+.university-picker-modal .university-orbit-directory .university-introduction{padding:10px 0 18px;grid-template-columns:1fr 1fr;gap:20px}
+.university-picker-modal .university-orbit-directory .university-introduction h1{font-size:34px}
+.university-picker-modal .uni-orbit-stage{height:420px}
+.university-picker-modal .uni-carousel .uni-card{height:345px;padding:22px 26px 18px}
+:root[data-theme=dark] .uni-carousel .uni-card{background:var(--surface);box-shadow:0 12px 30px rgb(0 0 0/.2)}
+:root[data-theme=dark] .uni-carousel .uni-card.is-front{box-shadow:0 20px 44px rgb(0 0 0/.4)}
+:root[data-theme=dark] .uni-orbit-stage:after{background:#000;opacity:.35}
+@media(max-width:1050px){.uni-carousel .uni-card{width:min(365px,calc(100% - 84px))}.university-orbit-directory .university-introduction{gap:35px}}
+@media(max-width:650px){
+ .university-orbit-directory .university-introduction{padding:30px 4px 24px;grid-template-columns:1fr;gap:0}
+ .university-orbit-directory .university-introduction h1{font-size:39px;line-height:1.2;margin:13px 0}
+ .university-orbit-directory .university-introduction>div>p{font-size:15px;line-height:1.8}
+ .university-orbit-directory .university-journey{display:none}
+ .university-orbit-directory .university-directory-tools{padding:12px 0;gap:9px}
+ .university-orbit-directory .university-directory-count{padding:15px 0 8px}
+ .uni-carousel{margin-top:0}
+ .uni-orbit-stage{height:380px;border-radius:18px}
+ .uni-carousel .uni-card{height:316px;width:calc(100% - 80px);max-width:310px;border-radius:25px;padding:20px 20px 17px;top:47%}
+ .uni-card-ordinal{top:22px;left:21px;font-size:13px}
+ .uni-carousel .uni-card-state{font-size:11px}
+ .uni-carousel .uni-logo{height:118px;flex-basis:118px;width:160px;margin:15px auto 10px;border-radius:18px}
+ .uni-carousel .uni-logo img{height:110px;max-width:150px}
+ .uni-carousel .uni-logo img.uni-university-mark{height:140px;max-width:150px;margin-bottom:-21px}
+ .uni-carousel .uni-card>strong{font-size:18px;line-height:1.6;margin-bottom:12px}
+ .uni-carousel .uni-card-city{font-size:12px;padding-top:12px}
+ .uni-orbit-stage:before{height:210px;width:155%;top:55%}
+ .uni-orbit-stage:after{bottom:22px;height:16px;width:55%}
+ .uni-carousel-navigation{width:calc(100% - 40px);margin:0 auto 6px}
+ .uni-carousel-actions{gap:10px}
+ .uni-carousel-arrow{width:45px;min-height:49px;border-radius:15px}
+ .uni-carousel-confirm{padding:13px 10px;font-size:14px;border-radius:15px}
+ .uni-carousel-meta{font-size:11px}
+ .uni-carousel-progress{margin-bottom:15px}
+ .university-picker-modal .university-orbit-directory .university-introduction{grid-template-columns:1fr;padding-bottom:16px}
+ .university-picker-modal .university-orbit-directory .university-introduction h1{font-size:29px}
+ .university-picker-modal .uni-orbit-stage{height:370px;margin-inline:-5px}
+ .university-picker-modal .uni-carousel .uni-card{height:310px;padding:20px 18px 15px;width:calc(100% - 66px)}
+}
+@media(prefers-reduced-motion:reduce){.uni-carousel .uni-card,.uni-carousel-progress span{transition:none}.uni-carousel .uni-card{will-change:auto}}

@@ -333,7 +333,7 @@ const server = http.createServer((req, res) => {
       },
     );
     await page.goto(url);
-    await page.locator('[data-select-university="405"]').click();
+    await page.locator('#university-search').fill('جامعة نجران');await page.locator('[data-select-university="405"]').click();
     await page.locator(".connection-banner.live").waitFor();
     assert.equal(await page.locator('footer a[href$="privacy.html"]').count(),1);
     assert.equal(await page.locator('footer a[href$="terms.html"]').count(),1);
@@ -558,7 +558,7 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator("#university-directory").isVisible(), true);
     await page.reload();
     await page.locator("#university-directory").waitFor();
-    await page.locator('[data-select-university="405"]').click();
+    await page.locator('#university-search').fill('جامعة نجران');await page.locator('[data-select-university="405"]').click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     assert.match(await page.locator(".connection-banner.live").innerText(), /جامعة نجران/);
     assert.equal(await page.locator("[data-page=admin]").count(), 1);
@@ -666,7 +666,7 @@ const server = http.createServer((req, res) => {
     await page.locator(".modal-backdrop").waitFor({ state: "detached" });
     await page.locator("#open-settings").click();
     await page.locator("#change-university").click();
-    await page.locator('[data-select-university="104"]').click();
+    await page.locator('#university-search').fill('جامعة الملك سعود');await page.locator('[data-select-university="104"]').click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     assert.equal(await page.locator(".doctor-card").count(),0);
     assert.match(await page.locator("#doctor-grid").innerText(), /لم تُضف كليات جامعتك/);
@@ -684,7 +684,7 @@ const server = http.createServer((req, res) => {
     await page.locator("#open-settings").click();
     assert.equal(await page.locator('#settings-form [name=major] option').count(),1);
     await page.locator("#change-university").click();
-    await page.locator('[data-select-university="405"]').click();
+    await page.locator('#university-search').fill('جامعة نجران');await page.locator('[data-select-university="405"]').click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     await page.locator('[data-request-doctor]').click();
     await page.locator('#doctor-request-form [name=name]').fill("زياد محمد الشهري");
@@ -973,14 +973,14 @@ const server = http.createServer((req, res) => {
     await page.locator(`[data-university-enable="${temporaryUniversity.id}"]`).click();await page.waitForFunction(id=>document.querySelector(`[data-university-enable="${id}"]`)?.dataset.enabled==='true',temporaryUniversity.id);
     await page.locator('#cloud-add-college [name=universityId]').selectOption(String(temporaryUniversity.id));
     await page.locator('#open-settings').click();await page.locator('#change-university').click();
-    await page.locator(`[data-select-university="custom-${temporaryUniversity.id}"]`).click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('#university-search').fill(temporaryUniversity.name);await page.locator(`[data-select-university="custom-${temporaryUniversity.id}"]`).click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
     await page.locator('[data-page=admin]').click();
     await page.locator(`[data-cloud-operation="university.delete"][data-id="${temporaryUniversity.id}"]`).click();
     await page.locator('#confirm-cloud-delete').click();await page.waitForFunction(()=>!document.querySelector('#confirm-cloud-delete'));await page.locator('#open-settings').click();await page.locator('#change-university').click();await page.locator('#university-directory').waitFor();
     assert.ok(!catalogue.universities.some((row)=>row.id===temporaryUniversity.id));
     assert.equal(me.university_id,null);assert.equal(me.isAdmin,true);
     assert.equal(await page.locator(`[data-select-university="custom-${temporaryUniversity.id}"]`).count(),0);
-    await page.locator('[data-select-university="405"]').click();
+    await page.locator('#university-search').fill('جامعة نجران');await page.locator('[data-select-university="405"]').click();
     await page.locator('.modal-backdrop').waitFor({state:'detached'});
     await page.locator('[data-page=admin]').click();
     assert.equal(await page.locator(`[data-cloud-operation="university.delete"][data-id="${temporaryUniversity.id}"]`).count(),0);

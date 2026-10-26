@@ -75,7 +75,7 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
  for(const width of [390,820,1440]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow ${width}`);await page.locator('#study-publish-form').screenshot({path:`/tmp/miyar-plan-preview-${width}.png`});}
  await page.locator('#publish-study-plan').click();await page.waitForFunction(()=>document.querySelector('#study-publish-form fieldset')?.disabled&&document.querySelector('#study-import-status')?.textContent.includes('محفوظة'));
  assert.equal(uploaded.length,1);assert.equal(uploaded[0].courses[0].name,'النحو العربي Grammar');assert.equal(uploaded[0].courses[0].credits,4);assert.equal(await page.locator('#read-study-plan').isDisabled(),false);
- await page.locator('#open-settings').click();await page.locator('#change-university').click();await page.locator('[data-select-university="custom-4"]').click();
+ await page.locator('#open-settings').click();await page.locator('#change-university').click();await page.locator('#university-search').fill('جامعة أخرى');await page.locator('[data-select-university="custom-4"]').click();
  await page.locator('aside [data-page=plan]').click();await page.locator(`#study-plan-select option[value="${draft.id}"]`).waitFor({state:'attached'});
  assert.equal(await page.locator('#study-plan-select option').count(),1);assert.equal(await page.locator('.study-advisory').count(),0,'a complete non-engineering plan must not show the old engineering-track notice');
  assert.match(await page.locator('.study-page').innerText(),/النحو العربي/);assert.ok((await page.locator('.study-page').innerText()).includes('Grammar'));
