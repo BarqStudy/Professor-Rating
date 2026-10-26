@@ -348,8 +348,8 @@ const server = http.createServer((req, res) => {
       ),
     );
     assert.equal(await page.locator(".quick-actions>button").first().getAttribute("data-page"),"ratings");
-    assert.equal(await page.locator(".quick-actions>button").first().locator("h2").innerText(),"تقييم دكتور");
-    assert.equal(await page.locator(".quick-actions>button").nth(1).locator("h2").innerText(),"إضافة دكتور بتقييم");
+    assert.equal(await page.locator(".quick-actions>button").first().locator("h2").innerText(),"الدكاترة وتقييماتهم");
+    assert.equal(await page.locator(".quick-actions>button").nth(1).locator("h2").innerText(),"إضافة دكتور");
     assert.equal(await page.locator(".action-decoration svg").count(),1);
     assert.ok(!(await page.locator(".action-decoration").innerText()).includes("✳"));
     assert.equal(await page.locator("[data-college]").count(), 0);
@@ -462,6 +462,7 @@ const server = http.createServer((req, res) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
 
     await page.locator("#new-review").click();
+    await page.locator('[name=includeReview]').click();
     await page.locator('#accept-review-pledge').waitFor();
     assert.match(await page.locator('.pledge-card').innerText(),/مخافة الله/);
     assert.equal(await page.locator('#review-form').count(),0);
@@ -558,6 +559,8 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator("#university-directory").isVisible(), true);
     await page.reload();
     await page.locator("#university-directory").waitFor();
+    // The directory skeleton renders before the authenticated catalogue is ready.
+    await page.locator('.uni-card.is-open[data-select-university="405"]').waitFor();
     await page.locator('#university-search').fill('جامعة نجران');await page.locator('[data-select-university="405"]').click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     assert.match(await page.locator(".connection-banner.live").innerText(), /جامعة نجران/);
@@ -572,6 +575,7 @@ const server = http.createServer((req, res) => {
     );
 
     await page.locator("#new-review").click();
+    await page.locator('[name=includeReview]').click();
     await page.locator("#accept-review-pledge").click();
 
     assert.equal(new URL(page.url()).hash, "#review");
@@ -686,9 +690,9 @@ const server = http.createServer((req, res) => {
     await page.locator("#change-university").click();
     await page.locator('#university-search').fill('جامعة نجران');await page.locator('[data-select-university="405"]').click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
-    await page.locator('[data-request-doctor]').click();
-    await page.locator('#doctor-request-form [name=name]').fill("زياد محمد الشهري");
-    await page.locator('#doctor-request-form [type=submit]').click();
+    await page.locator('#new-review').click();
+    await page.locator('#review-form [name=doctor]').fill("زياد محمد الشهري");
+    await page.locator('#review-form [type=submit]').click();
     await page.getByText("وصل طلب إضافة الدكتور إلى الإدارة دون إنشاء أي تقييم.").waitFor();
     assert.ok(calls.some((call)=>call.action==='doctor.request'&&call.majorId===1&&!('scores' in call)));
     await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
@@ -1064,7 +1068,7 @@ const server = http.createServer((req, res) => {
     await page.locator('.connection-banner.live').waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: Opt-in grade maps and same-course comparisons, hidden small samples, guest/account consent and withdrawal, pagination, responsive grade charts; AI availability gating, grounded chat UI with citations, escaped model output, guest session binding and quota error recovery, Scoped ambassador assignment/revocation, proposal moderation and persistence, student data corrections and history, responsive ambassador workspace, Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, independent doctor requests, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
+      "PASS: Opt-in grade maps and same-course comparisons, hidden small samples, guest/account consent and withdrawal, pagination, responsive grade charts; AI availability gating, grounded chat UI with citations, escaped model output, guest session binding and quota error recovery, Scoped ambassador assignment/revocation, proposal moderation and persistence, student data corrections and history, responsive ambassador workspace, Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, unified optional doctor additions, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
     );
   } finally {
     await browser.close();

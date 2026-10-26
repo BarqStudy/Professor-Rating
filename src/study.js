@@ -61,7 +61,7 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
  function showDoctors(plan,course){
   const existing=[...new Map(doctorsForPlan(plan).map(doctor=>[doctor.id,doctor])).values()].sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   const owner=ownerKey();
-  modal('اختيار دكتور المادة',`<div id="study-course-doctors"><div class="study-doctor-heading"><span class="eyebrow">${esc(plan.university)} · ${esc(plan.title)}</span><h3>${esc(course.name)}</h3><p>${esc(course.code)}</p></div><p class="muted">ابحث بين دكاترة جامعتك من جميع الكليات. اختيارك يُحفظ في خطتك؛ يمكنك تقييم الدكتور من خطتك أو من قسم التقييمات؛ يُحفظ تقييم واحد للدكتور.</p><label class="study-search">${icon('search')}<input id="study-doctor-search" type="search" placeholder="ابحث باسم الدكتور…" aria-label="البحث عن دكتور لخطة التخرج" autocomplete="off"></label><div id="study-doctor-options" class="study-doctor-options" aria-live="polite"></div><section class="missing-course-doctor"><h3>ألم تجد دكتور المادة؟</h3><p>أرسل طلب إضافته إلى الإدارة دون كتابة تقييم.</p><button type="button" class="primary" id="study-request-doctor">أضف الدكتور الآن</button></section><button type="button" class="secondary" id="study-new-doctor">${icon('plus')} الدكتور غير موجود؟ أضفه مع تقييم</button></div>`);
+  modal('اختيار دكتور المادة',`<div id="study-course-doctors"><div class="study-doctor-heading"><span class="eyebrow">${esc(plan.university)} · ${esc(plan.title)}</span><h3>${esc(course.name)}</h3><p>${esc(course.code)}</p></div><p class="muted">ابحث بين دكاترة جامعتك من جميع الكليات. اختيارك يُحفظ في خطتك؛ يمكنك تقييم الدكتور من خطتك أو من قسم التقييمات؛ يُحفظ تقييم واحد للدكتور.</p><label class="study-search">${icon('search')}<input id="study-doctor-search" type="search" placeholder="ابحث باسم الدكتور…" aria-label="البحث عن دكتور لخطة التخرج" autocomplete="off"></label><div id="study-doctor-options" class="study-doctor-options" aria-live="polite"></div><section class="missing-course-doctor"><h3>ألم تجد دكتور المادة؟</h3><p>أرسل بيانات الدكتور للإدارة، وأضف تقييمًا إذا رغبت.</p><button type="button" class="primary" id="study-request-doctor">أضف الدكتور الآن</button></section></div>`);
   const root=document.querySelector('#study-course-doctors');
   function paint(){
    const q=courseNameKey(root.querySelector('#study-doctor-search').value);
@@ -77,7 +77,6 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
   }
   root.querySelector('#study-doctor-search').oninput=paint;
   root.querySelector('#study-request-doctor').onclick=()=>onRequestDoctor?.(course,plan,root.querySelector('#study-doctor-search').value);
-  root.querySelector('#study-new-doctor').onclick=()=>onReview(null,course,plan);
   paint();root.querySelector('#study-doctor-search').focus();
  }
  function attachReview(form,{university,college,major,courseId}={}){

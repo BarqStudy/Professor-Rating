@@ -65,12 +65,12 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
   assert.equal(await page.locator('#review-form,#accept-review-pledge').count(),0);
   await page.reload();await page.locator('[data-study-course="najran-me-2026/me231"] .study-selected-doctor').waitFor();
   await page.locator('[data-study-doctors="najran-me-2026/me231"]').click();await page.locator('#study-doctor-search').fill('مهندس زياد خالد الشهري');await page.locator('#study-request-doctor').click();
-  assert.equal(await page.locator('#doctor-request-form [name=name]').inputValue(),'مهندس زياد خالد الشهري');await page.locator('#doctor-request-form [type=submit]').click();await page.getByRole('heading',{name:'تم استلام طلبك'}).waitFor();
+  assert.equal(await page.locator('#review-form [name=doctor]').inputValue(),'مهندس زياد خالد الشهري');await page.locator('#review-form [type=submit]').click();await page.getByRole('heading',{name:'تم استلام طلبك'}).waitFor();
   const requestCall=calls.find(c=>c.action==='guest.doctor.request');assert.equal(requestCall.courseId,'najran-me-2026/me231');assert.equal(requestCall.majorId,2);assert.equal(calls.filter(c=>c.action==='guest.submit').length,0);assert.ok(!catalogue.doctors.some(d=>d.id===99));
   await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
-  // The only rating flow inside the plan is the missing-professor exception.
+  // The same add-doctor form offers an optional rating with preserved course context.
   await page.locator('[data-study-doctors="najran-me-2026/me231"]').click();await page.locator('#study-doctor-search').fill('اسم غير مضاف');
-  assert.equal(await page.locator('[data-study-pick-doctor]').count(),0);await page.locator('#study-new-doctor').click();await page.locator('#accept-review-pledge').click();
+  assert.equal(await page.locator('[data-study-pick-doctor]').count(),0);await page.locator('#study-request-doctor').click();await page.locator('[name=includeReview]').click();await page.locator('#accept-review-pledge').click();
   assert.equal(await page.locator('#review-study-course').inputValue(),'najran-me-2026/me231');
   await page.locator('[name=doctor]').fill('محمد عبدالرحمن القحطاني');await page.locator('[name=grade]').fill('91');await page.locator('.submit-review').click();await page.locator('.study-page').waitFor();
   const submitted=calls.find(c=>c.action==='guest.submit');assert.equal(submitted.courseId,'najran-me-2026/me231');assert.equal(submitted.existingDoctorId,undefined);assert.equal(submitted.pledged,true);assert.equal(submitted.shareGrade,false);
@@ -113,6 +113,6 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
   await page.locator('aside [data-page=home]').click();assert.match(await page.locator('.doctor-card').filter({hasText:'أحمد محمد العتيبي'}).locator('.office-badge').innerText(),/عميد كلية العلوم/);
   assert.equal(await page.locator('.doctor-card').filter({hasText:'أحمد محمد العتيبي'}).locator('.verified').count(),1);
   assert.deepEqual(errors,[]);await context.close();
-  console.log('PASS: guest institution and course-professor requests to admin without reviews, previous-page history with forward navigation, personal cross-college searchable professor choices without reviews, missing-professor rating exception, intelligent course advice and material-specific comments, prerequisite deduplication, centered plan navigation, office badges/admin toggles, owner isolation and responsive day/night layouts. API network mocked.');
+  console.log('PASS: guest institution and course-professor requests to admin without reviews, previous-page history with forward navigation, personal cross-college searchable professor choices without reviews, optional missing-professor rating, intelligent course advice and material-specific comments, prerequisite deduplication, centered plan navigation, office badges/admin toggles, owner isolation and responsive day/night layouts. API network mocked.');
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;server.close();});

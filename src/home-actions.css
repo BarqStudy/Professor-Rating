@@ -1,0 +1,34 @@
+/* All four destinations share the same card size, spacing and reading order. */
+.quick-actions { grid-template-columns: minmax(0, 1fr); grid-auto-rows: 1fr; gap: 14px; }
+.quick-actions .action-card {
+  width: 100%; min-height: 132px; padding: 24px; flex-wrap: nowrap;
+  gap: 20px; border-radius: 24px;
+}
+.quick-actions .action-card > div { flex: 1; min-width: 0; width: auto; }
+.quick-actions .action-card:not(.rate-existing) {
+  background: var(--surface-raised); color: var(--ink); border-color: var(--line);
+}
+.quick-actions .action-card:not(.rate-existing) :is(p, .tiny-label) { color: var(--muted); }
+.quick-actions .action-card:not(.rate-existing) .action-icon {
+  background: var(--soft); color: var(--green); border-color: var(--line);
+}
+.quick-actions .action-arrow { margin-inline-start: auto; }
+.quick-actions .action-card h2 { font-size: calc(21px * var(--font-scale, 1)); }
+.header-change-university {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  white-space: nowrap; padding: 10px 14px; font-size: calc(13px * var(--font-scale, 1));
+  margin-inline-start: auto; margin-inline-end: 16px;
+}
+.header-change-university .icon { width: 19px; height: 19px; }
+.modal .doctor-review-choice { flex-direction: row; display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--soft); }
+.doctor-review-choice input { width: 20px; height: 20px; padding: 0; flex-shrink: 0; margin-top: 5px; accent-color: var(--green); }
+.doctor-review-choice small { display: block; color: var(--muted); margin-top: 6px; line-height: 1.8; }
+.doctor-rating-fields { min-width: 0; padding: 0; border: 0; margin: 0; display: grid; gap: 20px; }
+.doctor-rating-fields > legend { font-size: 18px; font-weight: 600; margin-bottom: 14px; }
+.doctor-rating-fields[hidden] { display: none !important; }
+@media (max-width: 650px) {
+  header:has(.header-change-university) { height: auto; min-height: 88px; flex-wrap: wrap; gap: 10px; padding-block: 12px; }
+  .header-change-university { order: 3; width: 100%; margin: 0; padding: 8px 12px; }
+  .quick-actions .action-card { padding: 20px 17px; gap: 15px; }
+  .quick-actions .action-card h2 { font-size: calc(19px * var(--font-scale, 1)); }
+}
