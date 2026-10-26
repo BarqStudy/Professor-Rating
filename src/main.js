@@ -1,3 +1,5 @@
+import { createStudyImport } from './study-import.js';
+import { setUploadedStudyPlans } from './study-catalogue.js';
 import { createCourseAdvisor } from './course-advisor.js';
 import { officeBadge } from './doctor-office.js';
 import { createStudyPlanner } from "./study.js";
@@ -15,6 +17,8 @@ import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
   api,
+  extractStudyPlan,
+  publishStudyPlan,
   configured,
   ensureGuestSession,
   getGoogleSession,
@@ -105,6 +109,7 @@ const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>config
   closeModal,toast,
 });
 const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onDoctor:(id)=>cloudDoctorDetail(id)});
+const studyImport=createStudyImport({catalogue:()=>cloudCatalogue,ownerKey:()=>googleSession?.user.id||'',extract:extractStudyPlan,publish:publishStudyPlan,onPublished:async()=>{await refreshCloudCatalogue();render();toast('حُفظت الخطة وأصبحت متاحة للطلاب.');}});
 const logo =
   `<span class="miyar-mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M32 10v43M14 22h36M22 53h20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="m14 22-9 19h18l-9-19Zm36 0-9 19h18l-9-19Z" fill="currentColor" opacity=".22"/><path d="M5 41c3 8 15 8 18 0M41 41c3 8 15 8 18 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="m32 3 5 6-5 6-5-6Z" fill="#bf9354"/></svg></span><span class="logo-type">مِعيار<span>MIYAR</span></span>`;
 const initial = [{
@@ -1537,7 +1542,8 @@ function connectionBanner() {
     `<div class="connection-banner live"><span></span>${escapeHtml(selectedUniversity()?.name || "مِعيار")} · <span data-online-count title="جلسات المنصة النشطة في جميع الجامعات خلال آخر ٩٠ ثانية">${onlineCountText()}</span></div>`;
 }
 async function refreshCloudCatalogue() {
-  const data = await api("catalogue");
+  const [data,plans]=await Promise.all([api('catalogue'),api('study.plans').catch(()=>null)]);
+  setUploadedStudyPlans(plans);
   if (
     !Array.isArray(data.colleges) || !Array.isArray(data.majors) ||
     !Array.isArray(data.doctors)
@@ -1715,7 +1721,7 @@ function cloudAdmin() {
   const queue = cloudQueue;
   const allDoctors = records.doctors || [];
   initAdminFilters();
-  return `<div class="page-title"><div class="eyebrow">إدارة مِعيار</div><h1>لوحة التحكم</h1><p>المشاركات لا تُنشر تلقائيًا. راجع التعليقات وطلبات الدكاترة من هنا.</p><button class="secondary" id="refresh-cloud-admin">تحديث الطلبات</button></div><div class="admin-grid"><section class="panel academic-management"><h2>الجامعات والكليات والتخصصات</h2><p class="admin-context-hint">نحتفظ بآخر جامعة وكلية اخترتها لتكمل الإضافة دون إعادة الاختيار.</p><h3 class="admin-step-title"><span>١</span> الجامعات</h3><form id="cloud-add-university"><label>إضافة جامعة<input name="name" required minlength="2" maxlength="100" placeholder="اسم الجامعة"></label><button class="primary">إضافة جامعة</button></form><div class="admin-record-list" role="region" tabindex="0" aria-label="الجامعات المضافة">${(records.universities || []).map((university) => `<div class="admin-row"><span>${escapeHtml(university.name)}<small>${records.colleges.filter((college) => college.university_id === university.id).length.toLocaleString('ar')} كلية مضافة</small></span><button type="button" class="danger" data-cloud-operation="university.delete" data-id="${university.id}" aria-label="حذف ${escapeHtml(university.name)}">حذف الجامعة</button></div>`).join('') || '<p class="muted">لا توجد جامعات مضافة.</p>'}</div><h3 class="admin-step-title"><span>٢</span> الكليات</h3><form id="cloud-add-college"><label>إضافة كلية<select name="universityId" required><option value="">اختر الجامعة</option>${(records.universities || []).map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")}</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم الكلية"></label><button class="primary">إضافة الكلية</button></form><div class="admin-record-list" aria-label="الكليات المضافة">${
+  return `<div class="page-title"><div class="eyebrow">إدارة مِعيار</div><h1>لوحة التحكم</h1><p>المشاركات لا تُنشر تلقائيًا. راجع التعليقات وطلبات الدكاترة من هنا.</p><button class="secondary" id="refresh-cloud-admin">تحديث الطلبات</button></div><div class="admin-grid">${studyImport.panel()}<section class="panel academic-management"><h2>الجامعات والكليات والتخصصات</h2><p class="admin-context-hint">نحتفظ بآخر جامعة وكلية اخترتها لتكمل الإضافة دون إعادة الاختيار.</p><h3 class="admin-step-title"><span>١</span> الجامعات</h3><form id="cloud-add-university"><label>إضافة جامعة<input name="name" required minlength="2" maxlength="100" placeholder="اسم الجامعة"></label><button class="primary">إضافة جامعة</button></form><div class="admin-record-list" role="region" tabindex="0" aria-label="الجامعات المضافة">${(records.universities || []).map((university) => `<div class="admin-row"><span>${escapeHtml(university.name)}<small>${records.colleges.filter((college) => college.university_id === university.id).length.toLocaleString('ar')} كلية مضافة</small></span><button type="button" class="danger" data-cloud-operation="university.delete" data-id="${university.id}" aria-label="حذف ${escapeHtml(university.name)}">حذف الجامعة</button></div>`).join('') || '<p class="muted">لا توجد جامعات مضافة.</p>'}</div><h3 class="admin-step-title"><span>٢</span> الكليات</h3><form id="cloud-add-college"><label>إضافة كلية<select name="universityId" required><option value="">اختر الجامعة</option>${(records.universities || []).map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")}</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم الكلية"></label><button class="primary">إضافة الكلية</button></form><div class="admin-record-list" aria-label="الكليات المضافة">${
     records.colleges.map((c) =>
       `<div class="admin-row"><span>${
         escapeHtml(c.name)
@@ -1794,6 +1800,7 @@ async function cloudAdminAction(operation, data) {
 }
 function bindCloudAdmin() {
   if (!cloudMe?.isAdmin) return;
+  studyImport.bind();
   const key = `miyar-admin-selections-${cloudMe.id}`;
   const stored = readJSON(key, {});
   const selections = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};

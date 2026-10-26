@@ -79,7 +79,7 @@ export async function signOutGoogle() {
 export async function api(action, data = {}) {
   if (!configured) throw new Error("لم يتم ربط قاعدة البيانات بعد.");
   const isGuest = action.startsWith("guest.");
-  const isPublic = isGuest || action === "catalogue" || action === "reviews" || action === "doctor.summary" || action === "doctor.grades" || action === "course.doctors" || action === "course.reviews" || action === "ai.status";
+  const isPublic = isGuest || action === "catalogue" || action === "reviews" || action === "doctor.summary" || action === "doctor.grades" || action === "course.doctors" || action === "course.reviews" || action === "study.plans" || action === "ai.status";
   const session = isPublic ? cachedSession : await getGoogleSession();
   if (!isPublic && !session) {
     throw new Error("سجّل الدخول باستخدام Google لإكمال العملية.");
@@ -132,3 +132,18 @@ export async function ensureGuestSession(){
  guestSessionPromise=(async()=>{if(navigator.locks?.request)return navigator.locks.request('miyar-guest-session',open);return open();})().finally(()=>{guestSessionPromise=null;});
  return guestSessionPromise;
 }
+
+async function studyAdminRequest(operation,body){
+ const session=await getGoogleSession();
+ if(!session)throw new Error('سجّل الدخول بحساب الإدارة أولًا.');
+ const headers={apikey:publishableKey,Authorization:`Bearer ${session.access_token}`};
+ if(operation==='publish')headers['Content-Type']='application/json';
+ let response;
+ try{response=await fetch(`${projectUrl}/functions/v1/miyar?study=${operation}`,{method:'POST',headers,body:operation==='publish'?JSON.stringify(body):body,signal:AbortSignal.timeout(operation==='extract'?120000:30000)});}
+ catch{throw new Error(operation==='extract'?'تعذّر إكمال قراءة الملف. تحقق من الاتصال أو جرّب ملفًا أصغر.':'تعذّر الاتصال أثناء الحفظ. يمكنك إعادة الحفظ بنفس المعاينة دون تكرار الخطة.');}
+ const result=await response.json().catch(()=>{throw new Error('استجابة غير متوقعة من قارئ الخطط.');});
+ if(!response.ok)throw new Error(result.error||'تعذّر إكمال عملية الخطة.');
+ return result;
+}
+export function extractStudyPlan(file,majorId,fileLabel){const form=new FormData();form.set('file',file);form.set('majorId',String(majorId));form.set('fileLabel',fileLabel);return studyAdminRequest('extract',form);}
+export const publishStudyPlan=(majorId,draft)=>studyAdminRequest('publish',{majorId,draft});

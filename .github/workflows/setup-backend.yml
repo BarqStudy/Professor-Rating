@@ -101,6 +101,8 @@ jobs:
               payload = json.dumps({'action': action, **(values or {})}).encode()
               with urllib.request.urlopen(urllib.request.Request(url, data=payload, headers=headers), timeout=30) as result:
                   return json.load(result)
+          if not isinstance(call('study.plans'), list):
+              raise SystemExit('Uploaded study plans endpoint failed.')
           # Read-only verification of the scoped curricula migration.
           for course in ['najran-ce-2025/ce211', 'najran-me-2026/me231', 'najran-che-2025/che311', 'najran-ee-2025/ee216', 'najran-arc-2026/arc111']:
               if not isinstance(call('course.doctors', {'courseId': course}), list):

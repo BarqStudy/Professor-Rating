@@ -1,3 +1,4 @@
+import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
 import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
 import { handleGuest } from "./guest.js";
 import { gradeConsent, gradeParticipation, publicGrades } from "./grades.js";
@@ -45,6 +46,18 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       if (request.method !== "POST") {
         throw new ApiError(405, "استخدم طلب POST.");
       }
+      const studyOperation=new URL(request.url).searchParams.get('study');
+      let studyAdmin=null;
+      if(studyOperation!==null){
+        if(!['extract','publish'].includes(studyOperation))throw new ApiError(400,'عملية خطة غير معروفة.');
+        if(!authenticate)throw new ApiError(401,'سجّل الدخول باستخدام Google.');
+        const identity=await authenticate(request);
+        if(!admins.has(String(identity.id)))throw new ApiError(403,'استيراد الخطط متاح للأدمن فقط.');
+        const rows=await db(`miyar_accounts?auth_id=eq.${identity.id}&select=auth_id,status`);
+        if(rows[0]?.status!=='active')throw new ApiError(403,'حساب الإدارة غير متاح للاستيراد.');
+        studyAdmin=identity.id;
+      }
+      const limit=studyOperation==='extract'?8*1024*1024:studyOperation==='publish'?768*1024:16384;
       let size = 0;
       const chunks = [];
       const reader = request.body?.getReader();
@@ -53,7 +66,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
           const { done, value } = await reader.read();
           if (done) break;
           size += value.byteLength;
-          if (size > 16384) {
+          if (size > limit) {
             await reader.cancel();
             throw new ApiError(413, "حجم الطلب أكبر من المسموح.");
           }
@@ -66,6 +79,14 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
         bytes.set(chunk, offset);
         offset += chunk.length;
       }
+      if(studyOperation==='extract'){
+        const contentType=request.headers.get('content-type')||'';
+        if(!contentType.toLowerCase().startsWith('multipart/form-data;'))throw new ApiError(400,'ارفع ملف الخطة من لوحة الإدارة.');
+        let form;
+        try{form=await new Response(bytes,{headers:{'Content-Type':contentType}}).formData();}
+        catch{throw new ApiError(400,'ملف الرفع غير صالح.');}
+        return respond(await extractStudyPlan(form,studyAdmin,db,env,aiFetch));
+      }
       let body;
       try {
         body = JSON.parse(new TextDecoder().decode(bytes));
@@ -75,11 +96,13 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       if (!body || typeof body !== "object" || Array.isArray(body)) {
         throw new ApiError(400, "طلب غير صالح.");
       }
+      if(studyOperation==='publish')return respond(await publishStudyPlan(body,studyAdmin,db));
       const action = body.action;
       const aiResult = await handleAi(request, body, db, env, aiFetch);
       if (aiResult) return respond(aiResult);
       const guestResult = await handleGuest(request, body, db, env.GUEST_PEPPER);
       if (guestResult) return respond(guestResult.data, guestResult.status || 200);
+      if(action==='study.plans')return respond(await db('rpc/miyar_uploaded_study_plans',{method:'POST',body:{}}));
       if (action === "catalogue") {
         return respond(
           await db("rpc/miyar_catalogue", { method: "POST", body: {} }),

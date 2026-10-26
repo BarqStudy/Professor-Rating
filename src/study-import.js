@@ -1,0 +1,55 @@
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const number=value=>Number(value).toLocaleString('ar');
+export function createStudyImport({catalogue,ownerKey,extract,publish,onPublished}){
+ let owner='',draft=null,target=null,busy=false,revision=0,error='',saved=false;
+ const selection={university:'',college:'',major:'',version:''};
+ function ensureOwner(){if(owner!==ownerKey()){owner=ownerKey();draft=null;target=null;busy=false;error='';saved=false;revision++;Object.assign(selection,{university:'',college:'',major:'',version:''});}}
+ function panel(){ensureOwner();return `<section class="panel study-import-panel"><h2>استيراد خطة تخصص بالذكاء الاصطناعي</h2><p class="muted">ارفع الخطة، ثم راجع المواد العربية والساعات والمتطلبات قبل حفظها للطلاب. الأسماء الإنجليزية المكررة لا تُضاف.</p><p class="plan-import-disclosure">يُرسل ملف الخطة إلى خدمة الذكاء الاصطناعي المربوطة بمِعيار للقراءة. لا ترسل سجلًا أكاديميًا أو بيانات شخصية.</p><form id="study-import-form"><fieldset ${busy?'disabled':''}><div class="form-grid"><label>الجامعة<select name="university" required></select></label><label>الكلية<select name="college" required></select></label></div><div class="form-grid"><label>التخصص<select name="majorId" required></select></label><label>إصدار الخطة<input name="fileLabel" required maxlength="80" placeholder="مثال: خطة ١٤٤٨" value="${esc(selection.version)}"></label></div><label>ملف الخطة<input name="file" type="file" accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg" required><small>PDF أو صورة PNG أو JPG، حتى ٦ ميجابايت. يدعم الصفحات المصوّرة.</small></label><p class="muted">إذا لم يكن التخصص مضافًا، أضفه أولًا من قسم الجامعات والكليات والتخصصات.</p><button type="submit" class="primary" id="read-study-plan">قراءة الخطة بالعربية</button></fieldset></form><div id="study-import-status" role="status" aria-live="polite">${saved?'الخطة محفوظة ومتاحة للطلاب.':busy?'جارٍ معالجة الخطة…':''}</div><p id="study-import-error" class="form-error" role="alert">${esc(error)}</p><div id="study-import-preview">${draft?preview():''}</div></section>`;}
+ function courseRow(row,index){
+  const input=(key,label,type='text',extra='')=>`<label>${label}<input data-field="${key}" type="${type}" value="${esc(row[key]??'')}" ${extra}></label>`;
+  const codes=(key,label)=>`<label>${label}<input data-field="${key}" value="${esc(Array.isArray(row[key])?row[key].join('، '):'')}" placeholder="افصل الرموز بفاصلة عربية أو إنجليزية"></label>`;
+  return `<details class="plan-import-course" data-import-row="${index}"><summary>${number(index+1)} · ${esc(row.name||'اسم يحتاج مراجعة')} <bdi>${esc(row.code||'رمز غير واضح')}</bdi></summary><div class="plan-import-course-fields"><div class="form-grid">${input('code','رمز المقرر','text','required maxlength="50"')}${input('name','اسم المقرر بالعربية فقط','text','required maxlength="120"')}</div><div class="form-grid">${input('credits','الساعات المعتمدة','number','min="0" max="30" placeholder="غير واضحة"')}${input('level','المستوى — صفر للبديل الاختياري','number','required min="0" max="20"')}</div><div class="form-grid"><label>نوع البند<select data-field="kind"><option value="course" ${row.kind==='course'?'selected':''}>مقرر أو بديل اختياري</option><option value="slot" ${row.kind==='slot'?'selected':''}>خانة اختيارية مطلوبة</option></select></label>${input('pool','المجموعة الاختيارية بالعربية','text','maxlength="100" placeholder="للاختياريات وبدائلها فقط"')}</div>${codes('prerequisites','المواد المتطلب اجتيازها — رموزها')}${codes('corequisites','المتطلبات المتزامنة — رموزها')}${codes('anyPrerequisites','متطلبات بديلة يكفي أحدها — رموزها')}<div class="form-grid">${input('minimumCredits','شرط الساعات المكتملة','number','min="1" max="400"')}${input('completedLevel','شرط اجتياز مستوى كامل','number','min="1" max="20"')}</div><label class="plan-import-checkbox"><input type="checkbox" data-field="allPrevious" ${row.allPrevious?'checked':''}><span>يتطلب إكمال جميع المقررات السابقة</span></label>${input('review','ملاحظة تحتاج تحققًا من القسم','text','maxlength="300"')}${input('page','صفحة الملف','number','min="1" max="200"')}<button type="button" class="text-button danger" data-remove-import-course="${index}">حذف هذا المقرر من المعاينة</button></div></details>`;
+ }
+ function preview(){return `<form id="study-publish-form"><fieldset ${busy||saved?'disabled':''}><div class="plan-import-preview-heading"><h3>${saved?'الخطة محفوظة':'معاينة الخطة قبل النشر'}</h3><p>${esc(target?.university)} · ${esc(target?.college)} · ${esc(target?.major)}</p><strong>${number(draft.courses.length)} بندًا مستخرجًا</strong></div><div class="form-grid"><label>اسم الخطة بالعربية<input id="import-plan-title" value="${esc(draft.title||'')}" required maxlength="100"></label><label>إصدار الخطة<input id="import-plan-version" value="${esc(draft.fileLabel)}" required maxlength="80"></label></div><label>نطاق الخطة — اختياري<input id="import-plan-scope" value="${esc(draft.scopeNote||'')}" maxlength="240" placeholder="مثال: الخطة لا تشمل السنة التحضيرية"></label><label>ملاحظات القراءة — ملاحظة عربية بكل سطر<textarea id="import-plan-warnings" rows="3" maxlength="9000">${esc((draft.warnings||[]).join('\n'))}</textarea></label><p class="muted">افتح المقرر لمراجعة بياناته أو تصحيحها. الرموز تبقى كما في الخطة، حتى إن كانت بحروف إنجليزية؛ أسماء المقررات بالعربية فقط.</p><div class="plan-import-courses" role="region" aria-label="المقررات المستخرجة" tabindex="0">${draft.courses.map(courseRow).join('')}</div><div class="plan-import-preview-actions"><button type="button" class="secondary" id="add-import-course">إضافة مقرر للمعاينة</button><button type="submit" class="primary" id="publish-study-plan">حفظ الخطة وإتاحتها للطلاب</button></div></fieldset></form>`;}
+ function bind(){ensureOwner();const form=document.querySelector('#study-import-form');if(!form)return;
+  const data=catalogue()||{universities:[],colleges:[],majors:[]};
+  const universities=form.elements.university,colleges=form.elements.college,majors=form.elements.majorId;
+  const options=(rows,value)=>'<option value="">اختر</option>'+rows.map(row=>`<option value="${row.id}" ${String(row.id)===String(value)?'selected':''}>${esc(row.name)}</option>`).join('');
+  function fillMajors(){majors.innerHTML=options(data.majors.filter(m=>String(m.college_id)===colleges.value),selection.major);}
+  function fillColleges(){colleges.innerHTML=options(data.colleges.filter(c=>String(c.university_id)===universities.value),selection.college);fillMajors();}
+  universities.innerHTML=options(data.universities||[],selection.university);fillColleges();
+  universities.onchange=()=>{selection.university=universities.value;selection.college='';selection.major='';fillColleges();};
+  colleges.onchange=()=>{selection.college=colleges.value;selection.major='';fillMajors();};majors.onchange=()=>selection.major=majors.value;
+  form.elements.fileLabel.oninput=()=>selection.version=form.elements.fileLabel.value;
+  form.onsubmit=async event=>{
+   event.preventDefault();if(busy)return;
+   const file=form.elements.file.files[0];if(!file||file.size>6*1024*1024){setError('ارفع ملفًا حتى ٦ ميجابايت.');return;}
+   const token=++revision,currentOwner=ownerKey();busy=true;saved=false;error='';draft=null;target=null;setStatus('جارٍ قراءة الخطة… قد تستغرق الملفات المصوّرة وقتًا أطول.');setError('');setDisabled(true);document.querySelector('#study-import-preview').innerHTML='';
+   try{const result=await extract(file,Number(majors.value),form.elements.fileLabel.value);if(token!==revision||ownerKey()!==currentOwner)return;draft=result.draft;target=result.target;setStatus('اكتملت القراءة. راجع المعاينة قبل نشر الخطة.');paintPreview();}
+   catch(error){if(token===revision&&ownerKey()===currentOwner){setError(error.message);setStatus('لم تكتمل قراءة الخطة. يمكنك إعادة المحاولة.');}}
+   finally{if(token===revision&&ownerKey()===currentOwner){busy=false;setDisabled(false);}}
+  };
+  bindPreview();
+ }
+ function setStatus(message){const node=document.querySelector('#study-import-status');if(node)node.textContent=message;}
+ function setError(message){error=message;const node=document.querySelector('#study-import-error');if(node)node.textContent=message;}
+ function setDisabled(value){const upload=document.querySelector('#study-import-form fieldset'),preview=document.querySelector('#study-publish-form fieldset');if(upload)upload.disabled=value;if(preview)preview.disabled=value||saved;}
+ function collect(){
+  const root=document.querySelector('#study-publish-form');if(!root||!draft)return;
+  draft.title=root.querySelector('#import-plan-title').value;draft.fileLabel=root.querySelector('#import-plan-version').value;draft.scopeNote=root.querySelector('#import-plan-scope').value;draft.warnings=root.querySelector('#import-plan-warnings').value.split(/\n/).map(s=>s.trim()).filter(Boolean);
+  draft.courses=[...root.querySelectorAll('[data-import-row]')].map(row=>{
+   const obj={};row.querySelectorAll('[data-field]').forEach(input=>{const key=input.dataset.field;obj[key]=input.type==='checkbox'?input.checked:input.type==='number'?input.value===''?null:Number(input.value):['prerequisites','corequisites','anyPrerequisites'].includes(key)?input.value.split(/[,،]/).map(s=>s.trim()).filter(Boolean):input.value||null;});return obj;
+  });
+ }
+ function paintPreview(){const node=document.querySelector('#study-import-preview');if(node){node.innerHTML=preview();bindPreview();}}
+ function bindPreview(){const form=document.querySelector('#study-publish-form');if(!form||!draft)return;
+  form.querySelector('#add-import-course').onclick=()=>{collect();if(draft.courses.length>=240){setError('الحد الأقصى ٢٤٠ مقررًا في الخطة.');return;}draft.courses.push({code:'',name:'',credits:null,level:1,kind:'course',pool:null,prerequisites:[],corequisites:[],anyPrerequisites:[],minimumCredits:null,completedLevel:null,allPrevious:false,review:null,page:1});paintPreview();document.querySelector('.plan-import-course:last-child').open=true;};
+  form.querySelectorAll('[data-remove-import-course]').forEach(button=>button.onclick=()=>{collect();draft.courses.splice(Number(button.dataset.removeImportCourse),1);paintPreview();});
+  form.onsubmit=async event=>{
+   event.preventDefault();if(busy||saved)return;collect();const token=++revision,currentOwner=ownerKey();busy=true;setError('');setStatus('جارٍ حفظ الخطة…');setDisabled(true);
+   try{await publish(draft.majorId,draft);if(token!==revision||ownerKey()!==currentOwner)return;saved=true;busy=false;setStatus('حُفظت الخطة وأصبحت متاحة للطلاب.');setDisabled(false);try{await onPublished();}catch{setStatus('حُفظت الخطة، وتعذّر تحديث الواجهة الآن. حدّث الصفحة لعرضها.');}}
+   catch(error){if(token===revision&&ownerKey()===currentOwner){busy=false;setError(error.message);setStatus('لم تُحفظ الخطة؛ صحّح البيانات ثم أعد الحفظ.');setDisabled(false);}}
+  };
+ }
+ return {panel,bind};
+}

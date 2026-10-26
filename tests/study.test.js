@@ -118,7 +118,7 @@ test('database keeps course reviews published-only and atomically rejects cross-
   assert.equal((await rpc('miyar_course_doctors',[civil]))[0].count,1);
   await db.query("update miyar_reviews set status='rejected' where id=$1",[g.id]);assert.deepEqual(await rpc('miyar_course_doctors',[civil]),[]);
   // Same name and code in another plan version stays independent.
-  await db.exec("insert into miyar_study_plans(id,major_id,metadata) select 'najran-ce-2027',major_id,metadata from miyar_study_plans where id='najran-ce-2025';insert into miyar_study_courses values('najran-ce-2027/ce211','najran-ce-2027','همد 211','ميكانيكا الموائع',true);");
+  await db.exec("insert into miyar_study_plans(id,major_id,metadata) select 'najran-ce-2027',major_id,metadata||jsonb_build_object('fileLabel','CE-2027') from miyar_study_plans where id='najran-ce-2025';insert into miyar_study_courses values('najran-ce-2027/ce211','najran-ce-2027','همد 211','ميكانيكا الموائع',true);");
   assert.deepEqual(await rpc('miyar_course_doctors',['najran-ce-2027/ce211']),[]);
   for(const role of ['anon','authenticated']){
    await db.exec('set role '+role);

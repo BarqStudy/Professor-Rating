@@ -53,7 +53,7 @@ export function courseStatus(plan,item,raw) {
  if(course.anyPrerequisites?.length&&!course.anyPrerequisites.some(code=>done.has(code)))reasons.push('اجتياز أحد: '+course.anyPrerequisites.join(' أو '));
  const summary=progressSummary(plan,state);
  const minimum=Math.max(item.minimumCredits||0,course.minimumCredits||0);
- if(minimum&&(summary.completedCredits<minimum||summary.uncertainCredits))return {key:'review',label:'تحتاج تأكيد القسم',reasons:['تحقق من شرط إكمال '+minimum+' ساعة معتمدة لدى القسم؛ الخطة لا تشمل المسار الهندسي.']};
+ if(minimum&&(summary.completedCredits<minimum||summary.uncertainCredits))return {key:'review',label:'تحتاج تأكيد القسم',reasons:['تحقق من شرط إكمال '+minimum+' ساعة معتمدة لدى القسم؛ يعتمد الشرط على الساعات المعتمدة في سجلك الأكاديمي.']};
  const limit=item.allPrevious?item.level-1:item.completedLevel;
  if(limit&&plan.courses.some(c=>c.level>0&&c.level<=limit&&(!state.completed.includes(c.id)||!selectedCourse(plan,c,state))))reasons.push('اجتياز جميع المواد حتى المستوى '+limit+'.');
  if(reasons.length)return {key:'locked',label:'متطلبات لم تكتمل',reasons};

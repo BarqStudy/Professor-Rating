@@ -1,0 +1,71 @@
+import {ApiError,integer,text} from './security.js';
+const arabic=/[ء-ي]/u;
+const arabicOnly=/^[\p{Script=Arabic}\p{M}\p{N}\p{P}\p{Zs}\s]+$/u;
+export const PLAN_COURSE_LIMIT=240;
+const issue=message=>new ApiError(400,message);
+const codeKey=value=>value.toUpperCase().replace(/\s/g,'');
+export function arabicLabel(value,min,max,label){
+ const clean=text(value,min,max,label);
+ if(!arabic.test(clean)||!arabicOnly.test(clean))throw issue(`${label}: اكتب النص بالعربية فقط.`);
+ return clean;
+}
+export function planCode(value,label='رمز المقرر'){
+ const code=text(value,1,50,label).replace(/ـ/g,'').replace(/[٠-٩۰-۹]/g,c=>String(c.charCodeAt(0)-(c<='٩'?0x660:0x6f0))).replace(/\s+/g,' ');
+ if(!/^[\p{L}\p{N}\s._/-]+$/u.test(code))throw issue(`تحقق من ${label}.`);
+ return code;
+}
+function list(value,label){
+ if(!Array.isArray(value)||value.length>12)throw issue(`تحقق من ${label}.`);
+ return [...new Set(value.map(code=>planCode(code,label)))];
+}
+const hash=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),b=>b.toString(16).padStart(2,'0')).join('');
+export async function normalizePublishedPlan(input){
+ if(!input||typeof input!=='object'||Array.isArray(input))throw issue('تحقق من بيانات الخطة.');
+ const id=typeof input.id==='string'&&/^plan-[a-f0-9-]{36}$/.test(input.id)?input.id:null;
+ if(!id)throw issue('أعد قراءة ملف الخطة قبل حفظه.');
+ const title=arabicLabel(input.title,2,100,'اسم الخطة');
+ const fileLabel=text(input.fileLabel,1,80,'إصدار الخطة');
+ const scopeNote=input.scopeNote?arabicLabel(input.scopeNote,2,240,'نطاق الخطة'):'';
+ if(!Array.isArray(input.courses)||!input.courses.length||input.courses.length>PLAN_COURSE_LIMIT)throw issue('يجب أن تحتوي الخطة على ١ إلى ٢٤٠ مقررًا.');
+ if(!/^[a-f0-9]{64}$/.test(input.sha256||''))throw issue('أعد قراءة ملف الخطة قبل حفظه.');
+ const courses=[],codes=new Map(),groupNames=new Map();
+ for(const [index,row] of input.courses.entries()){
+  const label=`المقرر ${index+1}`;
+  if(!row||typeof row!=='object'||Array.isArray(row))throw issue(`تحقق من ${label}.`);
+  const kind=row.kind==='slot'?'slot':row.kind==='course'?'course':null;
+  if(!kind)throw issue(`${label}: اختر نوع المقرر.`);
+  const name=arabicLabel(row.name,2,120,`${label} — الاسم`);
+  const code=planCode(row.code,`${label} — الرمز`);
+  const credits=row.credits===null?null:integer(row.credits,0,30,`${label} — الساعات`);
+  const level=integer(row.level,0,20,`${label} — المستوى`);
+  const pool=row.pool?arabicLabel(row.pool,2,100,`${label} — المجموعة الاختيارية`):null;
+  if((kind==='slot'||level===0)&&!pool)throw issue(`${label}: حدد المجموعة الاختيارية.`);
+  if(kind==='slot'&&level===0)throw issue(`${label}: حدد مستوى المتطلب الاختياري.`);
+  const prerequisites=list(row.prerequisites,`${label} — المتطلبات السابقة`),corequisites=list(row.corequisites,`${label} — المتطلبات المتزامنة`),anyPrerequisites=list(row.anyPrerequisites,`${label} — المتطلبات البديلة`);
+  if(kind==='course'&&codes.has(codeKey(code)))throw issue(`${label}: الرمز ${code} مكرر؛ راجع المواد المكررة قبل الحفظ.`);
+  if(kind==='course')codes.set(codeKey(code),code);
+  if([...prerequisites,...corequisites,...anyPrerequisites].some(value=>codeKey(value)===codeKey(code)))throw issue(`${label}: المقرر لا يمكن أن يكون متطلبًا لنفسه.`);
+  if(pool)groupNames.set(pool,'group-'+(await hash(pool)).slice(0,16));
+  const review=row.review?arabicLabel(row.review,2,300,`${label} — الملاحظة`):null;
+  if(row.allPrevious!==true&&row.allPrevious!==false)throw issue(`${label}: تحقق من شرط إكمال المقررات السابقة.`);
+  const course={id:id+'/c-'+(await hash(kind==='course'?codeKey(code):`${code}:${name}:${index}`)).slice(0,20),code,name,credits,level,kind,pool:pool?groupNames.get(pool):null,
+   prerequisites,corequisites,anyPrerequisites,linkable:kind==='course',review,
+   ...(row.minimumCredits==null?{}:{minimumCredits:integer(row.minimumCredits,1,400,`${label} — الحد الأدنى للساعات`)}),
+   ...(row.completedLevel==null?{}:{completedLevel:integer(row.completedLevel,1,20,`${label} — المستوى المطلوب`)}),
+   ...(row.allPrevious?{allPrevious:true}:{}),page:Number.isInteger(row.page)&&row.page>0&&row.page<=200?row.page:1};
+  courses.push(course);
+ }
+ for(const course of courses){
+  for(const field of ['prerequisites','corequisites','anyPrerequisites'])course[field]=course[field].map(code=>codes.get(codeKey(code))||code);
+  if(course.completedLevel&&course.level>0&&course.completedLevel>=course.level)throw issue(`المقرر «${course.name}»: شرط المستوى يتضمن المقرر نفسه؛ راجعه قبل الحفظ.`);
+ }
+ const byCode=new Map(courses.filter(c=>c.kind==='course').map(c=>[c.code,c])),visiting=new Set(),visited=new Set();
+ function visit(course){if(visited.has(course.code))return;if(visiting.has(course.code))throw issue(`يوجد تعارض دائري في متطلبات «${course.name}»؛ صححه قبل الحفظ.`);visiting.add(course.code);for(const code of course.prerequisites){const previous=byCode.get(code);if(previous)visit(previous);}visiting.delete(course.code);visited.add(course.code);}
+ for(const course of byCode.values())visit(course);
+ if(!courses.some(c=>c.level>0))throw issue('الخطة تحتاج مقررات أساسية بمستويات محددة.');
+ for(const course of courses.filter(c=>c.kind==='slot'))if(!courses.some(c=>c.level===0&&c.kind==='course'&&c.pool===course.pool&&c.credits===course.credits))throw issue(`المتطلب «${course.name}» يحتاج بدائل اختيارية من مجموعته وبنفس الساعات.`);
+ const warnings=Array.isArray(input.warnings)?input.warnings.slice(0,30).map(w=>arabicLabel(w,2,300,'ملاحظة الخطة')):[];
+ courses.sort((a,b)=>(a.level||99)-(b.level||99));
+ return {id,title,fileLabel,version:fileLabel,versionKey:fileLabel.normalize('NFKC').toLowerCase().replace(/[٠-٩۰-۹]/g,c=>String(c.charCodeAt(0)-(c<='٩'?0x660:0x6f0))).replace(/\s+/g,' '),scopeNote,sha256:input.sha256,managed:'admin',firstLevel:Math.min(...courses.filter(c=>c.level>0).map(c=>c.level)),
+  courses,notes:warnings,groups:[...groupNames].map(([name,id])=>({id,name,slots:courses.filter(c=>c.kind==='slot'&&c.pool===id).map(c=>c.id)})),uncertainCredits:courses.some(c=>c.credits===null)};
+}
