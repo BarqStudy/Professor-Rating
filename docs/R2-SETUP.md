@@ -17,6 +17,8 @@
 
 `https://ACCOUNT_ID.r2.cloudflarestorage.com`
 
+تستخدم طلبات S3 وروابط التنزيل منطقة التوقيع `auto` تلقائيًا، وفق [توثيق R2](https://developers.cloudflare.com/r2/api/s3/api/#bucket-region). لا تحتاج إضافة سر للمنطقة أو تغيير موقع الحاوية.
+
 ## حفظ الإعدادات على الخادم
 
 في مشروع Supabase افتح **Edge Functions → Secrets**، وأضف:

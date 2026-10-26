@@ -13,13 +13,14 @@ test('R2 SigV4 PUT and short private download links match independently calculat
  const config=r2Configuration(env),now=Date.UTC(2026,9,26,12);
  const put=await signedR2Request(config,{method:'PUT',key,body:new TextEncoder().encode('%PDF-1.7'),headers:{'content-type':'application/pdf'},now});
  assert.equal(put.url,`https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/miyar-files/${key}`);
- assert.ok(put.options.headers.Authorization.endsWith('Signature=6737ec3a216b2bf06e05ec7a8d8e10a9d4a6b81567d538edd2886a61cb7d88fe'));
+ assert.ok(put.options.headers.Authorization.endsWith('Signature=1002fd62808ffb9c77663f32fe811d0c6cafff30bf74071f975b9a929d6d57f8'));
+ assert.ok(put.options.headers.Authorization.includes('/20261026/auto/s3/aws4_request'));
  assert.equal(put.options.headers['x-amz-date'],'20261026T120000Z');assert.equal(put.options.headers.host,undefined);assert.ok(!JSON.stringify(put).includes(env.R2_SECRET_ACCESS_KEY));
  const list=await signedR2Request(config,{method:'GET',query:[['max-keys','1'],['list-type','2']],now});
  assert.equal(new URL(list.url).search,'?list-type=2&max-keys=1');
- assert.ok(list.options.headers.Authorization.endsWith('Signature=71c606fe94c98a8f1864a1639630b9af5bbdab9c6a6169360764481e907e92d7'));
+ assert.ok(list.options.headers.Authorization.endsWith('Signature=8976350952b172accb3ccd3c047a0af88e9c2c44d1bc742f5cd311c72d020e76'));
  const get=await r2DownloadUrl(config,key,'خطة.pdf',{now});const url=new URL(get.url);
- assert.equal(url.searchParams.get('X-Amz-Signature'),'40b282cb68f5a2f2b48a4f6f266f0ff19f49b6a0f76de75672bb51243c4d2fad');assert.equal(url.searchParams.get('X-Amz-Expires'),'300');assert.equal(get.expiresAt,'2026-10-26T12:05:00.000Z');assert.ok(url.searchParams.get('response-content-disposition').startsWith('attachment;'));assert.ok(!get.url.includes(env.R2_SECRET_ACCESS_KEY));
+ assert.equal(url.searchParams.get('X-Amz-Signature'),'155008f1cfd4708543a6295b33b01e6bc26f5492c6d5ad898cd4aca16de0265f');assert.equal(url.searchParams.get('X-Amz-Credential'),env.R2_ACCESS_KEY_ID+'/20261026/auto/s3/aws4_request');assert.equal(url.searchParams.get('X-Amz-Expires'),'300');assert.equal(get.expiresAt,'2026-10-26T12:05:00.000Z');assert.ok(url.searchParams.get('response-content-disposition').startsWith('attachment;'));assert.ok(!get.url.includes(env.R2_SECRET_ACCESS_KEY));
  for(const path of ['../file.pdf','miyar/files/../../file','https://evil.test/a.pdf'])await assert.rejects(r2DownloadUrl(config,path,'file.pdf'),/معرّف الملف/);
  await assert.rejects(r2DownloadUrl(config,key,'file.pdf',{expires:99999}),/مدة/);
 });

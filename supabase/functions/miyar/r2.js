@@ -5,6 +5,8 @@ const digest=async text=>hex(await crypto.subtle.digest('SHA-256',typeof text===
 const encode=value=>encodeURIComponent(value).replace(/[!'()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());
 const hmac=async(key,value)=>crypto.subtle.sign('HMAC',await crypto.subtle.importKey('raw',typeof key==='string'?encoder.encode(key):key,{name:'HMAC',hash:'SHA-256'},false,['sign']),encoder.encode(value));
 const names=['R2_ACCOUNT_ID','R2_BUCKET_NAME','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY'];
+// R2's S3 region is auto; arbitrary AWS regions are not interchangeable.
+const region='auto';
 export function r2Configuration(env){
  const values=Object.fromEntries(names.map(name=>[name,typeof env[name]==='string'?env[name].trim():'']));
  const missing=names.filter(name=>!values[name]);
@@ -19,8 +21,8 @@ function objectUrl(config,key=''){
 }
 const time=now=>new Date(now).toISOString().replace(/[:-]|\.\d{3}/g,'');
 async function signature(config,date,canonical){
- const scope=date.slice(0,8)+'/any/s3/aws4_request';
- const dateKey=await hmac('AWS4'+config.secretKey,date.slice(0,8)),regionKey=await hmac(dateKey,'any'),serviceKey=await hmac(regionKey,'s3'),signingKey=await hmac(serviceKey,'aws4_request');
+ const scope=date.slice(0,8)+'/'+region+'/s3/aws4_request';
+ const dateKey=await hmac('AWS4'+config.secretKey,date.slice(0,8)),regionKey=await hmac(dateKey,region),serviceKey=await hmac(regionKey,'s3'),signingKey=await hmac(serviceKey,'aws4_request');
  return {scope,value:hex(await hmac(signingKey,'AWS4-HMAC-SHA256\n'+date+'\n'+scope+'\n'+await digest(canonical)))};
 }
 const queryString=entries=>entries.map(([k,v])=>[encode(k),encode(String(v))]).sort(([ak,av],[bk,bv])=>ak<bk?-1:ak>bk?1:av<bv?-1:av>bv?1:0).map(([k,v])=>k+'='+v).join('&');
@@ -37,7 +39,7 @@ export async function signedR2Request(config,{method,key='',query=[],body,header
 }
 function disposition(name){return `attachment; filename="miyar-file"; filename*=UTF-8''${encode(name)}`;}
 export async function r2DownloadUrl(config,key,name,{now=Date.now(),expires=300}={}){
- const url=objectUrl(config,key),date=time(now),scope=date.slice(0,8)+'/any/s3/aws4_request';
+ const url=objectUrl(config,key),date=time(now),scope=date.slice(0,8)+'/'+region+'/s3/aws4_request';
  if(!Number.isInteger(expires)||expires<1||expires>900)throw new ApiError(400,'مدة رابط التنزيل غير صالحة.');
  const entries=[['X-Amz-Algorithm','AWS4-HMAC-SHA256'],['X-Amz-Credential',config.accessKey+'/'+scope],['X-Amz-Date',date],['X-Amz-Expires',expires],['X-Amz-SignedHeaders','host'],['response-content-disposition',disposition(name)]];
  const canonical=['GET',url.pathname,queryString(entries),'host:'+url.host+'\n','host','UNSIGNED-PAYLOAD'].join('\n');
