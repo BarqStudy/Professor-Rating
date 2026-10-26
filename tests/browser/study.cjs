@@ -8,6 +8,7 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
  try{
   const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),page=await context.newPage(),calls=[],errors=[];
+  const pendingDoctors=[],institutionRequests=[];
   const guest={id:'44444444-4444-4444-8444-444444444444',status:'active',university_id:3};let failCourses=false,activeMember=null;
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('https://bbnsorjxgehvoddluvyo.supabase.co/**',async route=>{
@@ -24,11 +25,13 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
     result=body.courseId==='najran-ce-2025/ge101'?[catalogue.doctors[2],catalogue.doctors[0]]:[];
    }
    if(body.action==='course.reviews')result=[{id:501,subject:'الاستاتيكا',comment:'تجربة منشورة لهذه المادة',scores:[95,93,94],date:'2026-10-26T00:00:00Z'}];
+   if(body.action==='guest.doctor.request'){const d={id:99,name:body.name,major_id:body.majorId,requested_course:body.courseId,submitted_by:guest.id,identity_type:'guest'};pendingDoctors.push(d);result={id:d.id,status:'pending'};}
+   if(body.action==='guest.institution.request'){institutionRequests.push({id:1,name:body.university,colleges:body.colleges,guest_id:guest.id});result={id:1,status:'pending'};}
    if(body.action==='guest.submit')result={id:50,status:'pending'};
    if(body.action==='reviews')result=[];
    if(body.action==='doctor.summary')result={insufficient:true,totalPublished:0,themes:[]};
    if(body.action==='doctor.grades')result={available:false,minimum:10,subjects:[]};
-   if(body.action==='admin'&&body.operation==='queue')result={doctors:[],reviews:[],edits:[],reports:[],catalogueRequests:[],ambassadors:[]};
+   if(body.action==='admin'&&body.operation==='queue')result={doctors:pendingDoctors,reviews:[],edits:[],reports:[],catalogueRequests:[],ambassadors:[],institutionRequests};
    if(body.action==='admin'&&body.operation==='doctor.office'){
     const d=catalogue.doctors.find(d=>d.id===body.id);d.office_role=body.role;d.office_college_id=body.role==='dean'?body.collegeId:null;d.office_college=body.role==='dean'?catalogue.colleges.find(c=>c.id===body.collegeId).name:null;
    }
@@ -37,6 +40,13 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
   const url=`http://127.0.0.1:${server.address().port}/Professor-Rating/`;
   await page.goto(url);await page.locator('.doctor-card').first().waitFor();await page.waitForTimeout(250);
   assert.deepEqual(await page.locator('aside nav [data-page]').evaluateAll(nodes=>nodes.slice(0,5).map(n=>n.dataset.page)),['home','ratings','plan','saved','developer']);
+  await page.locator('.university-request [data-university-request]').click();
+  await page.locator('#institution-request-form [name=universityId]').selectOption('');await page.locator('#institution-request-form [name=university]').fill('جامعة الطلب الجديدة');
+  await page.locator('[data-college-name]').fill('كلية العلوم');await page.locator('[data-college-majors]').fill('الفيزياء\nالكيمياء');await page.locator('#institution-add-college').click();await page.locator('[data-college-name]').nth(1).fill('كلية الآداب');
+  for(const width of [390,820,1440]){await page.setViewportSize({width,height:950});assert.equal(await page.locator('.modal').evaluate(el=>el.scrollWidth>el.clientWidth),false);}
+  await page.locator('#institution-request-form [type=submit]').click();await page.getByRole('heading',{name:'تم استلام طلبك'}).waitFor();
+  const institution=calls.find(c=>c.action==='guest.institution.request');assert.equal(institution.colleges.length,2);assert.deepEqual(institution.colleges[0].majors,['الفيزياء','الكيمياء']);assert.ok(!catalogue.universities.some(u=>u.name==='جامعة الطلب الجديدة'));
+  await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
   await page.locator('aside [data-page=plan]').click();await page.locator('#study-plan-select').selectOption('najran-me-2026');
   assert.equal(await page.locator('.study-source-notes,.study-prerequisite-settings,.study-course-meta a,.study-setup a').count(),0);
   assert.equal(await page.locator('.study-advisory').innerText(),'الخطة لا تشمل المسار الهندسي.');
@@ -55,6 +65,10 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
   assert.equal(calls.filter(c=>c.action==='guest.submit'||c.action==='submit').length,0,'choosing a professor does not create a review or public course link');
   assert.equal(await page.locator('#review-form,#accept-review-pledge').count(),0);
   await page.reload();await page.locator('[data-study-course="najran-me-2026/me231"] .study-selected-doctor').waitFor();
+  await page.locator('[data-study-doctors="najran-me-2026/me231"]').click();await page.locator('#study-doctor-search').fill('مهندس زياد خالد الشهري');await page.locator('#study-request-doctor').click();
+  assert.equal(await page.locator('#doctor-request-form [name=name]').inputValue(),'مهندس زياد خالد الشهري');await page.locator('#doctor-request-form [type=submit]').click();await page.getByRole('heading',{name:'تم استلام طلبك'}).waitFor();
+  const requestCall=calls.find(c=>c.action==='guest.doctor.request');assert.equal(requestCall.courseId,'najran-me-2026/me231');assert.equal(requestCall.majorId,2);assert.equal(calls.filter(c=>c.action==='guest.submit').length,0);assert.ok(!catalogue.doctors.some(d=>d.id===99));
+  await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
   // The only rating flow inside the plan is the missing-professor exception.
   await page.locator('[data-study-doctors="najran-me-2026/me231"]').click();await page.locator('#study-doctor-search').fill('اسم غير مضاف');
   assert.equal(await page.locator('[data-study-pick-doctor]').count(),0);await page.locator('#study-new-doctor').click();await page.locator('#accept-review-pledge').click();
@@ -71,6 +85,10 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
   await page.locator('#advisor-search').fill('');
   failCourses=true;await page.locator('#advisor-course').selectOption('najran-ce-2025/chem101');await page.locator('#advisor-retry').waitFor();failCourses=false;await page.locator('#advisor-retry').click();await page.locator('#advisor-results .empty').waitFor();
   await page.locator('#advisor-course').selectOption('najran-ce-2025/ge101');await page.locator('[data-advisor-doctor="21"]').waitFor();
+  await page.locator('#page-close').click();await page.locator('.study-page').waitFor();assert.equal(new URL(page.url()).hash,'#plan');
+  await page.goForward();await page.locator('[data-advisor-doctor="21"]').waitFor();assert.equal(new URL(page.url()).hash,'#advisor');
+  await page.evaluate(()=>{const link=document.createElement('a');link.href='#ratings';link.textContent='مصدر التقييمات';document.querySelector('main').prepend(link);link.click();});
+  await page.getByRole('heading',{name:'دليل الدكاترة والتقييمات',exact:false}).waitFor();assert.equal(new URL(page.url()).hash,'#ratings');await page.locator('#page-close').click();await page.locator('[data-advisor-doctor="21"]').waitFor();assert.equal(new URL(page.url()).hash,'#advisor');
   for(const width of [390,820,1440])for(const theme of ['light','dark']){
    await page.setViewportSize({width,height:950});await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
@@ -87,7 +105,8 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
   await signInMock(accountA);assert.equal(await page.locator('#study-plan-select').inputValue(),'najran-me-2026');assert.equal(await page.locator('.study-selected-doctor').count(),0);await page.locator('[data-study-complete="najran-me-2026/me221"]').check();
   await signInMock(accountB);assert.equal(await page.locator('[data-study-complete="najran-me-2026/me221"]').isChecked(),false);
   await signInMock(accountA);assert.equal(await page.locator('[data-study-complete="najran-me-2026/me221"]').isChecked(),true);
-  await page.locator('aside [data-page=admin]').click();await page.locator('[data-cloud-operation="doctor.head"][data-id="17"]').click();
+  await page.locator('aside [data-page=admin]').click();await page.locator('[data-cloud-operation="institution.approve"][data-id="1"]').waitFor();assert.match(await page.locator('[aria-label="طلبات الجامعات والكليات"]').innerText(),/جامعة الطلب الجديدة/);assert.match(await page.locator('.moderation-panel').filter({has:page.getByRole('heading',{name:'طلبات إضافة دكتور',exact:true})}).innerText(),/طلب من مادة: ميكانيكا الموائع/);
+  await page.locator('[data-cloud-operation="doctor.head"][data-id="17"]').click();
   await page.waitForFunction(()=>document.querySelector('[data-cloud-operation="doctor.head"][data-id="17"]')?.getAttribute('aria-pressed')==='false');
   await page.locator('[data-cloud-operation="doctor.head"][data-id="17"]').click();await page.waitForFunction(()=>document.querySelector('[data-cloud-operation="doctor.head"][data-id="17"]')?.getAttribute('aria-pressed')==='true');
   await page.locator('[data-cloud-operation="doctor.dean"][data-id="17"]').click();await page.locator('#doctor-dean-form select').selectOption('3');await page.locator('#doctor-dean-form .primary').click();await page.locator('#doctor-dean-form').waitFor({state:'detached'});
@@ -95,6 +114,6 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
   await page.locator('aside [data-page=home]').click();assert.match(await page.locator('.doctor-card').filter({hasText:'أحمد محمد العتيبي'}).locator('.office-badge').innerText(),/عميد كلية العلوم/);
   assert.equal(await page.locator('.doctor-card').filter({hasText:'أحمد محمد العتيبي'}).locator('.verified').count(),1);
   assert.deepEqual(errors,[]);await context.close();
-  console.log('PASS: personal cross-college searchable professor choices without reviews, missing-professor rating exception, intelligent course advice and material-specific comments, prerequisite deduplication, centered plan navigation, office badges/admin toggles, owner isolation and responsive day/night layouts. API network mocked.');
+  console.log('PASS: guest institution and course-professor requests to admin without reviews, previous-page history with forward navigation, personal cross-college searchable professor choices without reviews, missing-professor rating exception, intelligent course advice and material-specific comments, prerequisite deduplication, centered plan navigation, office badges/admin toggles, owner isolation and responsive day/night layouts. API network mocked.');
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;server.close();});

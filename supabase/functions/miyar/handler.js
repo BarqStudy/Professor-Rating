@@ -237,6 +237,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      if(['institution.approve','institution.reject'].includes(operation))return respond(await db('rpc/miyar_decide_institution',{method:'POST',body:{p_actor:identity.id,p_id:integer(body.id,1,Number.MAX_SAFE_INTEGER,'الطلب'),p_approve:operation==='institution.approve',p_reason:text(body.reason||'',operation==='institution.reject'?3:0,300,'سبب الرفض')}}));
       if (operation === 'doctor.office') return respond(await doctorOffice(body,db));
       if (operation === 'ai.check') return respond(await checkAiConnection(env, aiFetch));
       const ambassadorResult = await ambassadorAdmin(operation, body, identity.id, db);
@@ -246,29 +247,31 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       if (operation === "queue") {
         const [doctors, reviews] = await Promise.all([
           db(
-            "miyar_doctors?status=eq.pending&select=id,name,major_id,submitted_by_account,submitted_by_guest,created_at&order=created_at.asc&limit=100",
+            "miyar_doctors?status=eq.pending&select=id,name,major_id,submitted_by_account,submitted_by_guest,requested_course,created_at&order=created_at.asc&limit=100",
           ),
           db(
             "miyar_reviews?status=eq.pending&select=id,doctor_id,account_id,guest_id,subject,comment,tags,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
           ),
         ]);
-        const [extra, catalogueRequests, ambassadors] = await Promise.all([
+        const [extra, catalogueRequests, ambassadors, institutionRequests] = await Promise.all([
           db("rpc/miyar_community_queue", {method:"POST",body:{}}),
           db("rpc/miyar_catalogue_queue", {method:"POST",body:{}}),
           db("rpc/miyar_ambassador_list", {method:"POST",body:{}}),
+          db("miyar_institution_requests?status=eq.pending&select=id,name,colleges,account_id,guest_id,created_at&order=created_at.asc&limit=100"),
         ]);
         // Grade is deliberately excluded even from the moderation response.
         return respond({
           edits: extra?.edits || [], reports: extra?.reports || [],
-          catalogueRequests: catalogueRequests || [], ambassadors: ambassadors || [],
+          catalogueRequests: catalogueRequests || [], ambassadors: ambassadors || [], institutionRequests:institutionRequests||[],
           doctors: doctors.map((
-            { id, name, major_id, submitted_by_account, submitted_by_guest, created_at },
+            { id, name, major_id, submitted_by_account, submitted_by_guest, requested_course, created_at },
           ) => ({
             id,
             name,
             major_id,
             submitted_by: submitted_by_account || submitted_by_guest,
             identity_type: submitted_by_guest ? "guest" : "google",
+            requested_course,
             created_at,
           })),
           reviews: reviews.map((

@@ -34,6 +34,7 @@ export function createDatabase(url, key, fetcher = fetch) {
         );
       }
       const reasons = {
+        INVALID_INSTITUTION_REQUEST:[400,"راجع اسم الجامعة والكليات والتخصصات في الطلب."],
         INVALID_STUDY_COURSE: [400, "المادة لا تتبع جامعة الدكتور أو تغيّر اسمها. اخترها من الخطة مجددًا."],
         PLAN_IMPORT_RATE: [429, "وصلت لحد قراءة الخطط. انتظر قليلًا قبل إعادة المحاولة؛ الحد ٢٠ قراءة يوميًا."],
         INVALID_STUDY_PLAN: [400, "راجع بيانات الخطة العربية والرموز والساعات قبل الحفظ."],

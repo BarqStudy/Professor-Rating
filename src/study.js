@@ -5,7 +5,7 @@ import {storage,readJSON} from './storage.js';
 import {cleanProgress,courseStatus,progressSummary,selectedCourse} from './study-engine.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=n=>Number(n).toLocaleString('ar');
-export function createStudyPlanner({api,modal,icon,universityName,ownerKey,majorName,doctorsForPlan,onReview,onAdvisor,closeModal,toast}) {
+export function createStudyPlanner({api,modal,icon,universityName,ownerKey,majorName,doctorsForPlan,onReview,onAdvisor,onRequestDoctor,closeModal,toast}) {
  let filter='all',search='';
  const available=()=>getStudyPlans().filter(p=>!universityName()||p.university===universityName());
  const selectionKey=()=>`miyar-study-selected:${ownerKey()}:${universityName()||'all'}`;
@@ -59,12 +59,12 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
  function showDoctors(plan,course){
   const existing=[...new Map(doctorsForPlan(plan).map(doctor=>[doctor.id,doctor])).values()].sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   const owner=ownerKey();
-  modal('اختيار دكتور المادة',`<div id="study-course-doctors"><div class="study-doctor-heading"><span class="eyebrow">${esc(plan.university)} · ${esc(plan.title)}</span><h3>${esc(course.name)}</h3><p>${esc(course.code)}</p></div><p class="muted">ابحث بين دكاترة جامعتك من جميع الكليات. اختيارك يُحفظ في خطتك؛ التقييم متاح من قسم التقييمات.</p><label class="study-search">${icon('search')}<input id="study-doctor-search" type="search" placeholder="ابحث باسم الدكتور…" aria-label="البحث عن دكتور لخطة التخرج" autocomplete="off"></label><div id="study-doctor-options" class="study-doctor-options" aria-live="polite"></div><button type="button" class="secondary" id="study-new-doctor">${icon('plus')} الدكتور غير موجود؟ أضفه مع تقييم</button></div>`);
+  modal('اختيار دكتور المادة',`<div id="study-course-doctors"><div class="study-doctor-heading"><span class="eyebrow">${esc(plan.university)} · ${esc(plan.title)}</span><h3>${esc(course.name)}</h3><p>${esc(course.code)}</p></div><p class="muted">ابحث بين دكاترة جامعتك من جميع الكليات. اختيارك يُحفظ في خطتك؛ التقييم متاح من قسم التقييمات.</p><label class="study-search">${icon('search')}<input id="study-doctor-search" type="search" placeholder="ابحث باسم الدكتور…" aria-label="البحث عن دكتور لخطة التخرج" autocomplete="off"></label><div id="study-doctor-options" class="study-doctor-options" aria-live="polite"></div><section class="missing-course-doctor"><h3>ألم تجد دكتور المادة؟</h3><p>أرسل طلب إضافته إلى الإدارة دون كتابة تقييم.</p><button type="button" class="primary" id="study-request-doctor">أضف الدكتور الآن</button></section><button type="button" class="secondary" id="study-new-doctor">${icon('plus')} الدكتور غير موجود؟ أضفه مع تقييم</button></div>`);
   const root=document.querySelector('#study-course-doctors');
   function paint(){
    const q=courseNameKey(root.querySelector('#study-doctor-search').value);
    const rows=existing.filter(d=>!q||courseNameKey(d.name).includes(q));
-   root.querySelector('#study-doctor-options').innerHTML=rows.length?rows.map(d=>`<button type="button" class="study-doctor-option" data-study-pick-doctor="${d.id}"><span class="avatar" aria-hidden="true">${icon('profile')}</span><span><strong>${esc(d.name)} ${officeBadge(d)}</strong><small>${esc(d.college||'')} · ${esc(d.major||'')}</small></span><span class="study-pick-label">اختيار ${icon('check')}</span></button>`).join(''):'<p class="empty">لم نجد دكتورًا بهذا الاسم. يمكنك إضافته مع تقييمه من الزر أدناه.</p>';
+   root.querySelector('#study-doctor-options').innerHTML=rows.length?rows.map(d=>`<button type="button" class="study-doctor-option" data-study-pick-doctor="${d.id}"><span class="avatar" aria-hidden="true">${icon('profile')}</span><span><strong>${esc(d.name)} ${officeBadge(d)}</strong><small>${esc(d.college||'')} · ${esc(d.major||'')}</small></span><span class="study-pick-label">اختيار ${icon('check')}</span></button>`).join(''):'<p class="empty">لم نجد دكتورًا بهذا الاسم. يمكنك إرسال طلب إضافته إلى الإدارة من الأسفل.</p>';
    root.querySelectorAll('[data-study-pick-doctor]').forEach(button=>button.onclick=()=>{
     if(ownerKey()!==owner||!root.isConnected)return;
     const state=progress(plan);state.doctorChoices[course.id]=Number(button.dataset.studyPickDoctor);save(plan,state);
@@ -74,6 +74,7 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
    });
   }
   root.querySelector('#study-doctor-search').oninput=paint;
+  root.querySelector('#study-request-doctor').onclick=()=>onRequestDoctor?.(course,plan,root.querySelector('#study-doctor-search').value);
   root.querySelector('#study-new-doctor').onclick=()=>onReview(null,course,plan);
   paint();root.querySelector('#study-doctor-search').focus();
  }

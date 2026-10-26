@@ -1,3 +1,4 @@
+import {requestInstitution,requestCourseDoctor} from './requests.js';
 import { studyCourse, existingDoctorReview } from "./study.js";
 import { ApiError, integer, uuid, validateReview } from './security.js';
 import { gradeConsent, gradeParticipation } from './grades.js';
@@ -20,7 +21,7 @@ export async function verifiedGuest(request,db,allowBanned=false){
 }
 export async function handleGuest(request,body,db,pepper){
  const action=body.action;
- if(!['guest.start','guest.me','guest.university','guest.presence','guest.submit','guest.grade.participation','guest.grade.consent'].includes(action))return null;
+ if(!['guest.start','guest.me','guest.university','guest.presence','guest.submit','guest.grade.participation','guest.grade.consent','guest.institution.request','guest.doctor.request'].includes(action))return null;
  if(action==='guest.start'){
   const token=hex(crypto.getRandomValues(new Uint8Array(32)));
   const profile=await rpc(db,'miyar_open_guest',{p_token_hash:await guestTokenHash(token),p_network_hash:await networkHash(request,pepper)});
@@ -41,6 +42,8 @@ export async function handleGuest(request,body,db,pepper){
   return {data:{...guest,university_id:university}};
  }
  if(guest.status!=='active')throw new ApiError(403,'جلسة الزائر مقيّدة عن إضافة التقييمات.');
+ if(action==='guest.institution.request')return {status:201,data:await requestInstitution(body,null,guest.id,db)};
+ if(action==='guest.doctor.request')return {status:201,data:await requestCourseDoctor(body,null,guest.id,db)};
  if(body.pledged!==true)throw new ApiError(400,'وافق على تعهّد التقييم أولًا.');
  const review=validateReview(body);
  const existing=existingDoctorReview(body,review,guest.id,true);

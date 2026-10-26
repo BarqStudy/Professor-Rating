@@ -376,8 +376,7 @@ const server = http.createServer((req, res) => {
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
     assert.equal(await page.locator("footer .icon").count(), 0);
-    const email = page.locator('.university-request a[href^="mailto:"]');
-    assert.match(await email.getAttribute("href"), /^mailto:info@miyar\.website/);
+    assert.equal(await page.locator('.university-request [data-university-request]').count(),1);
     assert.equal(await page.locator(".stats + #home-doctors-slot + .university-request").count(),1);
     for(const id of [20,19,18]) await page.locator(`[data-compare="${id}"]`).click();
     await page.locator("#compare-now").click();
@@ -462,7 +461,7 @@ const server = http.createServer((req, res) => {
 
     await page.locator("#new-review").click();
     await page.locator('#university-choice select').selectOption('3');
-    await page.locator('#university-choice button').click();
+    await page.locator('#university-choice [type=submit]').click();
     await page.locator('#accept-review-pledge').waitFor();
     assert.match(await page.locator('.pledge-card').innerText(),/مخافة الله/);
     assert.equal(await page.locator('#review-form').count(),0);
@@ -561,7 +560,7 @@ const server = http.createServer((req, res) => {
     await page.reload();
     await page.locator("#university-choice").waitFor();
     await page.locator('#university-choice select').selectOption("3");
-    await page.locator('#university-choice button').click();
+    await page.locator('#university-choice [type=submit]').click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     assert.match(await page.locator(".connection-banner.live").innerText(), /جامعة نجران/);
     assert.equal(await page.locator("[data-page=admin]").count(), 1);
@@ -670,7 +669,7 @@ const server = http.createServer((req, res) => {
     await page.locator("#open-settings").click();
     await page.locator("#change-university").click();
     await page.locator('#university-choice select').selectOption("1");
-    await page.locator('#university-choice button').click();
+    await page.locator('#university-choice [type=submit]').click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     assert.equal(await page.locator(".doctor-card").count(),0);
     assert.match(await page.locator("#doctor-grid").innerText(), /لم تُضف كليات جامعتك/);
@@ -689,7 +688,7 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator('#settings-form [name=major] option').count(),1);
     await page.locator("#change-university").click();
     await page.locator('#university-choice select').selectOption("3");
-    await page.locator('#university-choice button').click();
+    await page.locator('#university-choice [type=submit]').click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     await page.locator('[data-request-doctor]').click();
     await page.locator('#doctor-request-form [name=name]').fill("زياد محمد الشهري");
@@ -885,10 +884,11 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator(".nav-item.active").innerText(), "من نحن");
     assert.ok(!(await page.locator(".dev-badges").innerText()).includes("نسخة تجريبية"));
     await page.locator("[data-university-request]").click();
-    assert.match(await page.locator('.modal a[href^="mailto:"]').getAttribute("href"), /^mailto:info@miyar\.website/);
+    assert.equal(await page.locator('#institution-request-form').count(),1);
     await page.locator(".close-modal").click();
     await page.locator(".modal-backdrop").waitFor({ state: "detached" });
     await page.locator("#page-close").click();
+    await page.locator('aside [data-page=home]').click();
     // Corrections preserve the published record until an administrator decides.
     await page.locator('#search').fill('أحمد محمد العتيبي');
     await page.locator('.card-detail[data-doctor="17"]').click();
@@ -977,14 +977,14 @@ const server = http.createServer((req, res) => {
     await page.locator('#cloud-add-college [name=universityId]').selectOption(String(temporaryUniversity.id));
     await page.locator('#open-settings').click();await page.locator('#change-university').click();
     await page.locator('#university-choice select').selectOption(String(temporaryUniversity.id));
-    await page.locator('#university-choice button').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
+    await page.locator('#university-choice [type=submit]').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
     await page.locator('[data-page=admin]').click();
     await page.locator(`[data-cloud-operation="university.delete"][data-id="${temporaryUniversity.id}"]`).click();
     await page.locator('#confirm-cloud-delete').click();await page.locator('#university-choice').waitFor();
     assert.ok(!catalogue.universities.some((row)=>row.id===temporaryUniversity.id));
     assert.equal(me.university_id,null);assert.equal(me.isAdmin,true);
     assert.equal(await page.locator(`#university-choice option[value="${temporaryUniversity.id}"]`).count(),0);
-    await page.locator('#university-choice select').selectOption('3');await page.locator('#university-choice button').click();
+    await page.locator('#university-choice select').selectOption('3');await page.locator('#university-choice [type=submit]').click();
     await page.locator('.modal-backdrop').waitFor({state:'detached'});
     await page.locator('[data-page=admin]').click();
     assert.equal(await page.locator(`[data-cloud-operation="university.delete"][data-id="${temporaryUniversity.id}"]`).count(),0);
