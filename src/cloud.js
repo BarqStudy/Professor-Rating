@@ -145,5 +145,5 @@ async function studyAdminRequest(operation,body){
  if(!response.ok)throw new Error(result.error||'تعذّر إكمال عملية الخطة.');
  return result;
 }
-export function extractStudyPlan(file,majorId,fileLabel){const form=new FormData();form.set('file',file);form.set('majorId',String(majorId));form.set('fileLabel',fileLabel);return studyAdminRequest('extract',form);}
+export function extractStudyPlan(file,majorId,fileLabel,requirementLists=false){const form=new FormData();form.set('file',file);form.set('majorId',String(majorId));form.set('fileLabel',fileLabel);form.set('requirementLists',String(requirementLists));return studyAdminRequest('extract',form);}
 export const publishStudyPlan=(majorId,draft)=>studyAdminRequest('publish',{majorId,draft});

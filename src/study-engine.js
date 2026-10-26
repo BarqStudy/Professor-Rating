@@ -1,10 +1,13 @@
 // Eligibility is advisory and never guesses equivalence between course codes.
+export function choiceCandidates(plan,item){
+ return plan.courses.filter(c=>c.kind==='course'&&c.level===0&&c.pool===item.pool&&c.credits===item.credits&&(c.requirementType||null)===(item.requirementType||null));
+}
 export function cleanProgress(plan,raw={}) {
  if(!raw||typeof raw!=='object'||Array.isArray(raw))raw={};
  const required=new Set(plan.courses.filter(c=>c.level>0).map(c=>c.id));
  const electiveChoices={};
  for(const slot of plan.courses.filter(c=>c.kind==='slot')){
-  const candidate=plan.courses.find(c=>c.id===raw.electiveChoices?.[slot.id]&&c.level===0&&c.pool===slot.pool&&c.credits===slot.credits&&c.linkable);
+  const candidate=choiceCandidates(plan,slot).find(c=>c.id===raw.electiveChoices?.[slot.id]&&c.linkable);
   if(candidate&&!Object.values(electiveChoices).includes(candidate.id))electiveChoices[slot.id]=candidate.id;
  }
  const knownCodes=new Set(plan.courses.map(c=>c.code));
@@ -19,7 +22,13 @@ export function cleanProgress(plan,raw={}) {
  };
 }
 export function selectedCourse(plan,item,state) {
- return item.kind==='slot'?plan.courses.find(c=>c.id===state.electiveChoices[item.id]&&c.pool===item.pool&&c.level===0&&c.credits===item.credits&&c.linkable):item;
+ if(item.kind!=='slot')return item;
+ const course=choiceCandidates(plan,item).find(c=>c.id===state.electiveChoices[item.id]&&c.linkable);
+ if(!course||!item.requirementType)return course;
+ const slotAny=item.anyPrerequisites||[],courseAny=course.anyPrerequisites||[];
+ const conflictingAlternatives=slotAny.length&&courseAny.length&&(slotAny.length!==courseAny.length||slotAny.some(code=>!courseAny.includes(code)));
+ return {...course,prerequisites:[...new Set([...item.prerequisites,...course.prerequisites])],corequisites:[...new Set([...item.corequisites,...course.corequisites])],anyPrerequisites:slotAny.length?slotAny:courseAny,
+  ...(conflictingAlternatives?{review:'للخانة والمادة مجموعتان مختلفتان من المتطلبات البديلة؛ تأكد من القسم.'}:{})};
 }
 export function completedCodes(plan,state) {
  const codes=new Set(state.externalPassed);
@@ -42,7 +51,7 @@ export function progressSummary(plan,state) {
 export function courseStatus(plan,item,raw) {
  const state=cleanProgress(plan,raw),course=selectedCourse(plan,item,state);
  if(state.completed.includes(item.id)&&course)return {key:'completed',label:'مكتملة',reasons:[]};
- if(!course)return {key:'choice',label:'اختر المقرر الاختياري',reasons:['اختر مادة من المجموعة قبل تحديدها كمكتملة.']};
+ if(!course)return {key:'choice',label:item.requirementType?'اختر مادة المتطلب':'اختر المقرر الاختياري',reasons:['اختر مادة من القائمة قبل تحديدها كمكتملة.']};
  const notes=[item.review,course!==item?course.review:null].filter(Boolean);
  if(notes.length)return {key:'review',label:'تحتاج تأكيد القسم',reasons:notes};
  const reasons=[];const done=completedCodes(plan,state);

@@ -8,11 +8,12 @@ const draft=()=>({id:'plan-12345678-1234-4234-8234-123456789012',title:'الخط
 const rpc=(db,name,args)=>db.query(`select ${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args).then(r=>r.rows[0].result);
 async function database(){const db=new PGlite();await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);');const dir=new URL('../supabase/migrations/',import.meta.url);for(const name of (await readdir(dir)).filter(f=>f.endsWith('.sql')).sort())await db.exec(await readFile(new URL(name,dir),'utf8'));return db;}
 
-test('publication keeps Arabic names, stable course IDs and exact prerequisite codes, and rejects duplicates, self/cyclic requirements and unresolved elective slots',async()=>{
+test('publication keeps mixed Arabic/English names, stable course IDs and exact prerequisite codes, and rejects duplicates, self/cyclic requirements and unresolved elective slots',async()=>{
  const plan=await normalizePublishedPlan(draft());
  assert.equal(plan.courses[1].prerequisites[0],'MATH 101');assert.equal(plan.firstLevel,1);assert.equal(plan.scopeNote,'');
  assert.deepEqual(await normalizePublishedPlan(draft()),plan);
- for(const name of ['Calculus','حساب التفاضل Calculus','حساب <script>'])await assert.rejects(normalizePublishedPlan({...draft(),courses:[course('MATH 101',name)]}),/بالعربية فقط/);
+ for(const name of ['Calculus','حساب التفاضل Calculus','برمجة C++'])assert.equal((await normalizePublishedPlan({...draft(),courses:[course('MATH 101',name)]})).courses[0].name,name);
+ await assert.rejects(normalizePublishedPlan({...draft(),courses:[course('MATH 101','حساب <script>')]}),/اسم مقرر صالح/);
  await assert.rejects(normalizePublishedPlan({...draft(),courses:[course('A 1','مادة أولى'),course('a1','مادة أخرى')]}),/مكرر/);
  await assert.rejects(normalizePublishedPlan({...draft(),courses:[{...course('A 1','مادة أولى'),prerequisites:['a1']}]}),/لنفسه/);
  await assert.rejects(normalizePublishedPlan({...draft(),courses:[{...course('A 1','مادة أولى'),prerequisites:['B 2']},{...course('B 2','مادة ثانية'),prerequisites:['A 1']}]}),/دائري/);
@@ -33,7 +34,7 @@ test('uploaded plans publish atomically under the selected major, remain idempot
   assert.equal(uploaded[0].courses.length,2);assert.deepEqual(await rpc(db,'miyar_course_doctors',[plan.courses[0].id]),[]);assert.equal((await db.query('select count(*)::int n from miyar_study_plans')).rows[0].n,6);
   assert.ok(!JSON.stringify(uploaded).includes(admin));assert.ok(!JSON.stringify(uploaded).includes('never-store-file'));
   await assert.rejects(rpc(db,'miyar_publish_study_plan',[admin,major,{...plan,id:'plan-99999999-9999-4999-8999-999999999999'}]),/STUDY_PLAN_EXISTS/);
-  const broken=structuredClone(plan);broken.id='plan-99999999-9999-4999-8999-999999999999';broken.fileLabel='خطة أخرى';broken.versionKey='خطة أخرى';broken.courses[0].name='English only';
+  const broken=structuredClone(plan);broken.id='plan-99999999-9999-4999-8999-999999999999';broken.fileLabel='خطة أخرى';broken.versionKey='خطة أخرى';broken.courses[0].name='';
   await assert.rejects(rpc(db,'miyar_publish_study_plan',[admin,major,broken]),/INVALID_STUDY_PLAN/);
   assert.equal((await db.query('select count(*)::int n from miyar_study_plans')).rows[0].n,6);
   assert.equal((await db.query('select count(*)::int n from miyar_study_courses where plan_id=$1',[plan.id])).rows[0].n,2);
@@ -75,7 +76,7 @@ test('admin publication validates editable Arabic rows, binds the verified admin
  const f=fixture();const request=d=>new Request('https://test?study=publish',{method:'POST',headers:{authorization:'Bearer verified','Content-Type':'application/json'},body:JSON.stringify({majorId:1,draft:d,adminId:student})});
  const response=await f.handle(request(draft()));assert.equal(response.status,200);
  const saved=f.calls.find(c=>c.path==='rpc/miyar_publish_study_plan');assert.equal(saved.body.p_admin,admin);assert.equal(saved.body.p_major,1);assert.equal(saved.body.p_plan.courses[1].prerequisites[0],'MATH 101');
- assert.equal((await f.handle(request({...draft(),courses:[course('A','English only')]}))).status,400);
+ assert.equal((await f.handle(request({...draft(),courses:[course('A','<script>')]}))).status,400);
  assert.equal(f.calls.filter(c=>c.path==='rpc/miyar_publish_study_plan').length,1);
  assert.equal((await f.handle(new Request('https://test',{method:'POST',body:JSON.stringify({action:'study.plans'})}))).status,200);
  const many={...draft(),courses:Array.from({length:90},(_,i)=>course('C '+i,'مادة دراسية '+i))};assert.ok(JSON.stringify(many).length>16384);assert.equal((await f.handle(request(many))).status,200);
@@ -95,4 +96,40 @@ test('OpenAI receives native image/PDF data privately and incomplete responses a
   const file=body.input[0].content[1];assert.equal(file.type,mime==='application/pdf'?'input_file':'input_image');assert.ok((file.file_data||file.image_url).startsWith('data:'+mime+';base64,'));
   status='incomplete';await assert.rejects(extractStudyPlan(form,admin,db,env,fetcher),/لم تكتمل/);status='completed';
  }
+});
+
+
+function choiceDraft(){
+ const slot=(code,name,type,pool,credits=2)=>({...course(code,name),credits,kind:'slot',requirementType:type,pool});
+ const option=(code,name,type,pool,credits=2)=>({...course(code,name,0),credits,requirementType:type,pool});
+ return {...draft(),requirementLists:true,courses:[...draft().courses,slot('REQ-U-1','متطلب جامعة','university','مواد متطلبات الجامعة'),slot('REQ-U-2','متطلب جامعة ثان','university','مواد متطلبات الجامعة'),slot('REQ-R-1','متطلب إجباري','required','المقررات الإجبارية',3),option('UNI 101','مهارات التواصل Communication','university','مواد متطلبات الجامعة'),option('UNI 102','العمل التطوعي','university','مواد متطلبات الجامعة'),option('REQ 101','English Language','required','المقررات الإجبارية',3),option('REQ 102','التفكير الناقد','required','المقررات الإجبارية',3)]};
+}
+
+test('optional university and required-course lists stay separate, preserve ordinary plans and count only chosen courses once',async()=>{
+ const {courseStatus,cleanProgress,selectedCourse,progressSummary,choiceCandidates}=await import('../src/study-engine.js');
+ const plan=await normalizePublishedPlan(choiceDraft()),uni=plan.courses.find(c=>c.code==='REQ-U-1'),uni2=plan.courses.find(c=>c.code==='REQ-U-2'),required=plan.courses.find(c=>c.code==='REQ-R-1');
+ const options=choiceCandidates(plan,uni),requiredOptions=choiceCandidates(plan,required);assert.deepEqual(options.map(c=>c.code),['UNI 101','UNI 102']);assert.deepEqual(requiredOptions.map(c=>c.code),['REQ 101','REQ 102']);
+ const state=cleanProgress(plan,{completed:[uni.id,uni2.id,required.id],electiveChoices:{[uni.id]:options[0].id,[uni2.id]:options[0].id,[required.id]:requiredOptions[0].id}});
+ assert.equal(progressSummary(plan,state).completed,2);assert.equal(progressSummary(plan,state).completedCredits,5);assert.equal(progressSummary(plan,state).total,5);assert.equal(selectedCourse(plan,uni2,state),undefined);
+ const wrong=cleanProgress(plan,{completed:[uni.id],electiveChoices:{[uni.id]:requiredOptions[0].id}});assert.equal(selectedCourse(plan,uni,wrong),undefined);assert.equal(progressSummary(plan,wrong).completed,0);
+ const pending=cleanProgress(plan,{electiveChoices:{[uni.id]:options[0].id}});uni.prerequisites=['MATH 101'];assert.equal(courseStatus(plan,uni,pending).key,'locked');pending.completed=[plan.courses.find(c=>c.code==='MATH 101').id];assert.equal(courseStatus(plan,uni,pending).key,'ready');uni.prerequisites=[];
+ assert.equal((await normalizePublishedPlan(draft())).requirementLists,false);
+ await assert.rejects(normalizePublishedPlan({...choiceDraft(),requirementLists:false}),/فعّل/);
+ const mixed=choiceDraft();mixed.courses.at(-1).pool='مواد متطلبات الجامعة';await assert.rejects(normalizePublishedPlan(mixed),/افصل قائمة/);
+ const noSlot=choiceDraft();noSlot.courses=noSlot.courses.filter(c=>c.requirementType!=='required'||c.kind!=='slot');await assert.rejects(normalizePublishedPlan(noSlot),/تحتاج خانة/);
+ const noOptions=choiceDraft();noOptions.courses=noOptions.courses.filter(c=>c.code!=='REQ 101'&&c.code!=='REQ 102');await assert.rejects(normalizePublishedPlan(noOptions),/بدائل/);
+ const db=await database();try{
+  await db.query('insert into auth.users(id) values($1)',[admin]);await db.query("insert into miyar_accounts(auth_id,name,university_id) values($1,'الإدارة',3)",[admin]);
+  const major=(await db.query("select major_id from miyar_study_plans where id='najran-ce-2025'")).rows[0].major_id;
+  await rpc(db,'miyar_publish_study_plan',[admin,major,plan]);const saved=(await rpc(db,'miyar_uploaded_study_plans',[]))[0];assert.equal(saved.requirementLists,true);assert.equal(saved.courses.find(c=>c.code==='REQ 101').name,'English Language');assert.equal(saved.groups.length,2);
+  assert.equal((await db.query('select count(*)::int n from miyar_study_courses where plan_id=$1',[plan.id])).rows[0].n,6,'slots do not become public course identities');
+  const crossType=structuredClone(plan);crossType.id='plan-99999999-9999-4999-8999-999999999999';crossType.fileLabel='نسخة أخرى';crossType.versionKey='نسخة أخرى';crossType.courses.forEach(c=>c.id=c.id.replace(plan.id,crossType.id));crossType.requirementLists=false;await assert.rejects(rpc(db,'miyar_publish_study_plan',[admin,major,crossType]),/INVALID_STUDY_PLAN/);
+ }finally{await db.close();}
+});
+
+test('AI extraction carries the explicit per-plan requirement-list switch and instructs separate appendix lists without duplicate bilingual rows',async()=>{
+ const f=fixture(),request=f.upload(),form=await request.formData();form.set('requirementLists','true');
+ const response=await f.handle(new Request('https://test?study=extract',{method:'POST',headers:{authorization:'Bearer verified'},body:form}));assert.equal(response.status,200);assert.equal((await response.json()).draft.requirementLists,true);
+ const input=JSON.parse(f.modelCalls[0].body);assert.equal(JSON.parse(input.contents[0].parts[0].text.split(': ').at(-1)).requirementLists,true);assert.ok(input.systemInstruction.parts[0].text.includes('لا تخلط القائمتين'));assert.ok(input.systemInstruction.parts[0].text.includes('كلمة أو اختصار إنجليزي'));assert.deepEqual(input.generationConfig.responseSchema.properties.courses.items.properties.requirementType.enum,['university','required']);
+ const ordinary=fixture();assert.equal((await (await ordinary.handle(ordinary.upload())).json()).draft.requirementLists,false);
 });
