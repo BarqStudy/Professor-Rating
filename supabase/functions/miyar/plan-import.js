@@ -1,4 +1,7 @@
-import {ApiError,integer,text} from './security.js';
+import {readPlatformFile} from './file-format.js';
+import {storePlatformFile} from './files.js';
+import {r2Configuration} from './r2.js';
+import {ApiError,integer,text,uuid} from './security.js';
 import {aiConfiguration} from './ai.js';
 import {cachedGeminiModel,discoverGeminiFallback} from './ai-models.js';
 import {normalizePublishedPlan,PLAN_COURSE_LIMIT} from './plan-format.js';
@@ -15,16 +18,7 @@ const courseProperties={code:str,name:str,credits:num,level:{type:'integer'},kin
 const schema={type:'object',properties:{title:str,scopeNote:str,warnings:{type:'array',items:str},courses:{type:'array',items:{type:'object',properties:courseProperties,required:Object.keys(courseProperties),additionalProperties:false}}},required:['title','scopeNote','warnings','courses'],additionalProperties:false};
 function geminiSchema(value){if(Array.isArray(value))return value.map(geminiSchema);if(!value||typeof value!=='object')return value;const out={};for(const [key,v]of Object.entries(value)){if(key==='additionalProperties')continue;if(key==='type'){out.type=(Array.isArray(v)?v.find(t=>t!=='null'):v).toUpperCase();if(Array.isArray(v)&&v.includes('null'))out.nullable=true;}else if(key==='enum')out.enum=v.filter(item=>item!==null);else out[key]=geminiSchema(v);}return out;}
 const base64=bytes=>{let text='';for(let i=0;i<bytes.length;i+=32768)text+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(text);};
-async function fileData(file){
- if(!file||typeof file.arrayBuffer!=='function'||file.size===0||file.size>MAX_FILE)throw new ApiError(400,'ارفع ملف PDF أو صورة واضحة بحجم لا يتجاوز ٦ ميجابايت.');
- const bytes=new Uint8Array(await file.arrayBuffer());let mime='';
- if(new TextDecoder().decode(bytes.subarray(0,5))==='%PDF-')mime='application/pdf';
- else if(bytes[0]===0x89&&bytes[1]===0x50&&bytes[2]===0x4e&&bytes[3]===0x47&&bytes[4]===13&&bytes[5]===10&&bytes[6]===26&&bytes[7]===10)mime='image/png';
- else if(bytes[0]===255&&bytes[1]===216&&bytes[2]===255)mime='image/jpeg';
- if(!mime)throw new ApiError(400,'صيغة الملف غير مدعومة. ارفع PDF أو صورة PNG أو JPG.');
- const sha256=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
- return {mime,sha256,data:base64(bytes)};
-}
+async function fileData(file){const data=await readPlatformFile(file,MAX_FILE);return {...data,data:base64(data.bytes)};}
 async function readWithAi(config,file,target,requirementLists,fetcher){
  const deadline=AbortSignal.timeout(90000);let response;
  const info=JSON.stringify({university:target.university,college:target.college,major:target.major,requirementLists});
@@ -51,7 +45,7 @@ async function readWithAi(config,file,target,requirementLists,fetcher){
   return {title:typeof draft.title==='string'?draft.title.slice(0,100):'',scopeNote:typeof draft.scopeNote==='string'?draft.scopeNote.slice(0,240):'',warnings:Array.isArray(draft.warnings)?draft.warnings.filter(w=>typeof w==='string').slice(0,30).map(w=>w.slice(0,300)):[],courses:draft.courses.map(row=>Object.fromEntries(Object.keys(courseProperties).map(key=>[key,row?.[key]??(key==='allPrevious'?false:key.endsWith('requisites')||key==='anyPrerequisites'?[]:null)])))};
  }catch{throw new ApiError(503,'قراءة الخطة لم تكتمل بصورة صالحة. لا تُحفظ نتائج جزئية؛ جرّب ملفًا أوضح أو أعد المحاولة.');}
 }
-export async function extractStudyPlan(form,admin,db,env,fetcher=fetch){
+export async function extractStudyPlan(form,admin,db,env,fetcher=fetch,storageFetcher=fetch){
  const majorId=integer(Number(form.get('majorId')),1,Number.MAX_SAFE_INTEGER,'التخصص');
  const fileLabel=text(form.get('fileLabel'),1,80,'إصدار الخطة');
  const requirementLists=form.get('requirementLists')==='true';
@@ -61,10 +55,11 @@ export async function extractStudyPlan(form,admin,db,env,fetcher=fetch){
  if(!config.enabled)throw new ApiError(503,'قارئ الخطط يحتاج ربط خدمة Gemini أو OpenAI من إعدادات الخادم.');
  await db('rpc/miyar_reserve_plan_import',{method:'POST',body:{p_admin:admin}});
  const draft=await readWithAi(config,file,target,requirementLists,fetcher);
- return {draft:{...draft,id:'plan-'+crypto.randomUUID(),fileLabel,sha256:file.sha256,majorId,requirementLists},target};
+ const source=r2Configuration(env).enabled?await storePlatformFile(file,admin,db,env,storageFetcher,{purpose:'study'}):null;
+ return {draft:{...draft,id:'plan-'+crypto.randomUUID(),fileLabel,sha256:file.sha256,majorId,requirementLists,...(source?{sourceFileId:source.id}:{})},target,storage:{stored:!!source,provider:source?'r2':null}};
 }
 export async function publishStudyPlan(body,admin,db){
  const major=integer(body.majorId,1,Number.MAX_SAFE_INTEGER,'التخصص');
  const plan=await normalizePublishedPlan(body.draft);
- return db('rpc/miyar_publish_study_plan',{method:'POST',body:{p_admin:admin,p_major:major,p_plan:plan}});
+ return db('rpc/miyar_publish_study_plan',{method:'POST',body:{p_admin:admin,p_major:major,p_plan:plan,...(body.draft?.sourceFileId?{p_file:uuid(body.draft.sourceFileId,'معرّف ملف الخطة')}:{})}});
 }

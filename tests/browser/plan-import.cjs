@@ -12,16 +12,22 @@ const catalogue={universities:[{id:3,name:'جامعة نجران'},{id:4,name:'�
 const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new URL(req.url,'http://test').pathname).replace(/^\/Professor-Rating\/?/,'');const file=path.resolve(root,relative||'index.html');if(!file.startsWith(root+path.sep))return res.writeHead(403).end();fs.readFile(file,(error,data)=>{if(error)return res.writeHead(404).end();res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.otf':'font/otf','.pdf':'application/pdf','.svg':'image/svg+xml'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
 (async()=>{await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});try{
  const {normalizePublishedPlan}=await import('../../supabase/functions/miyar/plan-format.js');
- const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),page=await context.newPage(),calls=[],errors=[],uploaded=[];
+ const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),page=await context.newPage(),calls=[],errors=[],uploaded=[],storedFiles=[];let r2Enabled=false,failFileUpload=true;
  const me={id:admin,name:'طالب الإدارة',major_id:1,university_id:3,level:3,status:'active',isAdmin:true,ambassadorUniversities:[]};
  await context.addInitScript(id=>{const expires=Math.floor(Date.now()/1000)+3600;localStorage.setItem('sb-bbnsorjxgehvoddluvyo-auth-token',JSON.stringify({access_token:'header.'+btoa(JSON.stringify({sub:id,exp:expires}))+'.mock',refresh_token:'mock-refresh',expires_at:expires,expires_in:3600,token_type:'bearer',user:{id,aud:'authenticated',role:'authenticated',app_metadata:{provider:'google',providers:['google']},user_metadata:{full_name:'طالب الإدارة'},identities:[]}}));},admin);
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('https://bbnsorjxgehvoddluvyo.supabase.co/**',async route=>{
   const req=route.request(),url=new URL(req.url()),operation=url.searchParams.get('study');
+  if(url.searchParams.get('files')==='upload'){
+   const form=await new Request(req.url(),{method:'POST',headers:req.headers(),body:req.postDataBuffer()}).formData();const file=form.get('file');calls.push({fileOperation:'upload',id:form.get('id'),name:file.name,authorization:req.headers().authorization});
+   if(failFileUpload){failFileUpload=false;return route.fulfill({status:503,json:{error:'تجربة فشل اتصال R2؛ أعد المحاولة بنفس الملف.'}});}
+   const record={id:form.get('id'),name:file.name,mime_type:file.type,byte_size:file.size,purpose:'files',status:'ready',created_at:new Date().toISOString()};storedFiles.push(record);return route.fulfill({status:201,json:{...record,provider:'r2'}});
+  }
   if(operation==='extract'){
    const request=new Request(req.url(),{method:'POST',headers:req.headers(),body:req.postDataBuffer()});const form=await request.formData();
    calls.push({operation,majorId:form.get('majorId'),version:form.get('fileLabel'),mime:form.get('file').type,requirementLists:form.get('requirementLists'),authorization:req.headers().authorization});
-   return route.fulfill({json:{draft:structuredClone(draft),target}});
+   const result=structuredClone(draft);if(r2Enabled){result.sourceFileId='66666666-6666-4666-8666-666666666666';storedFiles.push({id:result.sourceFileId,name:'CE-2025.pdf',mime_type:'application/pdf',byte_size:100,purpose:'study',status:'ready',created_at:new Date().toISOString()});}
+   return route.fulfill({json:{draft:result,target,storage:{stored:r2Enabled,provider:r2Enabled?'r2':null}}});
   }
   if(operation==='publish'){
    const body=req.postDataJSON();calls.push({operation,...body});
@@ -29,6 +35,9 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
    catch(error){return route.fulfill({status:400,json:{error:error.message}});}
   }
   const body=req.postDataJSON()||{};calls.push(body);let result={ok:true};
+  if(body.action==='admin'&&['storage.status','storage.check'].includes(body.operation))result={configured:r2Enabled,ready:r2Enabled,message:r2Enabled?'تم الاتصال بحاوية R2':'تخزين الملفات بانتظار إعداد R2 في أسرار Supabase.'};
+  if(body.action==='admin'&&body.operation==='files.list')result=storedFiles;
+  if(body.action==='admin'&&body.operation==='files.download')result={url:`https://${'a'.repeat(32)}.r2.cloudflarestorage.com/miyar-files/miyar/files/${body.id}/file.pdf?X-Amz-Expires=300&X-Amz-Signature=mock`,expiresAt:new Date(Date.now()+300000).toISOString()};
   if(body.action==='catalogue')result=catalogue;
   if(body.action==='study.plans')result=uploaded;
   if(body.action==='me')result=me;
@@ -42,9 +51,17 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
  });
  const url=`http://127.0.0.1:${server.address().port}/Professor-Rating/`;
  await page.goto(url);await page.locator('aside [data-page=admin]').waitFor();await page.locator('aside [data-page=admin]').click();await page.locator('#study-import-form').waitFor();
+ await page.getByText('تخزين الملفات بانتظار إعداد R2 في أسرار Supabase.').waitFor();assert.equal(await page.locator('#platform-file-form input').isDisabled(),true);
+ await page.locator('#check-file-storage').click();assert.equal(await page.locator('#platform-file-form input').isDisabled(),true);
+ r2Enabled=true;await page.locator('#check-file-storage').click();await page.waitForFunction(()=>!document.querySelector('#platform-file-form input').disabled);
+ await page.locator('#platform-file-form input').setInputFiles({name:'خطة دراسية.pdf',mimeType:'application/pdf',buffer:fs.readFileSync(path.resolve(__dirname,'../../public/plans/CE-2025.pdf'))});await page.locator('#platform-file-form [type=submit]').click();await page.locator('#platform-file-error').filter({hasText:'تجربة فشل'}).waitFor();
+ await page.locator('#platform-file-form [type=submit]').click();await page.locator('#platform-file-progress').filter({hasText:'حُفظ الملف'}).waitFor();assert.equal(storedFiles.length,1);const uploads=calls.filter(c=>c.fileOperation==='upload');assert.equal(uploads.length,2);assert.equal(uploads[0].id,uploads[1].id);assert.ok(uploads.every(c=>c.authorization));
+ await page.locator('[data-download-platform-file]').click();const download=page.locator('#platform-files-list a');await download.waitFor();assert.ok((await download.getAttribute('href')).includes('.r2.cloudflarestorage.com/'));assert.ok((await download.getAttribute('href')).includes('X-Amz-Expires=300'));assert.equal(await download.getAttribute('rel'),'noopener noreferrer');
+ for(const width of [390,820,1440]){await page.setViewportSize({width,height:1000});assert.equal(await page.locator('#file-management').evaluate(el=>el.scrollWidth>el.clientWidth),false);await page.locator('#file-management').screenshot({path:`/tmp/miyar-r2-files-${width}.png`});}
  await page.locator('#study-import-form [name=university]').selectOption('4');await page.locator('#study-import-form [name=college]').selectOption('2');await page.locator('#study-import-form [name=majorId]').selectOption('8');await page.locator('#study-import-form [name=fileLabel]').fill('خطة ١٤٤٨');
  assert.equal(await page.locator('#study-import-form [name=requirementLists]').isChecked(),false);await page.locator('#study-import-form [name=requirementLists]').check();
  await page.locator('#study-import-form [name=file]').setInputFiles(path.resolve(__dirname,'../../public/plans/CE-2025.pdf'));await page.locator('#read-study-plan').click();await page.locator('#study-publish-form').waitFor();
+ assert.match(await page.locator('.plan-import-archive-note').innerText(),/حُفظ أصل الملف في R2/);
  assert.equal(calls.filter(c=>c.operation==='publish').length,0);assert.equal(calls.find(c=>c.operation==='extract').majorId,'8');assert.ok(calls.find(c=>c.operation==='extract').authorization);
  assert.equal(await page.locator('[data-import-row]').count(),8);await page.locator('[data-import-row="0"] summary').click();
  await page.locator('[data-import-row="0"] [data-field=credits]').fill('4');await page.locator('#add-import-course').click();assert.equal(await page.locator('[data-import-row]').count(),9);assert.equal(await page.locator('[data-import-row="0"] [data-field=credits]').inputValue(),'4');
@@ -72,5 +89,5 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
  await page.reload();await page.locator(`#study-plan-select option[value="${draft.id}"]`).waitFor({state:'attached'});assert.equal(await page.locator(`[data-study-complete="${first.id}"]`).isChecked(),true);
  assert.equal(await page.locator(`[data-study-elective="${uni.id}"]`).inputValue(),uOption.id);assert.equal(await page.locator(`[data-study-complete="${required.id}"]`).isChecked(),true);
  await page.locator(`[data-study-advisor="${first.id}"]`).click();await page.locator('#advisor-course').waitFor();assert.equal(await page.locator('#advisor-course').inputValue(),first.id);assert.match(await page.locator('#advisor-plan').innerText(),/اللغة العربية/);
- assert.deepEqual(errors,[]);await context.close();console.log('PASS: mixed-name publication, opt-in university and required appendix lists kept separate with persisted course choices, admin PDF upload and editable review, validation errors, add/remove without lost edits, publication, dynamic cross-university student plans, persisted progress, adviser integration and responsive preview. AI and API network mocked.');
+ assert.deepEqual(errors,[]);await context.close();console.log('PASS: R2 missing-configuration gating, private multipart file upload/retry without duplicate IDs, short download-link UI, archived plan preview, mixed-name publication, opt-in university and required appendix lists kept separate with persisted course choices, admin PDF upload and editable review, validation errors, add/remove without lost edits, publication, dynamic cross-university student plans, persisted progress, adviser integration and responsive preview. AI and API network mocked.');
 }finally{await browser.close();server.close();}})().catch(e=>{console.error(e);process.exitCode=1;server.close();});

@@ -139,7 +139,7 @@ async function studyAdminRequest(operation,body){
  const headers={apikey:publishableKey,Authorization:`Bearer ${session.access_token}`};
  if(operation==='publish')headers['Content-Type']='application/json';
  let response;
- try{response=await fetch(`${projectUrl}/functions/v1/miyar?study=${operation}`,{method:'POST',headers,body:operation==='publish'?JSON.stringify(body):body,signal:AbortSignal.timeout(operation==='extract'?120000:30000)});}
+ try{response=await fetch(`${projectUrl}/functions/v1/miyar?study=${operation}`,{method:'POST',headers,body:operation==='publish'?JSON.stringify(body):body,signal:AbortSignal.timeout(operation==='extract'?180000:30000)});}
  catch{throw new Error(operation==='extract'?'تعذّر إكمال قراءة الملف. تحقق من الاتصال أو جرّب ملفًا أصغر.':'تعذّر الاتصال أثناء الحفظ. يمكنك إعادة الحفظ بنفس المعاينة دون تكرار الخطة.');}
  const result=await response.json().catch(()=>{throw new Error('استجابة غير متوقعة من قارئ الخطط.');});
  if(!response.ok)throw new Error(result.error||'تعذّر إكمال عملية الخطة.');
@@ -147,3 +147,10 @@ async function studyAdminRequest(operation,body){
 }
 export function extractStudyPlan(file,majorId,fileLabel,requirementLists=false){const form=new FormData();form.set('file',file);form.set('majorId',String(majorId));form.set('fileLabel',fileLabel);form.set('requirementLists',String(requirementLists));return studyAdminRequest('extract',form);}
 export const publishStudyPlan=(majorId,draft)=>studyAdminRequest('publish',{majorId,draft});
+
+export async function uploadPlatformFile(file,id){
+ const session=await getGoogleSession();if(!session)throw new Error('سجّل الدخول بحساب الإدارة أولًا.');
+ const form=new FormData();form.set('file',file);form.set('id',id);
+ let response;try{response=await fetch(`${projectUrl}/functions/v1/miyar?files=upload`,{method:'POST',headers:{apikey:publishableKey,Authorization:`Bearer ${session.access_token}`},body:form,signal:AbortSignal.timeout(90000)});}catch{throw new Error('تعذّر إكمال رفع الملف. أعد المحاولة بنفس الملف؛ لا يُنشأ سجل مكرر.');}
+ const result=await response.json().catch(()=>{throw new Error('تعذّرت قراءة نتيجة الرفع.');});if(!response.ok)throw new Error(result.error||'تعذّر حفظ الملف في R2.');return result;
+}

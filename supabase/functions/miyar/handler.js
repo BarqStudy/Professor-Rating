@@ -1,3 +1,4 @@
+import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
 import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
 import { handleGuest } from "./guest.js";
@@ -14,7 +15,7 @@ import {
   validateReview,
 } from "./security.js";
 
-export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
+export function createHandler({ db, env, authenticate, aiFetch = fetch, storageFetch = fetch }) {
   const origins = (env.ALLOWED_ORIGINS || "https://barqstudy.github.io").split(
     ",",
   ).map((x) => x.trim());
@@ -46,18 +47,20 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       if (request.method !== "POST") {
         throw new ApiError(405, "استخدم طلب POST.");
       }
-      const studyOperation=new URL(request.url).searchParams.get('study');
+      const query=new URL(request.url).searchParams,studyOperation=query.get('study'),fileOperation=query.get('files');
+      if(fileOperation!==null&&fileOperation!=='upload')throw new ApiError(400,'عملية ملف غير معروفة.');
+      if(fileOperation!==null&&studyOperation!==null)throw new ApiError(400,'اختر عملية واحدة للرفع.');
       let studyAdmin=null;
-      if(studyOperation!==null){
-        if(!['extract','publish'].includes(studyOperation))throw new ApiError(400,'عملية خطة غير معروفة.');
+      if(studyOperation!==null||fileOperation!==null){
+        if(studyOperation!==null&&!['extract','publish'].includes(studyOperation))throw new ApiError(400,'عملية خطة غير معروفة.');
         if(!authenticate)throw new ApiError(401,'سجّل الدخول باستخدام Google.');
         const identity=await authenticate(request);
-        if(!admins.has(String(identity.id)))throw new ApiError(403,'استيراد الخطط متاح للأدمن فقط.');
+        if(!admins.has(String(identity.id)))throw new ApiError(403,'رفع الملفات واستيراد الخطط متاحان للأدمن فقط.');
         const rows=await db(`miyar_accounts?auth_id=eq.${identity.id}&select=auth_id,status`);
         if(rows[0]?.status!=='active')throw new ApiError(403,'حساب الإدارة غير متاح للاستيراد.');
         studyAdmin=identity.id;
       }
-      const limit=studyOperation==='extract'?8*1024*1024:studyOperation==='publish'?768*1024:16384;
+      const limit=fileOperation==='upload'?21*1024*1024:studyOperation==='extract'?8*1024*1024:studyOperation==='publish'?768*1024:16384;
       let size = 0;
       const chunks = [];
       const reader = request.body?.getReader();
@@ -79,13 +82,14 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
         bytes.set(chunk, offset);
         offset += chunk.length;
       }
-      if(studyOperation==='extract'){
+      if(studyOperation==='extract'||fileOperation==='upload'){
         const contentType=request.headers.get('content-type')||'';
         if(!contentType.toLowerCase().startsWith('multipart/form-data;'))throw new ApiError(400,'ارفع ملف الخطة من لوحة الإدارة.');
         let form;
         try{form=await new Response(bytes,{headers:{'Content-Type':contentType}}).formData();}
         catch{throw new ApiError(400,'ملف الرفع غير صالح.');}
-        return respond(await extractStudyPlan(form,studyAdmin,db,env,aiFetch));
+        if(fileOperation==='upload')return respond(await uploadPlatformFile(form,studyAdmin,db,env,storageFetch),201);
+        return respond(await extractStudyPlan(form,studyAdmin,db,env,aiFetch,storageFetch));
       }
       let body;
       try {
@@ -238,6 +242,9 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
       if(['institution.approve','institution.reject'].includes(operation))return respond(await db('rpc/miyar_decide_institution',{method:'POST',body:{p_actor:identity.id,p_id:integer(body.id,1,Number.MAX_SAFE_INTEGER,'الطلب'),p_approve:operation==='institution.approve',p_reason:text(body.reason||'',operation==='institution.reject'?3:0,300,'سبب الرفض')}}));
+      if(typeof operation==='string'&&(operation.startsWith('files.')||operation.startsWith('storage.'))&&user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد عن الوصول للملفات.');
+      const fileResult=await adminFiles(operation,body,identity.id,db,env,storageFetch);
+      if(fileResult!==null)return respond(fileResult);
       if (operation === 'doctor.office') return respond(await doctorOffice(body,db));
       if (operation === 'ai.check') return respond(await checkAiConnection(env, aiFetch));
       const ambassadorResult = await ambassadorAdmin(operation, body, identity.id, db);

@@ -4,6 +4,10 @@ import { createGoogleVerifier } from "./auth.js";
 
 // Values are configured in Supabase Edge Function Secrets, never in GitHub code.
 const env = {
+  R2_ACCOUNT_ID: Deno.env.get("R2_ACCOUNT_ID"),
+  R2_BUCKET_NAME: Deno.env.get("R2_BUCKET_NAME"),
+  R2_ACCESS_KEY_ID: Deno.env.get("R2_ACCESS_KEY_ID"),
+  R2_SECRET_ACCESS_KEY: Deno.env.get("R2_SECRET_ACCESS_KEY"),
   ADMIN_AUTH_IDS: Deno.env.get("ADMIN_AUTH_IDS"),
   ALLOWED_ORIGINS: Deno.env.get("ALLOWED_ORIGINS"),
   GUEST_PEPPER: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
