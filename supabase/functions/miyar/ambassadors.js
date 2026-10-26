@@ -28,6 +28,11 @@ export async function catalogueProposal(action, body, user, account, db) {
 
 // Called only after the handler's server-side administrator check.
 export async function ambassadorAdmin(operation, body, actor, db) {
+  if(operation==='assistant.set'){
+    const email=text(body.email,3,254,'البريد الإلكتروني').toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||typeof body.active!=='boolean')throw new ApiError(400,'تحقق من البريد والإجراء.');
+    return rpc(db,'miyar_set_assistant',{p_actor:actor,p_email:email,p_college:id(body.collegeId),p_active:body.active});
+  }
   if (operation === 'ambassador.set') {
     const email = text(body.email, 3, 254, 'البريد الإلكتروني').toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof body.active !== 'boolean') throw new ApiError(400, 'تحقق من البريد والإجراء.');

@@ -49,14 +49,18 @@ test('recommendations merge equivalent legacy text conservatively, keep course s
   rows=await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101']);assert.deepEqual(rows.map(r=>r.id),[cross,b,a]);assert.equal(rows[0].college,'كلية العلوم');
   const publicReviews=await rpc(db,'miyar_course_reviews',['najran-ce-2025/ge101',a]);assert.equal(publicReviews.length,2);
   const serialized=JSON.stringify([rows,publicReviews]);for(const value of ['account_id','guest_id','"grade"',...accounts])assert.ok(!serialized.includes(value));
+  // Historical rows from before the one-review rule remain readable and deduplicated.
+  // New submissions cannot recreate those duplicates.
+  await assert.rejects(review(accounts[0],a,'مادة أخرى',70),/REVIEW_ALREADY_EXISTS/);
+  const legacyReview=async(...args)=>{await db.exec('alter table miyar_reviews disable trigger miyar_single_review');try{return await review(...args);}finally{await db.exec('alter table miyar_reviews enable trigger miyar_single_review');}};
   // Same identity + equivalent spelling counts only the latest published experience.
-  await review(accounts[0],a,' الإِسْتَاتِيكا ',70);
+  await legacyReview(accounts[0],a,' الإِسْتَاتِيكا ',70);
   rows=await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101']);assert.equal(rows.find(r=>r.id===a).count,2);assert.equal(rows.find(r=>r.id===a).score,75);
   // Existing links to a different plan/version stay there even if the names match.
-  await review(accounts[2],a,'استاتيكا',100,'najran-me-2026/ge101');
+  await legacyReview(accounts[2],a,'استاتيكا',100,'najran-me-2026/ge101');
   rows=await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101']);assert.equal(rows.find(r=>r.id===a).count,2);
   // Numbered courses cannot merge just because the base name matches.
-  await review(accounts[0],a,'دوائر كهربائية 2',100);
+  await legacyReview(accounts[0],a,'دوائر كهربائية 2',100);
   assert.deepEqual(await rpc(db,'miyar_course_doctors',['najran-me-2026/ee216']),[]);
   // Ambiguous normalized names in one plan require explicit course IDs.
   await db.exec("insert into miyar_study_courses values('najran-ce-2025/duplicate-statics','najran-ce-2025','هعم 999','الاستاتيكا',true);");

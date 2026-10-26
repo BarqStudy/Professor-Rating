@@ -21,7 +21,7 @@ export async function verifiedGuest(request,db,allowBanned=false){
 }
 export async function handleGuest(request,body,db,pepper){
  const action=body.action;
- if(!['guest.start','guest.me','guest.university','guest.presence','guest.submit','guest.grade.participation','guest.grade.consent','guest.institution.request','guest.doctor.request'].includes(action))return null;
+ if(!['guest.start','guest.me','guest.university','guest.presence','guest.submit','guest.grade.participation','guest.grade.consent','guest.institution.request','guest.doctor.request','guest.review.eligibility'].includes(action))return null;
  if(action==='guest.start'){
   const token=hex(crypto.getRandomValues(new Uint8Array(32)));
   const profile=await rpc(db,'miyar_open_guest',{p_token_hash:await guestTokenHash(token),p_network_hash:await networkHash(request,pepper)});
@@ -37,11 +37,11 @@ export async function handleGuest(request,body,db,pepper){
  }
  if(action==='guest.university'){
   const university=integer(body.universityId,1,Number.MAX_SAFE_INTEGER,'الجامعة');
-  if(!(await db(`miyar_universities?id=eq.${university}&select=id`)).length)throw new ApiError(400,'الجامعة غير موجودة.');
-  await db(`miyar_guest_sessions?id=eq.${guest.id}`,{method:'PATCH',body:{university_id:university}});
+  await rpc(db,'miyar_choose_university',{p_account:null,p_guest:guest.id,p_university:university});
   return {data:{...guest,university_id:university}};
  }
  if(guest.status!=='active')throw new ApiError(403,'جلسة الزائر مقيّدة عن إضافة التقييمات.');
+ if(action==='guest.review.eligibility')return {data:await rpc(db,'miyar_review_eligibility',{p_account:null,p_guest:guest.id,p_doctor:integer(body.doctor,1,Number.MAX_SAFE_INTEGER,'الدكتور')})};
  if(action==='guest.institution.request')return {status:201,data:await requestInstitution(body,null,guest.id,db)};
  if(action==='guest.doctor.request')return {status:201,data:await requestCourseDoctor(body,null,guest.id,db)};
  if(body.pledged!==true)throw new ApiError(400,'وافق على تعهّد التقييم أولًا.');

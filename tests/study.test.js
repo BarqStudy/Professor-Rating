@@ -166,8 +166,8 @@ test('existing professor reviews use one canonical ID and appear in the main cat
   let catalogue=await rpc('miyar_catalogue',[]);assert.equal(catalogue.doctors.length,1);assert.equal(catalogue.doctors[0].count,0);
   await db.query("update miyar_reviews set status='published' where id=$1",[r.id]);
   catalogue=await rpc('miyar_catalogue',[]);assert.equal(catalogue.doctors.length,1);assert.equal(catalogue.doctors[0].count,1);
-  await assert.rejects(submit(),/duplicate key/);
-  await assert.rejects(submit(d,'najran-me-2026/me231'),/duplicate key|INVALID_STUDY_COURSE/);
+  await assert.rejects(submit(),/REVIEW_ALREADY_EXISTS/);
+  await assert.rejects(submit(d,'najran-me-2026/me231'),/REVIEW_ALREADY_EXISTS|INVALID_STUDY_COURSE/);
   const guest=await rpc('miyar_open_guest',['a'.repeat(64),null]);await db.query('update miyar_guest_sessions set university_id=3 where id=$1',[guest.id]);
   const g=await rpc('miyar_submit_existing_guest_review',[guest.id,d,'ميكانيكا الموائع',87,80,80,80,'',[],false,'najran-ce-2025/ce211']);
   assert.equal(g.newDoctor,false);assert.equal((await db.query('select doctor_id from miyar_reviews where id=$1',[g.id])).rows[0].doctor_id,d);

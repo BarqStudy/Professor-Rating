@@ -88,7 +88,7 @@ export async function api(action, data = {}) {
     "Content-Type": "application/json",
     apikey: publishableKey,
   };
-  if(isGuest && readGuestToken()) headers["x-miyar-guest"]=readGuestToken();
+  if(readGuestToken()) headers["x-miyar-guest"]=readGuestToken();
   if (session?.access_token) {
     headers.Authorization = `Bearer ${session.access_token}`;
   }

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
-import { createHandler } from '../supabase/functions/miyar/handler.js';
 import { ApiError } from '../supabase/functions/miyar/security.js';
+import { createHandler } from '../supabase/functions/miyar/handler.js';
 const account = '11111111-1111-4111-8111-111111111111';
 test('only administrators can delete universities, with valid IDs, missing-row detection and linked-data errors',async()=>{
  const admin='22222222-2222-4222-8222-222222222222';let actor=account;
@@ -100,16 +100,15 @@ test('only the authenticated account can choose a real university; changing it c
   const handle=createHandler({env:{ALLOWED_ORIGINS:'https://miyar.website'},authenticate:async()=>({id:account}),db:async(path,options={})=>{
     calls.push({path,...options});
     if(path.startsWith('miyar_accounts') && !options.method) return [{auth_id:account,name:'طالب',status:'active',university_id:3,major_id:1}];
-    if(path==='miyar_universities?id=eq.1&select=id') return [{id:1}];
+    if(path==='rpc/miyar_choose_university'){if(options.body.p_university===999)throw new ApiError(409,'الجامعة غير مفعّلة');return{university_id:options.body.p_university};}
     return [];
   }});
   const request=(body)=>new Request('https://test',{method:'POST',body:JSON.stringify(body)});
   const result=await handle(request({action:'university',universityId:1,userId:'forged',isAdmin:true}));
   assert.equal(result.status,200);
-  const patch=calls.find((c)=>c.method==='PATCH');
-  assert.equal(patch.path,`miyar_accounts?auth_id=eq.${account}`);
-  assert.deepEqual(patch.body,{university_id:1,major_id:null});
-  assert.equal((await handle(request({action:'university',universityId:999}))).status,400);
+  const choice=calls.find(c=>c.path==='rpc/miyar_choose_university');
+  assert.deepEqual(choice.body,{p_account:account,p_guest:null,p_university:1});
+  assert.equal((await handle(request({action:'university',universityId:999}))).status,409);
   assert.equal((await handle(request({action:'profile',name:'طالب',majorId:99,level:1}))).status,400);
-  assert.equal(calls.filter((c)=>c.method==='PATCH').length,1);
+  assert.equal(calls.filter((c)=>c.method==='PATCH').length,0);
 });

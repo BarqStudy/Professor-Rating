@@ -1,0 +1,311 @@
+[
+  {
+    "key": "101",
+    "name": "جامعة حائل",
+    "aliases": [
+      "جامعة حايل"
+    ],
+    "city": "حائل",
+    "region": "الشمال",
+    "domain": "uoh.edu.sa",
+    "logo": "universities/101.png"
+  },
+  {
+    "key": "102",
+    "name": "جامعة الإمام محمد بن سعود الإسلامية",
+    "aliases": [
+      "جامعة الإمام"
+    ],
+    "city": "الرياض",
+    "region": "الوسطى",
+    "domain": "imamu.edu.sa",
+    "logo": "https://i.ibb.co/SmvY7V6/imam.png"
+  },
+  {
+    "key": "103",
+    "name": "جامعة الملك سعود بن عبدالعزيز للعلوم الصحية",
+    "aliases": [
+      "جامعة الملك سعود للعلوم الصحية"
+    ],
+    "city": "الرياض",
+    "region": "الوسطى",
+    "domain": "ksau-hs.edu.sa",
+    "logo": "universities/103.png"
+  },
+  {
+    "key": "104",
+    "name": "جامعة الملك سعود",
+    "aliases": [
+      "جامعة الملك سعود"
+    ],
+    "city": "الرياض",
+    "region": "الوسطى",
+    "domain": "ksu.edu.sa",
+    "logo": "universities/104.png"
+  },
+  {
+    "key": "105",
+    "name": "جامعة المجمعة",
+    "aliases": [
+      "جامعة المجمعة"
+    ],
+    "city": "المجمعة",
+    "region": "الوسطى",
+    "domain": "mu.edu.sa",
+    "logo": "https://i.ibb.co/F8bkqFy/mu.png"
+  },
+  {
+    "key": "106",
+    "name": "جامعة الأميرة نورة بنت عبدالرحمن",
+    "aliases": [
+      "جامعة الاميرة نورة"
+    ],
+    "city": "الرياض",
+    "region": "الوسطى",
+    "domain": "pnu.edu.sa",
+    "logo": "https://i.ibb.co/J3nYkcp/pnu.png"
+  },
+  {
+    "key": "107",
+    "name": "جامعة الأمير سطام بن عبدالعزيز",
+    "aliases": [
+      "جامعة الأمير سطام"
+    ],
+    "city": "الخرج",
+    "region": "الوسطى",
+    "domain": "psau.edu.sa",
+    "logo": "universities/107.png"
+  },
+  {
+    "key": "108",
+    "name": "جامعة القصيم",
+    "aliases": [
+      "جامعة القصيم"
+    ],
+    "city": "القصيم",
+    "region": "الوسطى",
+    "domain": "qu.edu.sa",
+    "logo": "https://i.ibb.co/4tHj7N9/qu.png"
+  },
+  {
+    "key": "109",
+    "name": "الجامعة السعودية الإلكترونية",
+    "aliases": [
+      "الجامعة السعودية الـإلكترونية"
+    ],
+    "city": "الرياض",
+    "region": "الوسطى",
+    "domain": "seu.edu.sa",
+    "logo": "https://i.ibb.co/tBBX3wW/seu.png"
+  },
+  {
+    "key": "110",
+    "name": "جامعة شقراء",
+    "aliases": [
+      "جامعة شقراء"
+    ],
+    "city": "شقراء",
+    "region": "الوسطى",
+    "domain": "su.edu.sa",
+    "logo": "universities/110.jpg"
+  },
+  {
+    "key": "201",
+    "name": "جامعة حفر الباطن",
+    "aliases": [
+      "جامعة حفر الباطن"
+    ],
+    "city": "حفر الباطن",
+    "region": "الشرق",
+    "domain": "uhb.edu.sa",
+    "logo": "https://i.ibb.co/xqhKmjP/uohb.png"
+  },
+  {
+    "key": "202",
+    "name": "جامعة الإمام عبدالرحمن بن فيصل",
+    "aliases": [
+      "جامعة الإمام عبدالرحمن"
+    ],
+    "city": "الدمام",
+    "region": "الشرق",
+    "domain": "iau.edu.sa",
+    "logo": "https://i.ibb.co/7b93SgJ/iau.png"
+  },
+  {
+    "key": "203",
+    "name": "جامعة الملك فهد للبترول والمعادن",
+    "aliases": [
+      "جامعة الملك فهد"
+    ],
+    "city": "الظهران",
+    "region": "الشرق",
+    "domain": "kfupm.edu.sa",
+    "logo": "universities/203.png"
+  },
+  {
+    "key": "204",
+    "name": "جامعة الملك فيصل",
+    "aliases": [
+      "جامعة الملك فيصل"
+    ],
+    "city": "الأحساء",
+    "region": "الشرق",
+    "domain": "kfu.edu.sa",
+    "logo": "https://i.ibb.co/37FNvmq/kfu.png"
+  },
+  {
+    "key": "301",
+    "name": "جامعة الجوف",
+    "aliases": [
+      "جامعة الجوف"
+    ],
+    "city": "سكاكا",
+    "region": "الشمال",
+    "domain": "ju.edu.sa",
+    "logo": "https://i.ibb.co/wCfVPC5/ju.gif"
+  },
+  {
+    "key": "302",
+    "name": "جامعة الحدود الشمالية",
+    "aliases": [
+      "جامعة الحدود الشمالية"
+    ],
+    "city": "عرعر",
+    "region": "الشمال",
+    "domain": "nbu.edu.sa",
+    "logo": "universities/302.jpg"
+  },
+  {
+    "key": "303",
+    "name": "جامعة تبوك",
+    "aliases": [
+      "جامعة تبوك"
+    ],
+    "city": "تبوك",
+    "region": "الشمال",
+    "domain": "ut.edu.sa",
+    "logo": "https://i.ibb.co/1XZpMJt/tu.png"
+  },
+  {
+    "key": "401",
+    "name": "جامعة الباحة",
+    "aliases": [
+      "جامعة الباحة"
+    ],
+    "city": "الباحة",
+    "region": "الجنوب",
+    "domain": "bu.edu.sa",
+    "logo": "https://i.ibb.co/dKSnkpQ/bu.png"
+  },
+  {
+    "key": "402",
+    "name": "جامعة بيشة",
+    "aliases": [
+      "جامعة بيشة"
+    ],
+    "city": "بيشة",
+    "region": "الجنوب",
+    "domain": "ub.edu.sa",
+    "logo": "universities/402.png"
+  },
+  {
+    "key": "403",
+    "name": "جامعة جازان",
+    "aliases": [
+      "جامعة جازان"
+    ],
+    "city": "جازان",
+    "region": "الجنوب",
+    "domain": "jazanu.edu.sa",
+    "logo": "universities/403.png"
+  },
+  {
+    "key": "404",
+    "name": "جامعة الملك خالد",
+    "aliases": [
+      "جامعة الملك خالد"
+    ],
+    "city": "أبها",
+    "region": "الجنوب",
+    "domain": "kku.edu.sa",
+    "logo": "universities/404.png"
+  },
+  {
+    "key": "405",
+    "name": "جامعة نجران",
+    "aliases": [
+      "جامعة نجران"
+    ],
+    "city": "نجران",
+    "region": "الجنوب",
+    "domain": "nu.edu.sa",
+    "logo": "universities/405.png",
+    "logoCrop": "unit-footer"
+  },
+  {
+    "key": "501",
+    "name": "الجامعة الإسلامية",
+    "aliases": [
+      "الجامعة الإسلامية"
+    ],
+    "city": "المدينة المنورة",
+    "region": "الغرب",
+    "domain": "iu.edu.sa",
+    "logo": "https://i.ibb.co/4mp8LCR/iu.png"
+  },
+  {
+    "key": "502",
+    "name": "جامعة جدة",
+    "aliases": [
+      "جامعة جدة"
+    ],
+    "city": "جدة",
+    "region": "الغرب",
+    "domain": "uj.edu.sa",
+    "logo": "universities/502.svg"
+  },
+  {
+    "key": "503",
+    "name": "جامعة الملك عبدالعزيز",
+    "aliases": [
+      "جامعة الملك عبدالعزيز"
+    ],
+    "city": "جدة",
+    "region": "الغرب",
+    "domain": "kau.edu.sa",
+    "logo": "universities/503.png"
+  },
+  {
+    "key": "504",
+    "name": "جامعة طيبة",
+    "aliases": [
+      "جامعة طيبة"
+    ],
+    "city": "المدينة المنورة",
+    "region": "الغرب",
+    "domain": "taibahu.edu.sa",
+    "logo": "https://i.ibb.co/ZWMTFTj/tu.png"
+  },
+  {
+    "key": "505",
+    "name": "جامعة الطائف",
+    "aliases": [
+      "جامعة الطايف"
+    ],
+    "city": "الطائف",
+    "region": "الغرب",
+    "domain": "tu.edu.sa",
+    "logo": "universities/505.png"
+  },
+  {
+    "key": "506",
+    "name": "جامعة أم القرى",
+    "aliases": [
+      "جامعة أم القرى"
+    ],
+    "city": "مكة المكرمة",
+    "region": "الغرب",
+    "domain": "uqu.edu.sa",
+    "logo": "https://firebasestorage.googleapis.com/v0/b/universities-directory.appspot.com/o/Universities%20Logo%2Falqura_logo.png?alt=media&token=de160ea2-ab0d-40d5-a654-0a92beebc1d8"
+  }
+]

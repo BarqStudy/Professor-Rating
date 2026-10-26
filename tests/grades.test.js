@@ -32,7 +32,7 @@ test('grade map requires explicit consent and ten distinct published contributor
   for(const value of [...accounts,'account_id','guest_id','created_at'])assert.ok(!JSON.stringify(map).includes(value));
   assert.equal((await rpc('miyar_grade_distribution',[d,null])).available,false);
   assert.equal((await rpc('miyar_grade_distribution',[d,'مادة أخرى'])).available,false);
-  const duplicate=await submit(accounts[0],'  ميكانيكا  ',55,true);await db.query("update miyar_reviews set status='published' where id=$1",[duplicate.id]);
+  await assert.rejects(submit(accounts[0],'  ميكانيكا  ',55,true),/REVIEW_ALREADY_EXISTS/);
   assert.equal((await rpc('miyar_grade_distribution',[d,'ميكانيكا'])).total,10,'one identity cannot inflate a course sample');
   await rpc('miyar_set_grade_consent',[accounts[9],null,privateReview.id,false]);
   assert.equal((await rpc('miyar_grade_distribution',[d,'ميكانيكا'])).available,false);

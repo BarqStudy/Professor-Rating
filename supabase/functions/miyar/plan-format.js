@@ -1,4 +1,5 @@
 import {ApiError,integer,text} from './security.js';
+import {repairCourseCode,repairPlanDraft} from './plan-repair.js';
 const arabic=/[ء-ي]/u;
 const arabicOnly=/^[\p{Script=Arabic}\p{M}\p{N}\p{P}\p{Zs}\s]+$/u;
 export const PLAN_COURSE_LIMIT=240;
@@ -15,7 +16,7 @@ export function courseLabel(value,min,max,label){
  return clean;
 }
 export function planCode(value,label='رمز المقرر'){
- const code=text(value,1,50,label).replace(/ـ/g,'').replace(/[٠-٩۰-۹]/g,c=>String(c.charCodeAt(0)-(c<='٩'?0x660:0x6f0))).replace(/\s+/g,' ');
+ const code=text(repairCourseCode(value),1,50,label);
  if(!/^[\p{L}\p{N}\s._/-]+$/u.test(code))throw issue(`تحقق من ${label}.`);
  return code;
 }
@@ -26,6 +27,7 @@ function list(value,label){
 const hash=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),b=>b.toString(16).padStart(2,'0')).join('');
 export async function normalizePublishedPlan(input){
  if(!input||typeof input!=='object'||Array.isArray(input))throw issue('تحقق من بيانات الخطة.');
+ const repaired=repairPlanDraft(input);input=repaired.draft;
  const id=typeof input.id==='string'&&/^plan-[a-f0-9-]{36}$/.test(input.id)?input.id:null;
  if(!id)throw issue('أعد قراءة ملف الخطة قبل حفظه.');
  const title=arabicLabel(input.title,2,100,'اسم الخطة');
@@ -80,5 +82,5 @@ export async function normalizePublishedPlan(input){
  const warnings=Array.isArray(input.warnings)?input.warnings.slice(0,30).map(w=>arabicLabel(w,2,300,'ملاحظة الخطة')):[];
  courses.sort((a,b)=>(a.level||99)-(b.level||99));
  return {id,title,fileLabel,version:fileLabel,versionKey:fileLabel.normalize('NFKC').toLowerCase().replace(/[٠-٩۰-۹]/g,c=>String(c.charCodeAt(0)-(c<='٩'?0x660:0x6f0))).replace(/\s+/g,' '),scopeNote,sha256:input.sha256,managed:'admin',requirementLists,firstLevel:Math.min(...courses.filter(c=>c.level>0).map(c=>c.level)),
-  courses,notes:warnings,groups:[...groupNames].map(([name,id])=>({id,name,...(groupTypes.get(name)?{requirementType:groupTypes.get(name)}:{}),slots:courses.filter(c=>c.kind==='slot'&&c.pool===id).map(c=>c.id)})),uncertainCredits:courses.some(c=>c.credits===null)};
+  courses,autoCorrections:repaired.corrections,notes:[...warnings,...repaired.corrections],groups:[...groupNames].map(([name,id])=>({id,name,...(groupTypes.get(name)?{requirementType:groupTypes.get(name)}:{}),slots:courses.filter(c=>c.kind==='slot'&&c.pool===id).map(c=>c.id)})),uncertainCredits:courses.some(c=>c.credits===null)};
 }

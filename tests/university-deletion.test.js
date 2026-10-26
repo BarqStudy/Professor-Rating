@@ -46,6 +46,6 @@ test('empty university deletion atomically resets selections while preserving ac
   const visitors=(await db.query('select * from miyar_guest_sessions')).rows;
   assert.equal(visitors.length,2);assert.ok(visitors.every((row)=>row.university_id===null));assert.equal(visitors.find((row)=>row.id===visitor.id).status,'banned');
   const reviews=(await db.query('select * from miyar_reviews')).rows;assert.equal(reviews.length,2);assert.ok(reviews.some((row)=>row.account_id===first));assert.ok(reviews.some((row)=>row.guest_id===visitor.id));
-  const catalogue=await rpc('miyar_catalogue',[]);assert.deepEqual(catalogue.universities.map((row)=>row.name),['جامعة نجران']);assert.equal(catalogue.doctors[0].count,2);
+  const catalogue=await rpc('miyar_catalogue',[]);assert.ok(catalogue.universities.some(row=>row.name==='جامعة نجران'));assert.ok(catalogue.universities.every(row=>row.id!==1&&row.id!==2));assert.equal(catalogue.doctors[0].count,2);
  }finally{await db.close();}
 });

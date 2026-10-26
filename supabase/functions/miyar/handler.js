@@ -1,7 +1,7 @@
 import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
 import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
-import { handleGuest } from "./guest.js";
+import { handleGuest, verifiedGuest } from "./guest.js";
 import { gradeConsent, gradeParticipation, publicGrades } from "./grades.js";
 import { handleAi, checkAiConnection } from "./ai.js";
 import { catalogueProposal, ambassadorAdmin } from "./ambassadors.js";
@@ -166,9 +166,14 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if (!user || user.status === "banned") {
         throw new ApiError(403, "هذا الحساب محظور من المنصة.");
       }
+      if(['me','submit','review.eligibility'].includes(action)&&user.status==='active'&&request.headers.has('x-miyar-guest')){
+        let guest;try{guest=await verifiedGuest(request,db,true);}catch(error){if(error.status!==401)throw error;}
+        if(guest?.status==='active')await db('rpc/miyar_link_review_identity',{method:'POST',body:{p_account:identity.id,p_guest:guest.id}});
+      }
       const isAdmin = admins.has(String(identity.id));
       if (action === "me") {
         const memberships = user.status === 'active' ? await db(`miyar_ambassadors?account_id=eq.${identity.id}&select=university_id`) : [];
+        const assistance=user.status==='active'?await db(`miyar_assistants?account_id=eq.${identity.id}&select=college_id`):[];
         return respond({
           id: identity.id,
           name: user.name,
@@ -178,16 +183,13 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
           status: user.status,
           isAdmin,
           ambassadorUniversities: memberships.map((row) => row.university_id),
+          assistantColleges:Array.isArray(assistance)?assistance.map(row=>row.college_id):[],
         });
       }
+      if(action==='review.eligibility')return respond(await db('rpc/miyar_review_eligibility',{method:'POST',body:{p_account:identity.id,p_guest:null,p_doctor:integer(body.doctor,1,Number.MAX_SAFE_INTEGER,'الدكتور')}}));
       if (action === "university") {
         const university = integer(body.universityId, 1, Number.MAX_SAFE_INTEGER, "الجامعة");
-        if (!(await db(`miyar_universities?id=eq.${university}&select=id`)).length) {
-          throw new ApiError(400, "الجامعة غير موجودة.");
-        }
-        await db(`miyar_accounts?auth_id=eq.${identity.id}`, {
-          method: "PATCH", body: { university_id: university, major_id: null },
-        });
+        await db('rpc/miyar_choose_university',{method:'POST',body:{p_account:identity.id,p_guest:null,p_university:university}});
         return respond({ ok: true, university_id: university });
       }
       if (action === "profile") {
@@ -241,6 +243,10 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      if(operation==='university.enable'){
+        if(typeof body.enabled!=='boolean')throw new ApiError(400,'اختر حالة الجامعة.');
+        return respond(await db('rpc/miyar_set_university_enabled',{method:'POST',body:{p_id:integer(body.id,1,Number.MAX_SAFE_INTEGER,'الجامعة'),p_enabled:body.enabled}}));
+      }
       if(['institution.approve','institution.reject'].includes(operation))return respond(await db('rpc/miyar_decide_institution',{method:'POST',body:{p_actor:identity.id,p_id:integer(body.id,1,Number.MAX_SAFE_INTEGER,'الطلب'),p_approve:operation==='institution.approve',p_reason:text(body.reason||'',operation==='institution.reject'?3:0,300,'سبب الرفض')}}));
       if(typeof operation==='string'&&(operation.startsWith('files.')||operation.startsWith('storage.'))&&user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد عن الوصول للملفات.');
       const fileResult=await adminFiles(operation,body,identity.id,db,env,storageFetch);
@@ -260,16 +266,17 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
             "miyar_reviews?status=eq.pending&select=id,doctor_id,account_id,guest_id,subject,comment,tags,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
           ),
         ]);
-        const [extra, catalogueRequests, ambassadors, institutionRequests] = await Promise.all([
+        const [extra, catalogueRequests, ambassadors, institutionRequests,assistants] = await Promise.all([
           db("rpc/miyar_community_queue", {method:"POST",body:{}}),
           db("rpc/miyar_catalogue_queue", {method:"POST",body:{}}),
           db("rpc/miyar_ambassador_list", {method:"POST",body:{}}),
-          db("miyar_institution_requests?status=eq.pending&select=id,name,colleges,account_id,guest_id,created_at&order=created_at.asc&limit=100"),
+          db("miyar_institution_requests?status=eq.pending&select=id,name,colleges,contact_email,request_kind,account_id,guest_id,created_at&order=created_at.asc&limit=100"),
+          db('rpc/miyar_assistant_list',{method:'POST',body:{}}),
         ]);
         // Grade is deliberately excluded even from the moderation response.
         return respond({
           edits: extra?.edits || [], reports: extra?.reports || [],
-          catalogueRequests: catalogueRequests || [], ambassadors: ambassadors || [], institutionRequests:institutionRequests||[],
+          catalogueRequests: catalogueRequests || [], ambassadors: ambassadors || [], assistants:Array.isArray(assistants)?assistants:[], institutionRequests:institutionRequests||[],
           doctors: doctors.map((
             { id, name, major_id, submitted_by_account, submitted_by_guest, requested_course, created_at },
           ) => ({

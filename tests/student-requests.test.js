@@ -52,7 +52,7 @@ test('HTTP student and guest requests bind verified actors; administrator decisi
  let actor=student;const calls=[];
  const db=async(path,options={})=>{calls.push({path,...options});if(path.startsWith('miyar_accounts?'))return[{auth_id:actor,status:'active',university_id:null}];if(path.startsWith('miyar_guest_sessions?'))return[{id:guest,status:'active',university_id:3}];return{ok:true};};
  const handle=createHandler({db,env:{ADMIN_AUTH_IDS:admin},authenticate:async request=>{if(!request.headers.has('authorization'))throw new ApiError(401,'unauthorized');return{id:actor};}});
- const req=(body,headers={})=>new Request('https://test',{method:'POST',headers,body:JSON.stringify(body)}),payload={university:'جامعة جديدة',colleges:[{name:'كلية جديدة',majors:['تخصص جديد']}]};
+ const req=(body,headers={})=>new Request('https://test',{method:'POST',headers,body:JSON.stringify(body)}),payload={kind:'university',email:'requester@example.test',university:'جامعة جديدة',colleges:[{name:'كلية جديدة',majors:['تخصص جديد']}]};
  assert.equal((await handle(req({action:'institution.request',...payload},{authorization:'Bearer valid'}))).status,201);assert.equal(calls.at(-1).body.p_account,student);assert.equal(calls.at(-1).body.p_guest,null);
  assert.equal((await handle(req({action:'guest.institution.request',...payload,accountId:admin},{'x-miyar-guest':'a'.repeat(64)}))).status,201);assert.equal(calls.at(-1).body.p_guest,guest);assert.equal(calls.at(-1).body.p_account,null);
  assert.equal((await handle(req({action:'guest.doctor.request',name:'مهندس أحمد محمد علي',majorId:1,courseId:'najran-ce-2025/ge101'},{'x-miyar-guest':'a'.repeat(64)}))).status,201);assert.equal(calls.at(-1).body.p_guest,guest);
