@@ -38,6 +38,7 @@ test('five curricula preserve original PDFs, scoped identities and unresolved so
 test('planner unlocks exact prerequisites, preserves corequisites and conservatively blocks uncertain conditions',()=>{
  const plan=find('me-2026');let state=cleanProgress(plan);
  const fluids=item(plan,'همك 231');
+ assert.equal(courseStatus(plan,item(plan,'ريض 106'),state).key,'ready','the removed foundation setting no longer locks the whole plan');
  assert.equal(courseStatus(plan,fluids,state).key,'locked');
  state.foundation=true;state.completed=[item(plan,'همك 221').id];
  assert.equal(courseStatus(plan,fluids,state).key,'ready');
@@ -49,8 +50,8 @@ test('planner unlocks exact prerequisites, preserves corequisites and conservati
  assert.equal(courseStatus(electrical,lab,state).key,'concurrent');
  state.completed=[item(electrical,'كهر 251').id];assert.equal(courseStatus(electrical,lab,state).key,'ready');
  const software=item(electrical,'كهر 253');state.completed=[item(electrical,'هعم 205').id];
- assert.equal(courseStatus(electrical,software,state).key,'locked');
- state.externalPassed=['هعم 204'];assert.equal(courseStatus(electrical,software,state).key,'ready');
+ assert.equal(courseStatus(electrical,software,state).key,'review');
+ state.externalPassed=['هعم 204'];assert.equal(courseStatus(electrical,software,state).key,'review','hidden legacy external settings cannot certify an unlisted prerequisite');
  assert.equal(courseStatus(find('ce-2025'),item(find('ce-2025'),'همد 455'),{foundation:true}).key,'review');
  const arc=find('arc-2026'),studio=item(arc,'عمر 417');
  assert.equal(courseStatus(arc,studio,{foundation:true,completed:[item(arc,'عمر 491').id]}).key,'ready');
@@ -68,9 +69,9 @@ test('electives count once per slot, remain department-scoped and cannot bypass 
  assert.equal(selectedCourse(plan,slots[1],state),undefined);
  assert.equal(courseStatus(plan,slots[1],state).key,'choice');
  const mechanical=find('me-2026'),project=item(mechanical,'همك 396');
- state=cleanProgress(mechanical,{foundation:true,extraCredits:100});assert.equal(courseStatus(mechanical,project,state).key,'locked');
+ state=cleanProgress(mechanical,{foundation:true,extraCredits:100});assert.equal(courseStatus(mechanical,project,state).key,'review');
  state.completed=mechanical.courses.filter(c=>c.level===3).map(c=>c.id);
- assert.equal(courseStatus(mechanical,project,state).key,'ready');
+ assert.equal(courseStatus(mechanical,project,state).key,'review','a plan excluding the engineering track does not certify the external credit requirement');
  const training=item(mechanical,'همك 495');
  state.completed=mechanical.courses.filter(c=>c.level>0&&c.level<10).map(c=>c.id);
  assert.equal(courseStatus(mechanical,training,state).key,'locked','unselected elective slots block completed-level conditions');
@@ -147,4 +148,59 @@ test('course HTTP routes remain public while submissions bind verified Google an
  assert.equal((await handle(request({action:'guest.submit',...data,guestId:account},{'x-miyar-guest':token}))).status,201);
  assert.equal(calls.find(c=>c.path==='rpc/miyar_guest_submit').body.p_guest,guest);
  for(const courseId of [123,{},'bad/id?eq=1','../','najran-ce-2025/ce211%'])assert.equal((await handle(request({action:'submit',...data,courseId},{authorization:'Bearer verified'}))).status,400);
+});
+
+test('existing professor reviews use one canonical ID and appear in the main catalogue only after approval',async()=>{
+ const db=new PGlite();try{
+  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);');
+  const dir=new URL('../supabase/migrations/',import.meta.url);
+  for(const file of (await readdir(dir)).filter(f=>f.endsWith('.sql')).sort())await db.exec(await readFile(new URL(file,dir),'utf8'));
+  const rpc=async(name,args)=>(await db.query(`select ${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
+  const account='11111111-1111-4111-8111-111111111111';
+  await db.query('insert into auth.users(id) values($1)',[account]);await db.query("insert into miyar_accounts(auth_id,name,university_id) values($1,'طالب',3)",[account]);
+  const d=(await db.query("insert into miyar_doctors(major_id,name,status) select major_id,'م. أحمد محمد العتيبي','approved' from miyar_study_plans where id='najran-ce-2025' returning id")).rows[0].id;
+  const submit=(id=d,course='najran-ce-2025/ce211')=>rpc('miyar_submit_existing_google_review',[account,id,'ميكانيكا الموائع',92,90,80,70,'',[],false,course]);
+  const r=await submit();assert.equal(r.newDoctor,false);assert.equal(r.status,'pending');
+  assert.equal((await db.query('select doctor_id from miyar_reviews where id=$1',[r.id])).rows[0].doctor_id,d);
+  let catalogue=await rpc('miyar_catalogue',[]);assert.equal(catalogue.doctors.length,1);assert.equal(catalogue.doctors[0].count,0);
+  await db.query("update miyar_reviews set status='published' where id=$1",[r.id]);
+  catalogue=await rpc('miyar_catalogue',[]);assert.equal(catalogue.doctors.length,1);assert.equal(catalogue.doctors[0].count,1);
+  await assert.rejects(submit(),/duplicate key/);
+  await assert.rejects(submit(d,'najran-me-2026/me231'),/duplicate key|INVALID_STUDY_COURSE/);
+  const guest=await rpc('miyar_open_guest',['a'.repeat(64),null]);await db.query('update miyar_guest_sessions set university_id=3 where id=$1',[guest.id]);
+  const g=await rpc('miyar_submit_existing_guest_review',[guest.id,d,'ميكانيكا الموائع',87,80,80,80,'',[],false,'najran-ce-2025/ce211']);
+  assert.equal(g.newDoctor,false);assert.equal((await db.query('select doctor_id from miyar_reviews where id=$1',[g.id])).rows[0].doctor_id,d);
+  await db.query("update miyar_reviews set status='published' where id=$1",[g.id]);
+  catalogue=await rpc('miyar_catalogue',[]);assert.equal(catalogue.doctors.length,1);assert.equal(catalogue.doctors[0].count,2);
+  // A professor in another university with the same name cannot silently select/create a local namesake.
+  await db.exec("insert into miyar_colleges(university_id,name) values(1,'كلية الهندسة');insert into miyar_majors(college_id,name) select id,'الهندسة المدنية' from miyar_colleges where university_id=1;insert into miyar_doctors(major_id,name,status) select m.id,'م. أحمد محمد العتيبي','approved' from miyar_majors m join miyar_colleges c on c.id=m.college_id where c.university_id=1;");
+  const foreign=(await db.query('select max(id)::int id from miyar_doctors')).rows[0].id;
+  await assert.rejects(submit(foreign),/DOCTOR_UNAVAILABLE/);
+  await assert.rejects(rpc('miyar_submit_existing_guest_review',[guest.id,foreign,'مادة أخرى',90,80,80,80,'',[],false,null]),/DOCTOR_UNAVAILABLE/);
+  assert.equal((await db.query('select count(*)::int n from miyar_doctors')).rows[0].n,2);
+  for(const role of ['anon','authenticated']){
+   await db.exec('set role '+role);
+   await assert.rejects(submit(),/permission denied/);
+   await db.exec('reset role');
+  }
+ }finally{await db.close();}
+});
+
+test('existing professor HTTP submissions bind trusted actor and ID and ignore stale posted professor names',async()=>{
+ const account='11111111-1111-4111-8111-111111111111',guest='22222222-2222-4222-8222-222222222222',token='b'.repeat(64),digest=await guestTokenHash(token),calls=[];
+ const db=async(path,options={})=>{
+  calls.push({path,...options});
+  if(path.startsWith('miyar_accounts?'))return[{auth_id:account,status:'active',university_id:3}];
+  if(path.startsWith('miyar_guest_sessions?'))return path.includes(digest)?[{id:guest,status:'active',university_id:3}]:[];
+  return{id:1,status:'pending',newDoctor:false};
+ };
+ const handle=createHandler({db,env:{},authenticate:async r=>{if(!r.headers.has('authorization'))throw new ApiError(401,'unauthorized');return{id:account};}});
+ const data={college:'كلية قديمة',major:'تخصص قديم',name:'اسم دكتور قديم',subject:'ميكانيكا الموائع',grade:90,scores:[80,80,80],comment:'',pledged:true,courseId:'najran-ce-2025/ce211',existingDoctorId:17};
+ const request=(action,headers,extra={})=>new Request('https://test',{method:'POST',headers,body:JSON.stringify({...data,...extra,action,accountId:guest,guestId:account})});
+ assert.equal((await handle(request('submit',{authorization:'Bearer verified'}))).status,201);
+ const google=calls.find(c=>c.path==='rpc/miyar_submit_existing_google_review');assert.equal(google.body.p_account,account);assert.equal(google.body.p_doctor,17);assert.ok(!('p_name' in google.body));assert.ok(!('p_major' in google.body));
+ assert.equal((await handle(request('guest.submit',{'x-miyar-guest':token}))).status,201);
+ assert.equal(calls.find(c=>c.path==='rpc/miyar_submit_existing_guest_review').body.p_guest,guest);
+ for(const existingDoctorId of [0,-1,'17',{},1.2])assert.equal((await handle(request('submit',{authorization:'Bearer verified'},{existingDoctorId}))).status,400);
+ assert.equal((await handle(request('submit',{},{}))).status,401);
 });

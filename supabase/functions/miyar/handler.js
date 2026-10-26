@@ -1,4 +1,4 @@
-import { studyCourse, courseDoctors } from "./study.js";
+import { studyCourse, courseDoctors, existingDoctorReview } from "./study.js";
 import { handleGuest } from "./guest.js";
 import { gradeConsent, gradeParticipation, publicGrades } from "./grades.js";
 import { handleAi, checkAiConnection } from "./ai.js";
@@ -188,6 +188,8 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
         if (!user.university_id) throw new ApiError(400, "اختر جامعتك أولًا.");
         if(body.pledged!==true) throw new ApiError(400,"وافق على تعهّد التقييم أولًا.");
         const r = validateReview(body);
+        const existing = existingDoctorReview(body,r,identity.id);
+        if (existing) return respond(await db('rpc/'+existing.name,{method:'POST',body:existing.body}),201);
         const result = await db("rpc/miyar_submit_google_review", {
           method: "POST",
           body: {

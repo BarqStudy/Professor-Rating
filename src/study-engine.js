@@ -44,13 +44,14 @@ export function courseStatus(plan,item,raw) {
  const notes=[item.review,course!==item?course.review:null].filter(Boolean);
  if(notes.length)return {key:'review',label:'تحتاج تأكيد القسم',reasons:notes};
  const reasons=[];const done=completedCodes(plan,state);
- if(!state.foundation)reasons.push('أكد اجتياز المسار الهندسي أو السنة التحضيرية.');
+ const listedCodes=new Set(plan.courses.map(c=>c.code));
+ const outside=[...course.prerequisites,...course.corequisites].filter(code=>!listedCodes.has(code));
+ if(outside.length)return {key:'review',label:'تحتاج تأكيد القسم',reasons:outside.map(code=>'المتطلب '+code+' غير مدرج في الخطة؛ تأكد من اجتيازه مع القسم.')};
  for(const code of course.prerequisites)if(!done.has(code))reasons.push('اجتياز '+code);
  if(course.anyPrerequisites?.length&&!course.anyPrerequisites.some(code=>done.has(code)))reasons.push('اجتياز أحد: '+course.anyPrerequisites.join(' أو '));
  const summary=progressSummary(plan,state);
  const minimum=Math.max(item.minimumCredits||0,course.minimumCredits||0);
- if(minimum&&summary.completedCredits+state.extraCredits<minimum)reasons.push('إكمال '+minimum+' ساعة معتمدة (مع ساعاتك خارج الملف).');
- if(minimum&&summary.uncertainCredits)reasons.push('مجموع الساعات غير محسوم في الملف؛ تحقق من شرط الساعات لدى القسم.');
+ if(minimum&&(summary.completedCredits<minimum||summary.uncertainCredits))return {key:'review',label:'تحتاج تأكيد القسم',reasons:['تحقق من شرط إكمال '+minimum+' ساعة معتمدة لدى القسم؛ الخطة لا تشمل المسار الهندسي.']};
  const limit=item.allPrevious?item.level-1:item.completedLevel;
  if(limit&&plan.courses.some(c=>c.level>0&&c.level<=limit&&(!state.completed.includes(c.id)||!selectedCourse(plan,c,state))))reasons.push('اجتياز جميع المواد حتى المستوى '+limit+'.');
  if(reasons.length)return {key:'locked',label:'متطلبات لم تكتمل',reasons};

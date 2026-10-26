@@ -90,6 +90,14 @@ const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>config
   universityName:()=>selectedUniversity()?.name,
   ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest',
   majorName:()=>cloudCatalogue?.majors.find(m=>m.id===cloudMe?.major_id)?.name||'',
+  doctorsForPlan:(plan)=>{
+    if(!configured)return doctors.filter(d=>[plan.major,...(plan.majorAliases||[])].includes(d.major)&&(d.college||'كلية الهندسة')===plan.college);
+    const catalogue=cloudCatalogue;if(!catalogue)return [];
+    const university=catalogue.universities.find(u=>u.name===plan.university);
+    const collegeIds=new Set(catalogue.colleges.filter(c=>c.university_id===university?.id&&c.name===plan.college).map(c=>c.id));
+    const majorIds=new Set(catalogue.majors.filter(m=>collegeIds.has(m.college_id)&&[plan.major,...(plan.majorAliases||[])].includes(m.name)).map(m=>m.id));
+    return catalogue.doctors.filter(d=>majorIds.has(d.major_id));
+  },
   onReview:(id,course,plan)=>reviewForm(id,false,{course,plan}),
   onDoctor:(id,course)=>cloudDoctorDetail(id,course.name),
 });
@@ -826,6 +834,15 @@ async function reviewForm(id, pledged = false, studySelection = null) {
     major:studySelection ? majors.find(name=>[studySelection.plan.major,...(studySelection.plan.majorAliases||[])].includes(name)) : undefined,
     courseId:studySelection?.course.id,
   });
+  if(selectedDoctor){
+    const form=document.querySelector('#review-form');
+    form.elements.doctor.readOnly=true;
+    for(const name of ['college','major']){
+      const select=form.querySelector(`[name=${name}]`),input=document.createElement('input');
+      input.type='hidden';input.name=name;input.value=select.value;
+      select.disabled=true;form.append(input);
+    }
+  }
   document.querySelectorAll("[data-range]").forEach((el) =>
     el.oninput = () => {
       const v = +el.value;
@@ -851,9 +868,10 @@ async function reviewForm(id, pledged = false, studySelection = null) {
       return;
     }
     const scores = [0, 1, 2].map((i) => +f.get("score" + i));
-    let d = doctors.find((x) => x.name === name);
+    let d = selectedDoctor || doctors.find(x=>x.name===name&&x.major===f.get('major')&&(x.college||'كلية الهندسة')===f.get('college'));
     const data = {
       doctor: d?.id,
+      ...(selectedDoctor ? {existingDoctorId:selectedDoctor.id} : {}),
       name,
       major: f.get("major"),
       college: f.get("college"),
@@ -872,9 +890,9 @@ async function reviewForm(id, pledged = false, studySelection = null) {
       try {
         await api(googleSession ? "submit" : "guest.submit", { ...data, grade: Number(f.get("grade")) });
         document.body.classList.remove("modal-open");
-        setPage("home");
+        setPage(studySelection ? "plan" : "home");
         render();
-        toast("وصل تقييمك، وسيظهر بعد موافقة الإدارة.");
+        toast(studySelection ? "وصل تقييمك لقسم التقييمات، وسيظهر بعد موافقة الإدارة." : "وصل تقييمك، وسيظهر بعد موافقة الإدارة.");
       } catch (error) {
         const el = document.querySelector(".form-error");
         if (el) el.textContent = error.message;
