@@ -1,3 +1,5 @@
+import { createCourseAdvisor } from './course-advisor.js';
+import { officeBadge } from './doctor-office.js';
 import { createStudyPlanner } from "./study.js";
 import "./study.css";
 import { REVIEW_TAGS } from "../supabase/functions/miyar/tags.js";
@@ -91,16 +93,18 @@ const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>config
   ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest',
   majorName:()=>cloudCatalogue?.majors.find(m=>m.id===cloudMe?.major_id)?.name||'',
   doctorsForPlan:(plan)=>{
-    if(!configured)return doctors.filter(d=>[plan.major,...(plan.majorAliases||[])].includes(d.major)&&(d.college||'كلية الهندسة')===plan.college);
+    if(!configured)return doctors;
     const catalogue=cloudCatalogue;if(!catalogue)return [];
     const university=catalogue.universities.find(u=>u.name===plan.university);
-    const collegeIds=new Set(catalogue.colleges.filter(c=>c.university_id===university?.id&&c.name===plan.college).map(c=>c.id));
-    const majorIds=new Set(catalogue.majors.filter(m=>collegeIds.has(m.college_id)&&[plan.major,...(plan.majorAliases||[])].includes(m.name)).map(m=>m.id));
+    const collegeIds=new Set(catalogue.colleges.filter(c=>c.university_id===university?.id).map(c=>c.id));
+    const majorIds=new Set(catalogue.majors.filter(m=>collegeIds.has(m.college_id)).map(m=>m.id));
     return catalogue.doctors.filter(d=>majorIds.has(d.major_id));
   },
   onReview:(id,course,plan)=>reviewForm(id,false,{course,plan}),
-  onDoctor:(id,course)=>cloudDoctorDetail(id,course.name),
+  onAdvisor:(course,plan)=>{courseAdvisor.select(plan.id,course.id);setPage('advisor');render();window.scrollTo({top:0});},
+  closeModal,toast,
 });
+const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onDoctor:(id)=>cloudDoctorDetail(id)});
 const logo =
   `<span class="miyar-mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M32 10v43M14 22h36M22 53h20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="m14 22-9 19h18l-9-19Zm36 0-9 19h18l-9-19Z" fill="currentColor" opacity=".22"/><path d="M5 41c3 8 15 8 18 0M41 41c3 8 15 8 18 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="m32 3 5 6-5 6-5-6Z" fill="#bf9354"/></svg></span><span class="logo-type">مِعيار<span>MIYAR</span></span>`;
 const initial = [{
@@ -174,7 +178,7 @@ function displayName() {
 let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
-const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "plan"];
+const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "plan", "advisor"];
 let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
 const persist = () => {
@@ -220,14 +224,14 @@ function appearanceSettings() {
 }
 function nav() {
   return `<nav>${
-    [["home", "home", "الرئيسية"], ["ratings", "star", "التقييمات"], ["saved", "bookmark", "المحفوظات"], [
+    [["home", "home", "الرئيسية"], ["ratings", "star", "التقييمات"], ["plan", "cap", "خطتي إلى التخرج"], ["saved", "bookmark", "المحفوظات"], [
       "developer",
       "users",
       "من نحن",
     ]].map(([p, i, t]) =>
       `<button data-page="${p}" class="nav-item ${
         page === p ? "active" : ""
-      }">${ic(i)}<span>${t}</span>${page === p ? "<i></i>" : ""}</button>`
+      }" aria-label="${t}">${ic(i)}${p==='plan'?'<span class="nav-label-long">خطتي إلى التخرج</span><span class="nav-label-short" aria-hidden="true">خطتي</span>':`<span>${t}</span>`}${page === p ? "<i></i>" : ""}</button>`
     ).join("")
   }${
     (configured ? cloudMe?.isAdmin : demoAdmin)
@@ -237,7 +241,7 @@ function nav() {
         configured ? "لوحة الإدارة" : "إدارة تجريبية"
       }</span></button>`
       : cloudMe?.ambassadorUniversities?.length ? `<button data-page="ambassador" class="nav-item ${page === 'ambassador' ? 'active' : ''}">${ic('cap')}<span>مساحة السفير</span></button>` : ""
-  }<button data-page="plan" class="nav-item desktop-study-nav ${page==='plan'?'active':''}">${ic("cap")}<span>خطتي إلى التخرج</span></button></nav>`;
+  }</nav>`;
 }
 function setPage(next) {
   page = next;
@@ -270,6 +274,7 @@ function render() {
         ambassador: "مساحة السفير",
         assistant: "مساعد مِعيار",
         plan: "خطتي إلى التخرج",
+        advisor: "اختيار الدكتور المناسب",
       })[page]
     }</b></div><div class="header-actions">${
       !googleSession
@@ -302,6 +307,8 @@ function render() {
         ? admin()
         : page === "ambassador"
         ? ambassadorPage()
+        : page === "advisor"
+        ? courseAdvisor.page()
         : page === "plan"
         ? studyPlanner.page()
         : page === "assistant"
@@ -311,6 +318,7 @@ function render() {
   bind();
   if (page === 'assistant') miyarAssistant.bind();
   if (page === 'plan') studyPlanner.bind();
+  if (page === 'advisor') courseAdvisor.bind();
   if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();
   if (page === "requests" && googleSession && requestsOwner !== googleSession.user.id && !requestsLoading) loadMyRequests();
   if (needsUniversity()) openUniversityChoice(true);
@@ -346,7 +354,7 @@ function home() {
     ic("plus")
   }</span><div><span class="tiny-label">تجربتك تستحق المشاركة</span><h2>إضافة دكتور بتقييم</h2><p>دكتور غير مضاف في الأقسام</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span><span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span></button></section><button class="doctor-request-start secondary" data-request-doctor>${ic("plus")} طلب إضافة دكتور بدون تقييم</button><section class="panel study-home-link"><div><span class="study-entry-icon">${ic("cap")}</span><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد.</p></div><button type="button" class="secondary" data-page="plan">افتح خطتك ${ic("arrow")}</button></section><section class="stats"><div><span class="stat-icon">${
+  }</span><span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span></button></section><button class="doctor-request-start secondary" data-request-doctor>${ic("plus")} طلب إضافة دكتور بدون تقييم</button><section class="panel study-home-link"><div><span class="study-entry-icon">${ic("cap")}</span><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد.</p></div><button type="button" class="secondary" data-page="plan">افتح خطتك ${ic("arrow")}</button></section><section class="panel study-home-link advisor-home-link"><div><span class="study-entry-icon">${ic("star")}</span><h2>اختيار الدكتور المناسب</h2><p>اختر المادة من خطتك، واستعرض دكاترتها حسب تقييم الطلاب في المادة نفسها.</p></div><button type="button" class="secondary" data-page="advisor">اختر مادتك ${ic("arrow")}</button></section><section class="stats"><div><span class="stat-icon">${
     ic("cap")
   }</span><div><b>+${
     configured
@@ -570,7 +578,7 @@ function cards() {
         d.verified
           ? verifiedBadge
           : ""
-      }</div><span class="major-label">${
+      }${officeBadge(d)}</div><span class="major-label">${
         escapeHtml(d.major)
       }</span><div class="subject-tags">${
         d.subjects.map((s) => `<span>${escapeHtml(s)}</span>`).join("")
@@ -1662,7 +1670,7 @@ async function cloudDoctorDetail(id, subject = "") {
   try {
     const [rows, summary] = await Promise.all([api("reviews", {doctor:id, ...(subject ? {subject} : {})}), api("doctor.summary", {doctor:id, ...(subject ? {subject} : {})}).catch(() => null)]);
     if (!loading.isConnected) return;
-    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?verifiedBadge:""}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<section id="doctor-grade-map" class="grade-map" aria-label="خريطة درجات الدكتور"></section><label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
+    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?verifiedBadge:""} ${officeBadge(doctor)}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<section id="doctor-grade-map" class="grade-map" aria-label="خريطة درجات الدكتور"></section><label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
     void gradeMap.mount(document.querySelector('#doctor-grade-map'),id,subject);
     document.querySelector("#review-subject-filter").onchange = (event) => cloudDoctorDetail(id,event.target.value);
     document.querySelectorAll("[data-report-review]").forEach((button) => button.onclick = () => reportReview(Number(button.dataset.reportReview)));
@@ -1845,11 +1853,27 @@ function bindCloudAdmin() {
   });
   bindCloudOperations();
 }
+function openDoctorDean(id){
+  const doctor=cloudCatalogue?.doctors.find(d=>d.id===id);if(!doctor)return;
+  const major=cloudCatalogue.majors.find(m=>m.id===doctor.major_id);
+  const university=doctor.university_id||cloudCatalogue.colleges.find(c=>c.id===major?.college_id)?.university_id;
+  const colleges=cloudCatalogue.colleges.filter(c=>c.university_id===university);
+  modal('منصب عميد الكلية',`<form id="doctor-dean-form"><p>${escapeHtml(doctor.name)}</p><label>الكلية<select name="collegeId" required><option value="">اختر الكلية</option>${colleges.map(c=>`<option value="${c.id}" ${c.id===doctor.office_college_id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select></label><p class="form-error" role="alert"></p><button type="submit" class="primary">حفظ منصب عميد الكلية</button>${doctor.office_role==='dean'?'<button type="button" class="secondary" id="remove-dean-office">إزالة منصب العميد</button>':''}</form>`);
+  const form=document.querySelector('#doctor-dean-form');
+  async function save(data){const button=form.querySelector('[type=submit]');button.disabled=true;const ok=await cloudAdminAction('doctor.office',{id,...data});if(!ok&&form.isConnected){button.disabled=false;form.querySelector('.form-error').textContent='تعذّر حفظ المنصب. تحقق من الكلية وحاول مجددًا.';}}
+  form.onsubmit=event=>{event.preventDefault();save({role:'dean',collegeId:Number(new FormData(form).get('collegeId'))});};
+  form.querySelector('#remove-dean-office')?.addEventListener('click',()=>save({role:null}));
+}
 function bindCloudOperations(root = document) {
   root.querySelectorAll("[data-cloud-operation]").forEach((b) =>
     b.onclick = () => {
       const operation = b.dataset.cloudOperation;
       const data = { id: Number(b.dataset.id) };
+      if(operation==='doctor.head'){
+        const doctor=cloudCatalogue?.doctors.find(d=>d.id===data.id);
+        b.disabled=true;cloudAdminAction('doctor.office',{id:data.id,role:doctor?.office_role==='head'?null:'head'}).finally(()=>b.disabled=false);return;
+      }
+      if(operation==='doctor.dean'){openDoctorDean(data.id);return;}
       if (operation === "doctor.verify") {
         data.verified = b.dataset.verified === "true";
       }
@@ -2157,7 +2181,7 @@ function adminDoctorRowsData(){
 function adminDoctorRows(){
  const rows=adminDoctorRowsData();
  adminChosen=new Set([...adminChosen].filter((id)=>rows.some((doctor)=>doctor.id===id)));
- return rows.length?rows.map((doctor)=>`<div class="admin-row"><label class="admin-select-doctor"><input type="checkbox" data-admin-check="${doctor.id}" aria-label="تحديد ${escapeHtml(doctor.name)}" ${adminChosen.has(doctor.id)?'checked':''}><span>${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></span></label><div><button data-cloud-operation="doctor.verify" data-id="${doctor.id}" data-verified="${!doctor.verified}">${doctor.verified?'إلغاء التوثيق':'توثيق'}</button><button class="danger" data-cloud-operation="doctor.delete" data-id="${doctor.id}">إزالة</button></div></div>`).join(''):'<p class="empty">لا توجد أسماء مطابقة للفلاتر.</p>';
+ return rows.length?rows.map((doctor)=>`<div class="admin-row"><label class="admin-select-doctor"><input type="checkbox" data-admin-check="${doctor.id}" aria-label="تحديد ${escapeHtml(doctor.name)}" ${adminChosen.has(doctor.id)?'checked':''}><span>${escapeHtml(doctor.name)} ${officeBadge(doctor)}<small>${escapeHtml(doctor.major)}</small></span></label><div class="admin-office-buttons"><button type="button" data-cloud-operation="doctor.head" data-id="${doctor.id}" aria-pressed="${doctor.office_role==='head'}">${doctor.office_role==='head'?'إلغاء رئيس قسم':'رئيس قسم'}</button><button type="button" data-cloud-operation="doctor.dean" data-id="${doctor.id}" aria-pressed="${doctor.office_role==='dean'}">عميد كلية</button><button data-cloud-operation="doctor.verify" data-id="${doctor.id}" data-verified="${!doctor.verified}">${doctor.verified?'إلغاء التوثيق':'توثيق'}</button><button class="danger" data-cloud-operation="doctor.delete" data-id="${doctor.id}">إزالة</button></div></div>`).join(''):'<p class="empty">لا توجد أسماء مطابقة للفلاتر.</p>';
 }
 function adminFilterOptions(field){
  const data=cloudCatalogue;
@@ -2262,7 +2286,7 @@ window.addEventListener("miyar-auth", async ({ detail }) => {
     storage.setItem("miyar-session", "active");
     if (cloudStatus === "ready") await connectCloudAccount(false);
   }
-  if (page === 'plan' && previous?.user.id !== detail.session?.user.id) {
+  if (['plan','advisor'].includes(page) && previous?.user.id !== detail.session?.user.id) {
     document.body.classList.remove('modal-open');
     render();
     return;

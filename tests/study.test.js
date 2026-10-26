@@ -79,7 +79,7 @@ test('electives count once per slot, remain department-scoped and cannot bypass 
  assert.deepEqual(cleanProgress(plan,{externalPassed:['fake']}).externalPassed,[]);
 });
 
-test('database links only explicit published course reviews and atomically rejects cross-major links',async()=>{
+test('database keeps course reviews published-only and atomically rejects cross-university links',async()=>{
  const db=new PGlite();
  try{
   await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);');
@@ -100,14 +100,15 @@ test('database links only explicit published course reviews and atomically rejec
   assert.equal(cd[0].count,1);assert.deepEqual(cd[0].scores,[90,80,70]);
   for(const privateField of ['grade','account_id','guest_id',account])assert.ok(!JSON.stringify(cd).includes(privateField));
   const before=(await db.query('select count(*)::int n from miyar_reviews')).rows[0].n;
-  await assert.rejects(submit('الهندسة المدنية',mechanical,'خالد محمد العتيبي'),/INVALID_STUDY_COURSE/);
+  await db.exec("insert into miyar_colleges(university_id,name) values(1,'كلية الهندسة');insert into miyar_majors(college_id,name) select id,'الهندسة المدنية' from miyar_colleges where university_id=1;insert into miyar_study_plans(id,major_id,metadata) select 'saud-ce-2025',m.id,'{}' from miyar_majors m join miyar_colleges c on c.id=m.college_id where c.university_id=1;insert into miyar_study_courses values('saud-ce-2025/ce211','saud-ce-2025','همد 211','ميكانيكا الموائع',true);");
+  await assert.rejects(submit('الهندسة المدنية','saud-ce-2025/ce211','خالد محمد العتيبي'),/INVALID_STUDY_COURSE/);
   await assert.rejects(submit('الهندسة المدنية',civil,'خالد محمد العتيبي','ميكانيكا'),/INVALID_STUDY_COURSE/);
   await assert.rejects(submit('الهندسة المدنية','najran-ce-2025/missing','خالد محمد العتيبي'),/INVALID_STUDY_COURSE/);
   assert.equal((await db.query('select count(*)::int n from miyar_reviews')).rows[0].n,before,'invalid links roll back review and doctor insertion');
   assert.equal((await db.query("select count(*)::int n from miyar_doctors where name='خالد محمد العتيبي'")).rows[0].n,0);
-  const legacy=await rpc('miyar_submit_google_review',[account,'كلية الهندسة','الهندسة المدنية','خالد محمد العتيبي','ميكانيكا الموائع',90,90,90,90,'',[],false]);
+  const legacy=await rpc('miyar_submit_google_review',[account,'كلية الهندسة','الهندسة المدنية','خالد محمد العتيبي','مادة غير مرتبطة',90,90,90,90,'',[],false]);
   await db.exec("update miyar_doctors set status='approved';update miyar_reviews set status='published';");
-  assert.equal((await rpc('miyar_course_doctors',[civil])).length,1,'legacy name matches are never automatically linked');
+  assert.equal((await rpc('miyar_course_doctors',[civil])).length,1,'unrelated legacy material names are not linked');
   await db.query("update miyar_reviews set subject='مادة أخرى' where id=$1",[a.id]);
   assert.equal((await db.query('select course_id from miyar_reviews where id=$1',[a.id])).rows[0].course_id,null);
   assert.deepEqual(await rpc('miyar_course_doctors',[civil]),[],'an approved material edit removes stale links');

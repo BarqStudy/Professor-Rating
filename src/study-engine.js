@@ -11,7 +11,9 @@ export function cleanProgress(plan,raw={}) {
  const externalCodes=new Set(plan.courses.flatMap(c=>[...c.prerequisites,...c.corequisites,...(c.anyPrerequisites||[])]).filter(code=>!knownCodes.has(code)));
  return {
   completed:[...new Set(Array.isArray(raw.completed)?raw.completed.filter(id=>required.has(id)):[])],
-  electiveChoices,foundation:raw.foundation===true,
+  electiveChoices,
+  doctorChoices:Object.fromEntries(Object.entries(raw.doctorChoices&&typeof raw.doctorChoices==='object'?raw.doctorChoices:{}).filter(([id,doctor])=>plan.courses.some(c=>c.id===id&&c.kind==='course'&&c.linkable)&&Number.isSafeInteger(doctor)&&doctor>0)),
+  foundation:raw.foundation===true,
   extraCredits:Number.isInteger(raw.extraCredits)?Math.max(0,Math.min(100,raw.extraCredits)):0,
   externalPassed:[...new Set(Array.isArray(raw.externalPassed)?raw.externalPassed.filter(code=>externalCodes.has(code)):[])],
  };

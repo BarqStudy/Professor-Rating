@@ -34,7 +34,8 @@ export function createDatabase(url, key, fetcher = fetch) {
         );
       }
       const reasons = {
-        INVALID_STUDY_COURSE: [400, "المادة لا تتبع تخصص الدكتور أو تغيّر اسمها. اخترها من الخطة مجددًا."],
+        INVALID_STUDY_COURSE: [400, "المادة لا تتبع جامعة الدكتور أو تغيّر اسمها. اخترها من الخطة مجددًا."],
+        INVALID_DOCTOR_OFFICE: [400, "اختر منصبًا صحيحًا وكلية تتبع جامعة الدكتور."],
         STUDY_COURSE_NOT_FOUND: [404, "المادة غير متاحة للربط حتى مراجعة بياناتها."],
         GRADE_DOCTOR_NOT_FOUND: [404, "الدكتور غير متاح."],
         GRADE_SUBJECT_CHANGED: [409, "تغيّرت مادة التقييم. أعد فتح مشاركة الدرجات وراجع اختيارك."],

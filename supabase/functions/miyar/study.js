@@ -24,3 +24,13 @@ export function existingDoctorReview(body,review,actor,isGuest=false) {
   },
  };
 }
+
+export async function courseReviews(body,db) {
+ const course=text(body.courseId,5,150,'المادة');studyCourse(course);
+ return db('rpc/miyar_course_reviews',{method:'POST',body:{p_course:course,p_doctor:integer(body.doctor,1,Number.MAX_SAFE_INTEGER,'الدكتور')}});
+}
+export async function doctorOffice(body,db) {
+ if(![null,'head','dean'].includes(body.role))throw new ApiError(400,'اختر المنصب.');
+ const college=body.role==='dean'?integer(body.collegeId,1,Number.MAX_SAFE_INTEGER,'الكلية'):null;
+ return db('rpc/miyar_set_doctor_office',{method:'POST',body:{p_doctor:integer(body.id,1,Number.MAX_SAFE_INTEGER,'الدكتور'),p_role:body.role,p_college:college}});
+}

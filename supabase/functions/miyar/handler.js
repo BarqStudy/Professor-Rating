@@ -1,4 +1,4 @@
-import { studyCourse, courseDoctors, existingDoctorReview } from "./study.js";
+import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
 import { handleGuest } from "./guest.js";
 import { gradeConsent, gradeParticipation, publicGrades } from "./grades.js";
 import { handleAi, checkAiConnection } from "./ai.js";
@@ -88,6 +88,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       if (action === "doctor.summary") return respond(await publicSummary(body, db));
       if (action === "doctor.grades") return respond(await publicGrades(body, db));
       if (action === "course.doctors") return respond(await courseDoctors(body, db));
+      if (action === "course.reviews") return respond(await courseReviews(body, db));
       if (action === "reviews") {
         const id = integer(body.doctor, 1, Number.MAX_SAFE_INTEGER, "الدكتور");
         const doctors = await db(
@@ -213,6 +214,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      if (operation === 'doctor.office') return respond(await doctorOffice(body,db));
       if (operation === 'ai.check') return respond(await checkAiConnection(env, aiFetch));
       const ambassadorResult = await ambassadorAdmin(operation, body, identity.id, db);
       if (ambassadorResult) return respond(ambassadorResult);

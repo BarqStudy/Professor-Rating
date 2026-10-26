@@ -105,6 +105,8 @@ jobs:
           for course in ['najran-ce-2025/ce211', 'najran-me-2026/me231', 'najran-che-2025/che311', 'najran-ee-2025/ee216', 'najran-arc-2026/arc111']:
               if not isinstance(call('course.doctors', {'courseId': course}), list):
                   raise SystemExit('Study course endpoint failed: ' + course)
+          if not isinstance(call('course.reviews', {'courseId': 'najran-ce-2025/ge101', 'doctor': 1}), list):
+              raise SystemExit('Course review endpoint failed.')
           visitor = call('guest.start')
           profile = call('guest.me', token=visitor['token'])
           if profile.get('id') != visitor.get('id') or profile.get('status') != 'active':

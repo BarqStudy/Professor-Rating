@@ -1,9 +1,11 @@
+import {courseNameKey,courseRequirementLabel} from './course-names.js';
+import {officeBadge} from './doctor-office.js';
 import plans from '../data/study-plans.json';
 import {storage,readJSON} from './storage.js';
 import {cleanProgress,courseStatus,progressSummary,selectedCourse} from './study-engine.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=n=>Number(n).toLocaleString('ar');
-export function createStudyPlanner({api,modal,icon,universityName,ownerKey,majorName,doctorsForPlan,onReview,onDoctor,configured}) {
+export function createStudyPlanner({api,modal,icon,universityName,ownerKey,majorName,doctorsForPlan,onReview,onAdvisor,closeModal,toast}) {
  let filter='all',search='';
  const available=()=>plans.filter(p=>!universityName()||p.university===universityName());
  const selectionKey=()=>`miyar-study-selected:${ownerKey()}:${universityName()||'all'}`;
@@ -17,16 +19,28 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
  }
  function courseCard(plan,item,state){
   const course=selectedCourse(plan,item,state),status=courseStatus(plan,item,state),done=status.key==='completed';
-  const requirements=course?[...course.prerequisites.map(c=>'سابق: '+c),...(course.anyPrerequisites?.length?['أحد: '+course.anyPrerequisites.join(' أو ')]:[]),...course.corequisites.map(c=>'متزامن: '+c)]:[];
+  const requirements=course?[
+    ...(course.prerequisites.length?['المواد المتطلب اجتيازها: '+[...new Set(course.prerequisites)].map(code=>courseRequirementLabel(plan,code)).join('، ')]:[]),
+    ...(course.anyPrerequisites?.length?['المواد المتطلب اجتياز إحداها: '+[...new Set(course.anyPrerequisites)].map(code=>courseRequirementLabel(plan,code)).join(' أو ')]:[]),
+    ...(course.corequisites.length?['المتطلبات المتزامنة: '+[...new Set(course.corequisites)].map(code=>courseRequirementLabel(plan,code)).join('، ')]:[]),
+  ]:[];
+  const repeated=new Set(course?[
+   ...course.prerequisites.map(code=>'اجتياز '+code),
+   ...(course.anyPrerequisites?.length?['اجتياز أحد: '+course.anyPrerequisites.join(' أو ')]:[]),
+   ...course.corequisites.map(code=>'تسجيل '+code+' بالتزامن أو اجتيازه مسبقًا.'),
+  ]:[]);
+  const reasons=status.reasons.filter(reason=>!repeated.has(reason));
+  if(course&&[...course.prerequisites,...course.corequisites].some(code=>!plan.courses.some(c=>c.code===code))&&status.key==='review')reasons.splice(0,reasons.length,'بعض المتطلبات غير مدرجة في الخطة؛ تأكد من القسم.');
+  const selectedDoctor=course?doctorsForPlan(plan).find(d=>d.id===state.doctorChoices[course.id]):null;
   const choices=item.kind==='slot'?plan.courses.filter(c=>c.level===0&&c.pool===item.pool&&c.credits===item.credits):[];
   const used=new Set(Object.entries(state.electiveChoices).filter(([slot])=>slot!==item.id).map(([,id])=>id));
-  return `<article class="study-course ${done?'is-completed':''}" data-study-course="${item.id}"><div class="study-course-top"><label class="study-complete"><input type="checkbox" data-study-complete="${item.id}" ${done?'checked':''} ${!course?'disabled':''}><span>${done?'اجتزت المادة':'حددها إذا اجتزتها'}</span></label><span class="study-status status-${status.key}">${esc(status.label)}</span></div><h3>${esc(item.kind==='slot'?item.name:course.name)}</h3>${item.kind==='slot'?`<label class="study-elective-label">المادة المختارة<select data-study-elective="${item.id}"><option value="">اختر من المجموعة</option>${choices.map(c=>`<option value="${c.id}" ${state.electiveChoices[item.id]===c.id?'selected':''} ${used.has(c.id)||!c.linkable?'disabled':''}>${esc(c.code+' · '+c.name)}${!c.linkable?' · رمز يحتاج مراجعة':''}${used.has(c.id)?' · مختارة مسبقًا':''}</option>`).join('')}</select></label>`:''}<div class="study-course-meta"><span>${esc(course?.code||'اختياري')}</span><span>${item.credits==null?'ساعات تحتاج تأكيدًا':number(item.credits)+' ساعات'}</span></div>${requirements.length?`<p class="study-requirements">${requirements.map(esc).join(' · ')}</p>`:''}${status.reasons.length?`<ul class="study-reasons">${status.reasons.map(reason=>`<li>${esc(reason)}</li>`).join('')}</ul>`:''}${course?.linkable?`<button type="button" class="text-button study-doctors-button" data-study-doctors="${course.id}">${icon('users')} ${done?'أضف درجتك وتقييم الدكتور':'الدكاترة والتقييمات'} ${icon('arrow')}</button>`:''}</article>`;
+  return `<article class="study-course ${done?'is-completed':''}" data-study-course="${item.id}"><div class="study-course-top"><label class="study-complete"><input type="checkbox" data-study-complete="${item.id}" ${done?'checked':''} ${!course?'disabled':''}><span>${done?'اجتزت المادة':'حددها إذا اجتزتها'}</span></label><span class="study-status status-${status.key}">${esc(status.label)}</span></div><h3>${esc(item.kind==='slot'?item.name:course.name)}</h3>${item.kind==='slot'?`<label class="study-elective-label">المادة المختارة<select data-study-elective="${item.id}"><option value="">اختر من المجموعة</option>${choices.map(c=>`<option value="${c.id}" ${state.electiveChoices[item.id]===c.id?'selected':''} ${used.has(c.id)||!c.linkable?'disabled':''}>${esc(c.code+' · '+c.name)}${!c.linkable?' · رمز يحتاج مراجعة':''}${used.has(c.id)?' · مختارة مسبقًا':''}</option>`).join('')}</select></label>`:''}<div class="study-course-meta"><span>${esc(course?.code||'اختياري')}</span><span>${item.credits==null?'ساعات تحتاج تأكيدًا':number(item.credits)+' ساعات'}</span></div>${requirements.length?`<p class="study-requirements">${requirements.map(esc).join(' · ')}</p>`:''}${reasons.length?`<ul class="study-reasons">${reasons.map(reason=>`<li>${esc(reason)}</li>`).join('')}</ul>`:''}${selectedDoctor?`<div class="study-selected-doctor"><span>الدكتور: <strong>${esc(selectedDoctor.name)}</strong> ${officeBadge(selectedDoctor)}</span><button type="button" class="text-button" data-study-remove-doctor="${course.id}" aria-label="إزالة اختيار الدكتور لهذه المادة">${icon('close')}</button></div>`:''}${course?.linkable?`<div class="study-course-actions"><button type="button" class="text-button study-doctors-button" data-study-doctors="${course.id}">${icon('profile')} ${selectedDoctor?'تغيير الدكتور':'اختيار الدكتور'} ${icon('arrow')}</button><button type="button" class="text-button" data-study-advisor="${course.id}">${icon('star')} اختيار الدكتور المناسب</button></div>`:''}</article>`;
  }
  function content(plan){
   const state=progress(plan),summary=progressSummary(plan,state),required=plan.courses.filter(c=>c.level>0);
   const statuses=new Map(required.map(c=>[c.id,courseStatus(plan,c,state)]));
   const ready=required.filter(c=>['ready','concurrent'].includes(statuses.get(c.id).key)).length;
-  const shown=required.filter(c=>(filter==='all'||(filter==='remaining'?statuses.get(c.id).key!=='completed':filter==='ready'?['ready','concurrent'].includes(statuses.get(c.id).key):statuses.get(c.id).key===filter))&&(!search||[c.name,c.code,selectedCourse(plan,c,state)?.name].filter(Boolean).some(s=>s.includes(search))));
+  const shown=required.filter(c=>(filter==='all'||(filter==='remaining'?statuses.get(c.id).key!=='completed':filter==='ready'?['ready','concurrent'].includes(statuses.get(c.id).key):statuses.get(c.id).key===filter))&&(!search||[c.name,c.code,selectedCourse(plan,c,state)?.name].filter(Boolean).some(s=>courseNameKey(s).includes(courseNameKey(search)))));
   return `<section class="panel study-overview"><div class="study-progress-heading"><div><span class="eyebrow">إنجازك في الخطة</span><h2>${number(summary.completed)} من ${number(summary.total)} متطلبًا</h2></div><strong>${number(summary.percent)}٪</strong></div><div class="study-progress-track" role="progressbar" aria-label="متطلبات الخطة المكتملة" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${summary.percent}"><span style="width:${summary.percent}%"></span></div><div class="study-metrics"><div><b>${number(summary.remaining)}</b><span>متطلب متبقٍ</span></div><div><b>${number(ready)}</b><span>متاحة مبدئيًا أو بتزامن</span></div><div><b>${number(summary.completedCredits)}</b><span>ساعة مكتملة${summary.uncertainCredits?' · دون غير المحسومة':''}</span></div></div><p class="study-advisory">الخطة لا تشمل المسار الهندسي.</p></section><section class="study-directory"><div class="study-tools"><div class="study-filters" role="group" aria-label="تصفية مواد الخطة">${[['all','جميع المواد'],['remaining','المتبقية'],['ready','المتاحة مبدئيًا'],['completed','المكتملة'],['review','تحتاج تأكيدًا']].map(([id,label])=>`<button type="button" class="chip ${id===filter?'selected':''}" data-study-filter="${id}" aria-pressed="${id===filter}">${label}</button>`).join('')}</div><label class="study-search">${icon('search')}<input id="study-search" placeholder="ابحث باسم المادة أو رمزها" aria-label="البحث في الخطة" value="${esc(search)}"><button type="button" id="study-clear-search" class="icon-btn" aria-label="مسح بحث الخطة" ${search?'':'hidden'}>${icon('close')}</button></label></div><div class="study-results" aria-live="polite">${number(shown.length)} متطلبًا</div>${shown.length?[...new Set(shown.map(c=>c.level))].map(level=>`<section class="study-level"><h2>المستوى ${number(level)}</h2><div class="study-courses-grid">${shown.filter(c=>c.level===level).map(c=>courseCard(plan,c,state)).join('')}</div></section>`).join(''):'<p class="panel empty">لا توجد مواد تطابق هذا الاختيار.</p>'}</section>`;
  }
  function bindContent(plan){
@@ -38,36 +52,39 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
   root.querySelector('#study-search').oninput=e=>{search=e.target.value;const pos=e.target.selectionStart;root.innerHTML=content(plan);bindContent(plan);const input=root.querySelector('#study-search');input.focus({preventScroll:true});input.setSelectionRange(pos,pos);};
   root.querySelector('#study-clear-search').onclick=()=>{search='';update(()=>{},'#study-search');};
   root.querySelectorAll('[data-study-doctors]').forEach(button=>button.onclick=()=>showDoctors(plan,plan.courses.find(c=>c.id===button.dataset.studyDoctors)));
+  root.querySelectorAll('[data-study-advisor]').forEach(button=>button.onclick=()=>onAdvisor(plan.courses.find(c=>c.id===button.dataset.studyAdvisor),plan));
+  root.querySelectorAll('[data-study-remove-doctor]').forEach(button=>button.onclick=()=>update(s=>{delete s.doctorChoices[button.dataset.studyRemoveDoctor];}));
  }
  function bind(){const select=document.querySelector('#study-plan-select');if(!select)return;const plan=current();select.onchange=()=>{storage.setItem(selectionKey(),select.value);filter='all';search='';document.querySelector('#study-progress-content').innerHTML=content(current());bindContent(current());};bindContent(plan);}
- async function showDoctors(plan,course){
+ function showDoctors(plan,course){
   const existing=[...new Map(doctorsForPlan(plan).map(doctor=>[doctor.id,doctor])).values()].sort((a,b)=>a.name.localeCompare(b.name,'ar'));
-  modal('دكاترة المادة',`<div id="study-course-doctors"><div class="study-doctor-heading"><span class="eyebrow">${esc(plan.university)} · ${esc(plan.title)}</span><h3>${esc(course.name)}</h3><p>${esc(course.code)}</p></div><form id="study-existing-doctor-form" class="study-existing-doctor-form"><h3>أضف درجتك وتقييم الدكتور</h3><p>اختر الدكتور الذي درّسك هذه المادة من دكاترة تخصصك الموجودين في المنصة. يُرسل تقييمك إلى قسم التقييمات نفسه للمراجعة قبل النشر.</p><label>الدكتور<select id="study-existing-doctor" required ${existing.length?'':'disabled'}><option value="">اختر الدكتور</option>${existing.map(doctor=>`<option value="${doctor.id}">${esc(doctor.name)}</option>`).join('')}</select></label>${existing.length?'':'<p class="muted">لم يُضف دكاترة لهذا التخصص بعد.</p>'}<button type="submit" class="primary" ${existing.length?'':'disabled'}>إضافة الدرجة وتقييم الدكتور ${icon('arrow')}</button></form><section class="study-published-doctors"><h3>التقييمات المنشورة لهذه المادة</h3><div id="study-linked-professors"><p role="status">جارٍ تحميل التقييمات…</p></div></section><button type="button" class="text-button" id="study-new-doctor">${icon('plus')} الدكتور غير موجود؟ أضفه بتقييم</button></div>`);
-  const root=document.querySelector('#study-course-doctors'),linked=root.querySelector('#study-linked-professors');
-  root.querySelector('#study-existing-doctor-form').onsubmit=event=>{
-   event.preventDefault();
-   const id=Number(root.querySelector('#study-existing-doctor').value);
-   if(existing.some(doctor=>doctor.id===id))onReview(id,course,plan);
-  };
+  const owner=ownerKey();
+  modal('اختيار دكتور المادة',`<div id="study-course-doctors"><div class="study-doctor-heading"><span class="eyebrow">${esc(plan.university)} · ${esc(plan.title)}</span><h3>${esc(course.name)}</h3><p>${esc(course.code)}</p></div><p class="muted">ابحث بين دكاترة جامعتك من جميع الكليات. اختيارك يُحفظ في خطتك؛ التقييم متاح من قسم التقييمات.</p><label class="study-search">${icon('search')}<input id="study-doctor-search" type="search" placeholder="ابحث باسم الدكتور…" aria-label="البحث عن دكتور لخطة التخرج" autocomplete="off"></label><div id="study-doctor-options" class="study-doctor-options" aria-live="polite"></div><button type="button" class="secondary" id="study-new-doctor">${icon('plus')} الدكتور غير موجود؟ أضفه مع تقييم</button></div>`);
+  const root=document.querySelector('#study-course-doctors');
+  function paint(){
+   const q=courseNameKey(root.querySelector('#study-doctor-search').value);
+   const rows=existing.filter(d=>!q||courseNameKey(d.name).includes(q));
+   root.querySelector('#study-doctor-options').innerHTML=rows.length?rows.map(d=>`<button type="button" class="study-doctor-option" data-study-pick-doctor="${d.id}"><span class="avatar" aria-hidden="true">${icon('profile')}</span><span><strong>${esc(d.name)} ${officeBadge(d)}</strong><small>${esc(d.college||'')} · ${esc(d.major||'')}</small></span><span class="study-pick-label">اختيار ${icon('check')}</span></button>`).join(''):'<p class="empty">لم نجد دكتورًا بهذا الاسم. يمكنك إضافته مع تقييمه من الزر أدناه.</p>';
+   root.querySelectorAll('[data-study-pick-doctor]').forEach(button=>button.onclick=()=>{
+    if(ownerKey()!==owner||!root.isConnected)return;
+    const state=progress(plan);state.doctorChoices[course.id]=Number(button.dataset.studyPickDoctor);save(plan,state);
+    const contentRoot=document.querySelector('#study-progress-content');
+    if(contentRoot){contentRoot.innerHTML=content(plan);bindContent(plan);}
+    closeModal();toast('تم حفظ دكتور المادة في خطتك.');
+   });
+  }
+  root.querySelector('#study-doctor-search').oninput=paint;
   root.querySelector('#study-new-doctor').onclick=()=>onReview(null,course,plan);
-  try {
-   const rows=configured()?await api('course.doctors',{courseId:course.id}):[];
-   if(!root.isConnected)return;
-   if(!Array.isArray(rows))throw new Error('تعذّر تحميل دكاترة المادة.');
-   linked.innerHTML=rows.length?rows.map(d=>`<article class="study-doctor-result"><span class="avatar" aria-hidden="true">${icon('profile')}</span><div><h3>${esc(d.name)}</h3><p>${number(d.count)} تقييمًا منشورًا · متوسط ${number(d.score)} / ١٠٠</p><p class="study-course-scores">${['الشرح','التعامل','المساعدة بالدرجات'].map((label,i)=>`${label}: ${number(d.scores[i])}`).join(' · ')}</p></div><button type="button" class="secondary" data-study-rate="${Number(d.id)}">قيّم الدكتور</button><button type="button" class="text-button" data-study-view="${Number(d.id)}">استعرض التقييمات</button></article>`).join(''):'<p class="study-no-doctors">لا توجد تقييمات منشورة لهذه المادة بعد. يمكنك اختيار الدكتور أعلاه وإضافة تجربتك.</p>';
-   linked.querySelectorAll('[data-study-rate]').forEach(button=>button.onclick=()=>onReview(Number(button.dataset.studyRate),course,plan));
-   linked.querySelectorAll('[data-study-view]').forEach(button=>button.onclick=()=>onDoctor(Number(button.dataset.studyView),course));
-  }catch(error){if(root.isConnected){linked.innerHTML=`<p role="alert">${esc(error.message)}</p><button type="button" class="secondary" id="study-doctors-retry">إعادة المحاولة</button>`;linked.querySelector('button').onclick=()=>showDoctors(plan,course);}}
+  paint();root.querySelector('#study-doctor-search').focus();
  }
  function attachReview(form,{university,college,major,courseId}={}){
   const subject=form.querySelector('[name=subject]');
   if(!subject)return;
   const section=document.createElement('div');section.className='study-review-selection';subject.closest('.form-grid').before(section);
   function update(preselect){
-   const selectedCollege=form.querySelector('[name=college]').value,selectedMajor=form.querySelector('[name=major]').value;
-   const choices=plans.filter(p=>p.university===university&&p.college===selectedCollege&&[p.major,...(p.majorAliases||[])].includes(selectedMajor));
+    const choices=plans.filter(p=>p.university===university);
    section.hidden=!choices.length;
-   section.innerHTML=choices.length?`<label>خطة المادة<select id="review-study-plan">${choices.map(p=>`<option value="${p.id}" ${preselect?.startsWith(p.id+'/')?'selected':''}>${esc(p.fileLabel)}</option>`).join('')}</select></label><label>المادة من الخطة<select name="courseId" id="review-study-course"><option value="">مادة أخرى أو غير محددة في الخطة</option></select></label><small class="muted">اختيار مادة من الخطة يربط هذا الدكتور بها بعد اعتماد التقييم.</small>`:'';
+   section.innerHTML=choices.length?`<label>خطة المادة<select id="review-study-plan">${choices.map(p=>`<option value="${p.id}" ${preselect?.startsWith(p.id+'/')||(!preselect&&p.id===current()?.id)?'selected':''}>${esc(p.fileLabel)}</option>`).join('')}</select></label><label>المادة من الخطة<select name="courseId" id="review-study-course"><option value="">مادة أخرى أو غير محددة في الخطة</option></select></label><small class="muted">اختيار مادة من الخطة يربط هذا الدكتور بها بعد اعتماد التقييم.</small>`:'';
    subject.readOnly=false;
    if(!choices.length)return;
    const fill=()=>{
@@ -81,7 +98,8 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
   // A selected plan can set the new doctor's department; subsequent changes clear the link.
   if(college&&major){const c=form.querySelector('[name=college]'),m=form.querySelector('[name=major]');c.value=college;c.dispatchEvent(new Event('change'));m.value=major;}
   update(courseId);
-  for(const name of ['college','major'])form.querySelector(`[name=${name}]`).addEventListener('change',()=>{subject.value='';update();});
+  // The teaching department can differ from the student's course department.
+  // University scope is fixed by the verified session, not by these selects.
  }
- return {page,bind,attachReview};
+ return {page,bind,attachReview,current,available};
 }
