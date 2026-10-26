@@ -15,6 +15,9 @@ test('R2 SigV4 PUT and short private download links match independently calculat
  assert.equal(put.url,`https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/miyar-files/${key}`);
  assert.ok(put.options.headers.Authorization.endsWith('Signature=6737ec3a216b2bf06e05ec7a8d8e10a9d4a6b81567d538edd2886a61cb7d88fe'));
  assert.equal(put.options.headers['x-amz-date'],'20261026T120000Z');assert.equal(put.options.headers.host,undefined);assert.ok(!JSON.stringify(put).includes(env.R2_SECRET_ACCESS_KEY));
+ const list=await signedR2Request(config,{method:'GET',query:[['max-keys','1'],['list-type','2']],now});
+ assert.equal(new URL(list.url).search,'?list-type=2&max-keys=1');
+ assert.ok(list.options.headers.Authorization.endsWith('Signature=71c606fe94c98a8f1864a1639630b9af5bbdab9c6a6169360764481e907e92d7'));
  const get=await r2DownloadUrl(config,key,'خطة.pdf',{now});const url=new URL(get.url);
  assert.equal(url.searchParams.get('X-Amz-Signature'),'40b282cb68f5a2f2b48a4f6f266f0ff19f49b6a0f76de75672bb51243c4d2fad');assert.equal(url.searchParams.get('X-Amz-Expires'),'300');assert.equal(get.expiresAt,'2026-10-26T12:05:00.000Z');assert.ok(url.searchParams.get('response-content-disposition').startsWith('attachment;'));assert.ok(!get.url.includes(env.R2_SECRET_ACCESS_KEY));
  for(const path of ['../file.pdf','miyar/files/../../file','https://evil.test/a.pdf'])await assert.rejects(r2DownloadUrl(config,path,'file.pdf'),/معرّف الملف/);
@@ -25,8 +28,19 @@ test('R2 setup checks are admin-readable metadata only and use a signed read-onl
  let count=0;const missing=await checkR2({},()=>{count++;throw Error('must not call');});assert.equal(missing.configured,false);assert.equal(count,0);assert.deepEqual(missing.missing,['R2_ACCOUNT_ID','R2_BUCKET_NAME','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY']);
  assert.equal(r2Configuration({...env,R2_ACCOUNT_ID:'https://evil.test'}).enabled,false);
  assert.equal(r2Configuration({...env,R2_BUCKET_NAME:'../../secret'}).enabled,false);
- const ready=await checkR2(env,async(url,options)=>{count++;assert.equal(options.method,'HEAD');assert.equal(options.body,undefined);assert.equal(options.redirect,'error');assert.ok(options.headers.Authorization.startsWith('AWS4-HMAC-SHA256'));return new Response(null,{status:200});});assert.equal(ready.ready,true);
+ const ready=await checkR2(env,async(url,options)=>{count++;assert.equal(options.method,'GET');assert.equal(new URL(url).search,'?list-type=2&max-keys=1');assert.equal(options.body,undefined);assert.equal(options.redirect,'manual');assert.ok(options.headers.Authorization.startsWith('AWS4-HMAC-SHA256'));return new Response('<ListBucketResult><Contents><Key>private-file.pdf</Key></Contents></ListBucketResult>',{status:200});});assert.equal(ready.ready,true);assert.ok(!JSON.stringify(ready).includes('private-file'));
  const denied=await checkR2(env,async()=>new Response(null,{status:403}));assert.equal(denied.ready,false);assert.match(denied.message,/رفض/);assert.ok(!JSON.stringify([ready,denied]).includes(env.R2_SECRET_ACCESS_KEY));
+});
+
+test('R2 check explains provider failures without reflecting private XML or following redirects',async()=>{
+ for(const [status,code,expected]of [[400,'SignatureDoesNotMatch',/التوقيع غير مطابق/],[403,'InvalidAccessKeyId',/Access Key ID غير صحيح/],[403,'AccessDenied',/Object Read & Write/],[404,'NoSuchBucket',/غير موجودة/],[400,'AuthorizationHeaderMalformed',/بيانات توقيع/],[503,'SlowDown',/تقليل/]]){
+  const result=await checkR2(env,async()=>new Response(`<Error><Code>${code}</Code><Message>${env.R2_SECRET_ACCESS_KEY}</Message><Resource>private-file.pdf</Resource></Error>`,{status}));
+  assert.equal(result.ready,false);assert.equal(result.configured,true);assert.equal(result.httpStatus,status);assert.equal(result.errorCode,code);assert.match(result.message,expected);assert.ok(!JSON.stringify(result).includes(env.R2_SECRET_ACCESS_KEY));assert.ok(!JSON.stringify(result).includes('private-file'));
+ }
+ const unknown=await checkR2(env,async()=>new Response(`<Error><Code>${env.R2_SECRET_ACCESS_KEY}</Code><Message>private-file</Message></Error>`,{status:400}));assert.equal(unknown.errorCode,undefined);assert.match(unknown.message,/HTTP 400/);assert.ok(!JSON.stringify(unknown).includes(env.R2_SECRET_ACCESS_KEY));
+ let cancelled=false;const oversized=await checkR2(env,async()=>new Response(new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode('x'.repeat(9000)));},cancel(){cancelled=true;}}),{status:502}));assert.equal(cancelled,true);assert.equal(oversized.httpStatus,502);
+ let requests=0;const moved=await checkR2(env,async(_,options)=>{requests++;assert.equal(options.redirect,'manual');return new Response(null,{status:307,headers:{location:'https://untrusted.example'}});});assert.equal(requests,1);assert.match(moved.message,/Jurisdiction/);assert.ok(!JSON.stringify(moved).includes('untrusted.example'));
+ const network=await checkR2(env,async()=>{throw Error(env.R2_SECRET_ACCESS_KEY);});assert.equal(network.ready,false);assert.ok(!JSON.stringify(network).includes(env.R2_SECRET_ACCESS_KEY));
 });
 
 test('file metadata has private RLS, atomic retries, owner/hash binding and links original study files without exposing them publicly',async()=>{

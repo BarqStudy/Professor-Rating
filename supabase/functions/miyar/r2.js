@@ -24,8 +24,9 @@ async function signature(config,date,canonical){
  return {scope,value:hex(await hmac(signingKey,'AWS4-HMAC-SHA256\n'+date+'\n'+scope+'\n'+await digest(canonical)))};
 }
 const queryString=entries=>entries.map(([k,v])=>[encode(k),encode(String(v))]).sort(([ak,av],[bk,bv])=>ak<bk?-1:ak>bk?1:av<bv?-1:av>bv?1:0).map(([k,v])=>k+'='+v).join('&');
-export async function signedR2Request(config,{method,key='',body,headers={},now=Date.now()}){
+export async function signedR2Request(config,{method,key='',query=[],body,headers={},now=Date.now()}){
  const url=objectUrl(config,key),date=time(now),payloadHash=await digest(body||new Uint8Array());
+ url.search=queryString(query);
  const canonicalHeaders={host:url.host,'x-amz-date':date,'x-amz-content-sha256':payloadHash};
  for(const [k,v]of Object.entries(headers))canonicalHeaders[k.toLowerCase()]=String(v).trim().replace(/\s+/g,' ');
  const keys=Object.keys(canonicalHeaders).sort(),signedHeaders=keys.join(';');
@@ -52,9 +53,32 @@ export async function putR2File(config,key,file,fetcher=fetch){
 export async function checkR2(env,fetcher=fetch){
  const config=r2Configuration(env);
  if(!config.enabled)return {provider:'r2',configured:false,ready:false,missing:config.missing,message:config.missing.length?'أضف إعدادات R2 في أسرار Supabase: '+config.missing.join('، '):'إعدادات R2 غير صالحة. راجع معرّف الحساب واسم الحاوية والمفاتيح.'};
- const request=await signedR2Request(config,{method:'HEAD'});
+ // List at most one object: object-scoped R2 credentials can list their bucket,
+ // and S3 returns a useful error code in XML (HEAD discards that explanation).
+ const request=await signedR2Request(config,{method:'GET',query:[['list-type','2'],['max-keys','1']]});
  try{
-  const response=await fetcher(request.url,{...request.options,signal:AbortSignal.timeout(12000),redirect:'error'});await response.body?.cancel();
-  return {provider:'r2',configured:true,ready:response.ok,message:response.ok?'تم الاتصال بحاوية R2. يمكنك رفع الملفات؛ فحص الاتصال لم ينشئ أي ملف.':response.status===403?'رفض R2 الوصول. راجع المفاتيح وصلاحيات الحاوية.':response.status===404?'حاوية R2 غير موجودة. راجع اسم الحاوية والحساب.':'لم يقبل R2 فحص الاتصال. أعد المحاولة لاحقًا.'};
+  const response=await fetcher(request.url,{...request.options,signal:AbortSignal.timeout(12000),redirect:'manual'});
+  if(response.ok){await response.body?.cancel();return {provider:'r2',configured:true,ready:true,httpStatus:response.status,message:'تم الاتصال بحاوية R2. يمكنك رفع الملفات؛ فحص الاتصال لم ينشئ أي ملف.'};}
+  const explanations={
+   InvalidAccessKeyId:'مفتاح Access Key ID غير صحيح أو محذوف. احفظ مفتاح S3 من صفحة R2 API Tokens، وليس API Token العام.',
+   SignatureDoesNotMatch:'التوقيع غير مطابق. أعد حفظ Access Key ID وSecret Access Key من زوج S3 نفسه؛ لا تستخدم API Token بدل Secret Access Key.',
+   AccessDenied:'رفض R2 الوصول. امنح المفتاح صلاحية Object Read & Write للحاوية المحددة وفي الحساب نفسه.',
+   NoSuchBucket:'حاوية R2 غير موجودة. راجع اسم الحاوية ومعرّف الحساب.',
+   InvalidBucketName:'اسم حاوية R2 غير صحيح. استخدم اسم الحاوية فقط دون رابط.',
+   AuthorizationHeaderMalformed:'بيانات توقيع R2 غير مقبولة. راجع معرّف الحساب وزوج مفاتيح S3.',
+   RequestTimeTooSkewed:'وقت خادم الطلب لا يطابق وقت R2. أعد الفحص، وإذا استمر الخطأ راجع وقت الخادم.',
+   RequestExpired:'انتهت صلاحية توقيع الطلب. أعد فحص الاتصال.',
+   ExpiredToken:'انتهت صلاحية مفتاح R2. أنشئ زوج مفاتيح S3 جديدًا للحاوية.',
+   InvalidToken:'رمز R2 غير صالح. استخدم Access Key ID وSecret Access Key الخاصين بـS3.',
+   PermanentRedirect:'عنوان R2 لا يطابق موقع الحاوية. راجع S3 API endpoint والحساب وإعداد Jurisdiction في Cloudflare.',
+   SlowDown:'R2 يطلب تقليل عدد الطلبات. انتظر قليلًا ثم أعد الفحص.',
+  };
+  // Never reflect provider XML, filenames, credentials, or arbitrary error codes.
+  const reader=response.body?.getReader();let xml='',size=0;
+  try{if(reader){const decoder=new TextDecoder();while(size<8192){const {done,value}=await reader.read();if(done)break;const part=value.subarray(0,8192-size);size+=part.length;xml+=decoder.decode(part,{stream:true});}}}finally{await reader?.cancel();}
+  const candidate=xml.match(/<Code>\s*([A-Za-z]+)\s*<\/Code>/)?.[1];
+  const errorCode=candidate&&Object.hasOwn(explanations,candidate)?candidate:null;
+  const fallback=response.status===403?explanations.AccessDenied:response.status===404?explanations.NoSuchBucket:response.status>=300&&response.status<400?explanations.PermanentRedirect:response.status===429||response.status>=500?'خدمة R2 غير متاحة مؤقتًا. أعد الفحص لاحقًا.':'راجع معرّف الحساب واسم الحاوية وزوج مفاتيح S3؛ يجب أن يكون المفتاحان من عملية الإنشاء نفسها.';
+  return {provider:'r2',configured:true,ready:false,httpStatus:response.status,...(errorCode?{errorCode}:{}),message:`فشل فحص R2 (HTTP ${response.status}${errorCode?' · '+errorCode:''}). ${errorCode?explanations[errorCode]:fallback}`};
  }catch{return {provider:'r2',configured:true,ready:false,message:'تعذّر الاتصال بـR2 أثناء الفحص. أعد المحاولة.'};}
 }
