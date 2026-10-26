@@ -1,3 +1,4 @@
+import { studyCourse } from "./study.js";
 import { ApiError, integer, uuid, validateReview } from './security.js';
 import { gradeConsent, gradeParticipation } from './grades.js';
 const rpc=(db,name,body)=>db('rpc/'+name,{method:'POST',body});
@@ -42,5 +43,5 @@ export async function handleGuest(request,body,db,pepper){
  if(guest.status!=='active')throw new ApiError(403,'جلسة الزائر مقيّدة عن إضافة التقييمات.');
  if(body.pledged!==true)throw new ApiError(400,'وافق على تعهّد التقييم أولًا.');
  const review=validateReview(body);
- return {status:201,data:await rpc(db,'miyar_guest_submit',{p_guest:guest.id,p_college:review.college,p_major:review.major,p_name:review.name,p_subject:review.subject,p_grade:review.grade,p_explanation:review.scores[0],p_treatment:review.scores[1],p_grading:review.scores[2],p_comment:review.comment,p_tags:review.tags,p_share_grade:gradeConsent(body.shareGrade)})};
+ return {status:201,data:await rpc(db,'miyar_guest_submit',{p_guest:guest.id,p_college:review.college,p_major:review.major,p_name:review.name,p_subject:review.subject,p_grade:review.grade,p_explanation:review.scores[0],p_treatment:review.scores[1],p_grading:review.scores[2],p_comment:review.comment,p_tags:review.tags,p_share_grade:gradeConsent(body.shareGrade),...studyCourse(body.courseId)})};
 }

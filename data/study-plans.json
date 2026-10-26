@@ -1,0 +1,4638 @@
+[
+  {
+    "id": "najran-ce-2025",
+    "university": "جامعة نجران",
+    "college": "كلية الهندسة",
+    "major": "الهندسة المدنية",
+    "title": "الهندسة المدنية",
+    "version": "CE-2025",
+    "year": 2025,
+    "source": "CE-2025.pdf",
+    "sha256": "7f2340243eeedb3fe4c1f48bf042279563732236ddf1ae59295fdbe94740db29",
+    "firstLevel": 3,
+    "courses": [
+      {
+        "id": "najran-ce-2025/chem101",
+        "code": "كيم 101",
+        "name": "الكيمياء العامة",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/phys105",
+        "code": "فيز 105",
+        "name": "الفيزياء المتقدمة",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/math106",
+        "code": "ريض 106",
+        "name": "المدخل لحساب التكامل",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/thqf211",
+        "code": "ثقف 211",
+        "name": "ثقافة المسلم 1",
+        "credits": 2,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ge101",
+        "code": "هعم 101",
+        "name": "استاتيكا",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce121",
+        "code": "همد 121",
+        "name": "الجيولوجيا الهندسية",
+        "credits": 2,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/thqf212",
+        "code": "ثقف 212",
+        "name": "ثقافة المسلم 2",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/arab101",
+        "code": "عرب 101",
+        "name": "المهارات اللغوية والكتابية",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/nat102",
+        "code": "وطن 102",
+        "name": "الهوية الوطنية",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce141",
+        "code": "همد 141",
+        "name": "مقاومة المواد",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "هعم 101"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/math203",
+        "code": "ريض 203",
+        "name": "التفاضل والتكامل المتقدم",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "ريض 106"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ge205",
+        "code": "هعم 205",
+        "name": "ديناميكا",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "هعم 101"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/arc122",
+        "code": "عمر 122",
+        "name": "تطبيقات الحاسوب في التصميم 1",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ge204",
+        "code": "هعم 204",
+        "name": "برمجة الحاسب للمهندسين",
+        "credits": null,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "review": "المقرر مكرر في المستوى نفسه بساعتين وثلاث ساعات؛ يلزم تأكيد الساعات من القسم."
+      },
+      {
+        "id": "najran-ce-2025/ce260",
+        "code": "همد 260",
+        "name": "هندسة المساحة",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "ريض 203"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/stat324",
+        "code": "إحص 324",
+        "name": "الاحتمالات والإحصاء الهندسي",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/math204",
+        "code": "ريض 204",
+        "name": "المعادلات التفاضلية",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "ريض 106"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce211",
+        "code": "همد 211",
+        "name": "ميكانيكا الموائع",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "هعم 205"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/math254",
+        "code": "ريض 254",
+        "name": "الطرق العددية",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "ريض 204"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce222",
+        "code": "همد 222",
+        "name": "الهندسة الجيوتقنية",
+        "credits": 4,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "همد 121"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce251",
+        "code": "همد 251",
+        "name": "تحليل إنشائي 1",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "همد 141"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce242",
+        "code": "همد 242",
+        "name": "خواص واختبارات المواد الإنشائية",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "همد 141"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce212",
+        "code": "همد 212",
+        "name": "هيدروليكا",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "همد 211"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce352",
+        "code": "همد 352",
+        "name": "خرسانة مسلحة 1",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "همد 251"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ge308",
+        "code": "هعم 308",
+        "name": "الاقتصاد والإدارة الهندسية",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce331",
+        "code": "همد 331",
+        "name": "هندسة النقل والمرور",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "همد 260"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce313",
+        "code": "همد 313",
+        "name": "هيدرولوجيا وإدارة الموارد المائية",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "همد 212"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce370",
+        "code": "همد 370",
+        "name": "أنظمة الإمداد بالمياه والصرف الصحي",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "همد 212"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/slot-uni-1",
+        "code": "اختياري",
+        "name": "مقرر اختياري — متطلب جامعة",
+        "credits": 2,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-ce-2025/ce381",
+        "code": "همد 381",
+        "name": "هندسة وإدارة التشييد",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "هعم 308"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce353",
+        "code": "همد 353",
+        "name": "تحليل إنشائي 2",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "همد 251"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce323",
+        "code": "همد 323",
+        "name": "هندسة الأساسات",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "همد 222"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce354",
+        "code": "همد 354",
+        "name": "خرسانة مسلحة 2",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "همد 352"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/slot-ce1-1",
+        "code": "اختياري",
+        "name": "مقرر اختياري 1",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "ce1",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-ce-2025/ce391",
+        "code": "همد 391",
+        "name": "مشروع التخرج 1",
+        "credits": 2,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "minimumCredits": 120
+      },
+      {
+        "id": "najran-ce-2025/ce455",
+        "code": "همد 455",
+        "name": "منشآت معدنية",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "review": "المتطلب في الملف همك 372؛ يحتاج تأكيد القسم ولا يُستبدل بمقرر مدني تلقائيًا."
+      },
+      {
+        "id": "najran-ce-2025/ce482",
+        "code": "همد 482",
+        "name": "عقود ومواصفات",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce434",
+        "code": "همد 434",
+        "name": "هندسة الطرق",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "review": "المتطلب في الملف همك 231؛ يحتاج تأكيد القسم."
+      },
+      {
+        "id": "najran-ce-2025/ce472",
+        "code": "همد 472",
+        "name": "هندسة البيئة",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "review": "المتطلب في الملف همك 261؛ يحتاج تأكيد القسم."
+      },
+      {
+        "id": "najran-ce-2025/slot-ce2-1",
+        "code": "اختياري",
+        "name": "مقرر اختياري 2",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "ce2",
+        "kind": "slot",
+        "linkable": false,
+        "review": "المتطلب في الملف همك 396؛ يحتاج تأكيد القسم."
+      },
+      {
+        "id": "najran-ce-2025/ce492",
+        "code": "همد 492",
+        "name": "مشروع التخرج 2",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "review": "المتطلب في الملف همك 342؛ يحتاج تأكيد القسم."
+      },
+      {
+        "id": "najran-ce-2025/ce493",
+        "code": "همد 493",
+        "name": "التدريب التعاوني",
+        "credits": 3,
+        "level": 10,
+        "page": 9,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "allPrevious": true
+      },
+      {
+        "id": "najran-ce-2025/ce315",
+        "code": "همد 315",
+        "name": "تصميم المنشآت الهيدروليكية",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "همد 212"
+        ],
+        "corequisites": [],
+        "pool": "ce1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce324",
+        "code": "همد 324",
+        "name": "تحسين المواد الجيوتقنية",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "همد 222"
+        ],
+        "corequisites": [],
+        "pool": "ce1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce361",
+        "code": "همد 361",
+        "name": "تطبيقات الاستشعار عن بعد ونظام المعلومات الجغرافية في الهندسة المدنية",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "همد 260"
+        ],
+        "corequisites": [],
+        "pool": "ce1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce332",
+        "code": "همد 332",
+        "name": "تخطيط النقل",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "همد 331"
+        ],
+        "corequisites": [],
+        "pool": "ce1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce356",
+        "code": "همد 356",
+        "name": "تحليل وتصميم المباني",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "همد 354"
+        ],
+        "corequisites": [],
+        "pool": "ce1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce383",
+        "code": "همد 383",
+        "name": "تقدير تكلفة التشييد",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "ce1",
+        "kind": "course",
+        "linkable": true,
+        "review": "المتطلب همد 308 غير مدرج؛ لا يُفترض أنه هعم 308."
+      },
+      {
+        "id": "najran-ce-2025/ce373",
+        "code": "همد 373",
+        "name": "التقييم البيئي وإدارة النظم البيئية",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "همد 370"
+        ],
+        "corequisites": [],
+        "pool": "ce1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce474",
+        "code": "همد 474",
+        "name": "موضوعات مختارة في هندسة المياه والبيئة",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "همد 370"
+        ],
+        "corequisites": [],
+        "pool": "ce2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce425",
+        "code": "همد 425",
+        "name": "موضوعات مختارة في الهندسة الجيوتقنية",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "همد 222"
+        ],
+        "corequisites": [],
+        "pool": "ce2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce435",
+        "code": "همد 435",
+        "name": "موضوعات مختارة في هندسة النقل",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "همد 331"
+        ],
+        "corequisites": [],
+        "pool": "ce2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce457",
+        "code": "همد 457",
+        "name": "موضوعات مختارة في الهندسة الإنشائية",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "همد 354"
+        ],
+        "corequisites": [],
+        "pool": "ce2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/ce484",
+        "code": "همد 484",
+        "name": "موضوعات مختارة في هندسة التشييد",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "همد 381"
+        ],
+        "corequisites": [],
+        "pool": "ce2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/env122",
+        "code": "نهج 122",
+        "name": "الثقافة البيئية",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/it102",
+        "code": "نال 102",
+        "name": "مهارات رقمية متقدمة",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/psy334",
+        "code": "نفس 334",
+        "name": "المنطق والتفكير الناقد",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/bus110",
+        "code": "عمل 110",
+        "name": "مبادئ الإدارة",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/law116",
+        "code": "نظم 116",
+        "name": "قيم النزاهة",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ce-2025/bus262",
+        "code": "عمل 262",
+        "name": "ريادة الأعمال",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      }
+    ],
+    "groups": [
+      {
+        "id": "uni",
+        "name": "متطلب جامعة",
+        "slots": [
+          "najran-ce-2025/slot-uni-1"
+        ]
+      },
+      {
+        "id": "ce1",
+        "name": "المقررات الاختيارية — ce1",
+        "slots": [
+          "najran-ce-2025/slot-ce1-1"
+        ]
+      },
+      {
+        "id": "ce2",
+        "name": "المقررات الاختيارية — ce2",
+        "slots": [
+          "najran-ce-2025/slot-ce2-1"
+        ]
+      }
+    ],
+    "notes": [
+      "الملف يبدأ من المستوى الثالث؛ مواد المسار الهندسي أو السنة التحضيرية غير مدرجة.",
+      "يعرض مِعيار المتطلبات كما وردت في الملف المرفوع؛ تأكد من خطتك الفعلية ومرشدك قبل التسجيل.",
+      "المستوى الخامس يكرر هعم 204 بساعتين وثلاث ساعات. أدرج مرة واحدة بثلاث ساعات مؤقتًا، ولا يُعتمد مجموع الساعات لحسم التخرج."
+    ],
+    "uncertainCredits": true,
+    "fileLabel": "CE-2025"
+  },
+  {
+    "id": "najran-me-2026",
+    "university": "جامعة نجران",
+    "college": "كلية الهندسة",
+    "major": "الهندسة الميكانيكية",
+    "title": "الهندسة الميكانيكية",
+    "version": "ME-2026",
+    "year": 2026,
+    "source": "ME-2026.pdf",
+    "sha256": "f63a5a524d3c68208dd82bf1455df5f2ece0240e35fd21e5b9afd028496b2e4b",
+    "firstLevel": 3,
+    "courses": [
+      {
+        "id": "najran-me-2026/thqf111",
+        "code": "ثقف 111",
+        "name": "ثقافة المسلم 1",
+        "credits": 2,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/phys105",
+        "code": "فيز 105",
+        "name": "الفيزياء المتقدمة",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [
+          "فيز 141"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/math106",
+        "code": "ريض 106",
+        "name": "المدخل لحساب التكامل",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/chem101",
+        "code": "كيم 101",
+        "name": "الكيمياء العامة",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/ge101",
+        "code": "هعم 101",
+        "name": "استاتيكا",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me101",
+        "code": "همك 101",
+        "name": "الرسم الهندسي الميكانيكي",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/thqf212",
+        "code": "ثقف 212",
+        "name": "ثقافة المسلم 2",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "ثقف 111"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/it101",
+        "code": "نال 101",
+        "name": "المهارات الرقمية",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/nat102",
+        "code": "وطن 102",
+        "name": "الهوية الوطنية",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/ee216",
+        "code": "كهر 216",
+        "name": "الدوائر الكهربائية 1",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "فيز 105"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/math203",
+        "code": "ريض 203",
+        "name": "التفاضل والتكامل المتقدم",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "ريض 106"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/ge205",
+        "code": "هعم 205",
+        "name": "ديناميكا",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "هعم 101"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me111",
+        "code": "همك 111",
+        "name": "علوم وهندسة المواد",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "كيم 101"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/arab101",
+        "code": "عرب 101",
+        "name": "المهارات اللغوية والكتابية",
+        "credits": 2,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me261",
+        "code": "همك 261",
+        "name": "عمليات التصنيع",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "هعم 101"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/ge204",
+        "code": "هعم 204",
+        "name": "برمجة الحاسب للمهندسين",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "هعم 101"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me221",
+        "code": "همك 221",
+        "name": "الديناميكا الحرارية 1",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "ريض 203"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/math204",
+        "code": "ريض 204",
+        "name": "المعادلات التفاضلية",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "ريض 106"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me213",
+        "code": "همك 213",
+        "name": "ميكانيكا المواد",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "همك 111"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me231",
+        "code": "همك 231",
+        "name": "ميكانيكا الموائع",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "همك 221"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/stat324",
+        "code": "إحص 324",
+        "name": "الاحتمالات والإحصاء الهندسي",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me212",
+        "code": "همك 212",
+        "name": "ميكانيكا الآلات",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "همك 261"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me222",
+        "code": "همك 222",
+        "name": "الديناميكا الحرارية 2",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "ريض 203"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me241",
+        "code": "همك 241",
+        "name": "التصميم الهندسي الميكانيكي 1",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "همك 213"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/math254",
+        "code": "ريض 254",
+        "name": "الطرق العددية",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "ريض 204"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me372",
+        "code": "همك 372",
+        "name": "كفاءة الطاقة",
+        "credits": 2,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me323",
+        "code": "همك 323",
+        "name": "انتقال الحرارة",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "همك 221"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me324",
+        "code": "همك 324",
+        "name": "آلات الاحتراق الداخلي",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "همك 222"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me351",
+        "code": "همك 351",
+        "name": "الاهتزازات الميكانيكية",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "همك 212"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me342",
+        "code": "همك 342",
+        "name": "التصميم الهندسي الميكانيكي 2",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "همك 241"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/ge308",
+        "code": "هعم 308",
+        "name": "الاقتصاد والإدارة الهندسية",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/slot-me1-1",
+        "code": "اختياري",
+        "name": "مقرر اختياري 1",
+        "credits": 2,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "me1",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-me-2026/me352",
+        "code": "همك 352",
+        "name": "ديناميكا النظم والتحكم",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "هعم 205",
+          "ريض 204"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me325",
+        "code": "همك 325",
+        "name": "تبريد وتكييف",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "همك 323"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me302",
+        "code": "همك 302",
+        "name": "القياسات الميكانيكية",
+        "credits": 2,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "همك 351"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me396",
+        "code": "همك 396",
+        "name": "مشروع التخرج 1",
+        "credits": 2,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "minimumCredits": 115
+      },
+      {
+        "id": "najran-me-2026/me471",
+        "code": "همك 471",
+        "name": "الطاقة المتجددة",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "همك 372"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/slot-me2-1",
+        "code": "اختياري",
+        "name": "مقرر اختياري 2",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "me2",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-me-2026/me443",
+        "code": "همك 443",
+        "name": "الآلات الهيدروليكية",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "همك 231"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me462",
+        "code": "همك 462",
+        "name": "تكنولوجيا التصنيع الحديثة",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "همك 261"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me497",
+        "code": "همك 497",
+        "name": "مشروع التخرج 2",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "همك 396"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me444",
+        "code": "همك 444",
+        "name": "التصميم بمساعدة الحاسب",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "همك 342"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me495",
+        "code": "همك 495",
+        "name": "التدريب التعاوني",
+        "credits": 3,
+        "level": 10,
+        "page": 9,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "completedLevel": 9
+      },
+      {
+        "id": "najran-me-2026/me381",
+        "code": "همك 381",
+        "name": "ميكاترونكس",
+        "credits": 2,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "همك 213",
+          "كهر 216"
+        ],
+        "corequisites": [],
+        "pool": "me1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me382",
+        "code": "همك 382",
+        "name": "تقنية النانو",
+        "credits": 2,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "همك 213"
+        ],
+        "corequisites": [],
+        "pool": "me1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me383",
+        "code": "همك 383",
+        "name": "الاختبارات غير المدمرة",
+        "credits": 2,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "همك 213"
+        ],
+        "corequisites": [],
+        "pool": "me1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me384",
+        "code": "همك 384",
+        "name": "المواد المركبة",
+        "credits": 2,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "همك 213",
+          "همك 241"
+        ],
+        "corequisites": [],
+        "pool": "me1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me482",
+        "code": "همك 482",
+        "name": "محطات القوى",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "همك 324"
+        ],
+        "corequisites": [],
+        "pool": "me2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me484",
+        "code": "همك 484",
+        "name": "منظومة الموائع الحرارية",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "همك 323"
+        ],
+        "corequisites": [],
+        "pool": "me2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me485",
+        "code": "همك 485",
+        "name": "الروبوتات",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "همك 342"
+        ],
+        "corequisites": [],
+        "pool": "me2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/me486",
+        "code": "همك 486",
+        "name": "هندسة السيارات",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "همك 351"
+        ],
+        "corequisites": [],
+        "pool": "me2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/env122",
+        "code": "نهج 122",
+        "name": "الثقافة البيئية",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/it102",
+        "code": "نال 102",
+        "name": "مهارات رقمية متقدمة",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/psy334",
+        "code": "نفس 334",
+        "name": "المنطق والتفكير الناقد",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/bus110",
+        "code": "عمل 110",
+        "name": "مبادئ الإدارة",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/law116",
+        "code": "نظم 116",
+        "name": "قيم النزاهة",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/bus261",
+        "code": "عمل 261",
+        "name": "ريادة الأعمال",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-me-2026/hist201",
+        "code": "ترخ 201",
+        "name": "التاريخ السعودي",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      }
+    ],
+    "groups": [
+      {
+        "id": "me1",
+        "name": "المقررات الاختيارية — me1",
+        "slots": [
+          "najran-me-2026/slot-me1-1"
+        ]
+      },
+      {
+        "id": "me2",
+        "name": "المقررات الاختيارية — me2",
+        "slots": [
+          "najran-me-2026/slot-me2-1"
+        ]
+      }
+    ],
+    "notes": [
+      "الملف يبدأ من المستوى الثالث؛ مواد المسار الهندسي أو السنة التحضيرية غير مدرجة.",
+      "يعرض مِعيار المتطلبات كما وردت في الملف المرفوع؛ تأكد من خطتك الفعلية ومرشدك قبل التسجيل.",
+      "مجموع ساعات بعض المستويات لا يطابق بنودها؛ يعرض التطبيق مجموع البنود المدرجة، ولا يستنتج منه استحقاق التخرج."
+    ],
+    "fileLabel": "ME-2026"
+  },
+  {
+    "id": "najran-che-2025",
+    "university": "جامعة نجران",
+    "college": "كلية الهندسة",
+    "major": "الهندسة الكيميائية",
+    "title": "الهندسة الكيميائية",
+    "version": "CHE-2025",
+    "year": 2025,
+    "source": "CHE-2025.pdf",
+    "sha256": "53993671a9cbb7107a1536c51aaab2381c7a2abcc8764e0400cfb3961e90821e",
+    "firstLevel": 3,
+    "courses": [
+      {
+        "id": "najran-che-2025/thqf111",
+        "code": "ثقف 111",
+        "name": "ثقافة المسلم 1",
+        "credits": 2,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/phys105",
+        "code": "فيز 105",
+        "name": "الفيزياء المتقدمة",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/math106",
+        "code": "ريض 106",
+        "name": "المدخل لحساب التكامل",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/chem101",
+        "code": "كيم 101",
+        "name": "الكيمياء العامة",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/ge101",
+        "code": "هعم 101",
+        "name": "استاتيكا",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che201",
+        "code": "هكم 201",
+        "name": "السلامة الصناعية",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/math203",
+        "code": "ريض 203",
+        "name": "التفاضل والتكامل المتقدم",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "ريض 106"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/ge204",
+        "code": "هعم 204",
+        "name": "برمجة الحاسب للمهندسين",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/nat102",
+        "code": "وطن 102",
+        "name": "الهوية الوطنية",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/thqf212",
+        "code": "ثقف 212",
+        "name": "ثقافة المسلم 2",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "ثقف 111"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/chem102",
+        "code": "كيم 102",
+        "name": "الكيمياء العامة 2",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "كيم 101"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che202",
+        "code": "هكم 202",
+        "name": "مبادئ الهندسة الكيميائية 1",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/arab101",
+        "code": "عرب 101",
+        "name": "المهارات اللغوية والكتابية",
+        "credits": 2,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/math204",
+        "code": "ريض 204",
+        "name": "المعادلات التفاضلية",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "ريض 106"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/chem241",
+        "code": "كيم 241",
+        "name": "كيمياء عضوية 1",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che203",
+        "code": "هكم 203",
+        "name": "مبادئ الهندسة الكيميائية 2",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "هكم 202"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che311",
+        "code": "هكم 311",
+        "name": "ميكانيكا الموائع",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "فيز 105",
+          "ريض 203"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/chem232",
+        "code": "كيم 232",
+        "name": "كيمياء الديناميكا الحرارية",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "كيم 102"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/stat324",
+        "code": "إحص 324",
+        "name": "الاحتمالات والإحصاء الهندسي",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/it101",
+        "code": "نال 101",
+        "name": "المهارات الرقمية",
+        "credits": 2,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che304",
+        "code": "هكم 304",
+        "name": "الديناميكا الحرارية في الهندسة الكيميائية",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "ريض 203",
+          "كيم 232"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che312",
+        "code": "هكم 312",
+        "name": "انتقال الكتلة",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "هكم 203",
+          "هكم 305"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che313",
+        "code": "هكم 313",
+        "name": "انتقال الحرارة",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "ريض 203",
+          "فيز 105"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che305",
+        "code": "هكم 305",
+        "name": "توازن الأطوار الكيميائي",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "هكم 303",
+          "هكم 304"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/math254",
+        "code": "ريض 254",
+        "name": "الطرق العددية",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "ريض 204"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/chem251",
+        "code": "كيم 251",
+        "name": "كيمياء التحليل الكمي",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che406",
+        "code": "هكم 406",
+        "name": "عملي الهندسة الكيميائية 1",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "هكم 311",
+          "هكم 312",
+          "هكم 313"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che407",
+        "code": "هكم 407",
+        "name": "هندسة التفاعلات الكيميائية",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "كيم 102",
+          "هكم 303"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che421",
+        "code": "هكم 421",
+        "name": "عمليات الفصل",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "هكم 305",
+          "هكم 312"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/slot-che1-1",
+        "code": "اختياري",
+        "name": "مقرر اختياري 1",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "che1",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-che-2025/ge308",
+        "code": "هعم 308",
+        "name": "الاقتصاد والإدارة الهندسية",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che408",
+        "code": "هكم 408",
+        "name": "عملي الهندسة الكيميائية 2",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "هكم 407",
+          "هكم 421"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che422",
+        "code": "هكم 422",
+        "name": "التصميم في الهندسة الكيميائية",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "هعم 308",
+          "هكم 421"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che423",
+        "code": "هكم 423",
+        "name": "تحكم وديناميكا العمليات الكيميائية",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "ريض 254",
+          "هكم 407"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che441",
+        "code": "هكم 441",
+        "name": "مشروع التخرج 1",
+        "credits": 2,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "completedLevel": 7
+      },
+      {
+        "id": "najran-che-2025/slot-che2-1",
+        "code": "اختياري",
+        "name": "مقرر اختياري 2",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "che2",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-che-2025/che526",
+        "code": "هكم 526",
+        "name": "تكنولوجيا العمليات الصناعية",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che527",
+        "code": "هكم 527",
+        "name": "تحسين العمليات الكيميائية",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "هكم 423"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che528",
+        "code": "هكم 528",
+        "name": "أتمتة العمليات الكيميائية",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "هكم 423"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/slot-che3-1",
+        "code": "اختياري",
+        "name": "مقرر اختياري 3",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "che3",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-che-2025/che542",
+        "code": "هكم 542",
+        "name": "مشروع التخرج 2",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "هكم 441"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che525",
+        "code": "هكم 525",
+        "name": "التدريب التعاوني",
+        "credits": 3,
+        "level": 10,
+        "page": 9,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "allPrevious": true
+      },
+      {
+        "id": "najran-che-2025/che431",
+        "code": "هكم 431",
+        "name": "عمليات تكرير النفط",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "كيم 241"
+        ],
+        "corequisites": [],
+        "pool": "che1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che432",
+        "code": "هكم 432",
+        "name": "تكنولوجيا البوليمرات",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "كيم 241"
+        ],
+        "corequisites": [],
+        "pool": "che1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che433",
+        "code": "هكم 433",
+        "name": "علم المواد للهندسة الكيميائية",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "كيم 102"
+        ],
+        "corequisites": [],
+        "pool": "che1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che434",
+        "code": "هكم 434",
+        "name": "عمليات الغاز الطبيعي",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "هكم 431"
+        ],
+        "corequisites": [],
+        "pool": "che2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che435",
+        "code": "هكم 435",
+        "name": "المواد البلاستيكية وغير المعدنية",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "هكم 432"
+        ],
+        "corequisites": [],
+        "pool": "che2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che436",
+        "code": "هكم 436",
+        "name": "المواد المتقدمة والمحفزات",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "هكم 433"
+        ],
+        "corequisites": [],
+        "pool": "che2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che537",
+        "code": "هكم 537",
+        "name": "تكنولوجيا البتروكيماويات",
+        "credits": 3,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [
+          "هكم 434"
+        ],
+        "corequisites": [],
+        "pool": "che3",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che538",
+        "code": "هكم 538",
+        "name": "صناعة اللدائن والمطاط",
+        "credits": 3,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [
+          "هكم 435"
+        ],
+        "corequisites": [],
+        "pool": "che3",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/che539",
+        "code": "هكم 539",
+        "name": "التطوير في الطاقة المستدامة",
+        "credits": 3,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [
+          "هكم 436"
+        ],
+        "corequisites": [],
+        "pool": "che3",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/env122",
+        "code": "نهج 122",
+        "name": "الثقافة البيئية",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/it102",
+        "code": "نال 102",
+        "name": "مهارات رقمية متقدمة",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/psy334",
+        "code": "نفس 334",
+        "name": "المنطق والتفكير الناقد",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/bus110",
+        "code": "عمل 110",
+        "name": "مبادئ الإدارة",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/law116",
+        "code": "نظم 116",
+        "name": "قيم النزاهة",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-che-2025/bus261",
+        "code": "عمل 261",
+        "name": "ريادة الأعمال",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      }
+    ],
+    "groups": [
+      {
+        "id": "che1",
+        "name": "المقررات الاختيارية — che1",
+        "slots": [
+          "najran-che-2025/slot-che1-1"
+        ]
+      },
+      {
+        "id": "che2",
+        "name": "المقررات الاختيارية — che2",
+        "slots": [
+          "najran-che-2025/slot-che2-1"
+        ]
+      },
+      {
+        "id": "che3",
+        "name": "المقررات الاختيارية — che3",
+        "slots": [
+          "najran-che-2025/slot-che3-1"
+        ]
+      }
+    ],
+    "notes": [
+      "الملف يبدأ من المستوى الثالث؛ مواد المسار الهندسي أو السنة التحضيرية غير مدرجة.",
+      "يعرض مِعيار المتطلبات كما وردت في الملف المرفوع؛ تأكد من خطتك الفعلية ومرشدك قبل التسجيل.",
+      "الملف يشير إلى هكم 303 بوصفه متطلبًا، لكنه غير مدرج ضمن المواد؛ يحتاج تأكيدًا من القسم.",
+      "المستوى التاسع عنوانه 16 ساعة بينما البنود المدرجة تجمع 14 ساعة؛ لا نضيف الساعتين المفقودتين دون تأكيد القسم."
+    ],
+    "fileLabel": "CHE-2025"
+  },
+  {
+    "id": "najran-ee-2025",
+    "university": "جامعة نجران",
+    "college": "كلية الهندسة",
+    "major": "الهندسة الكهربائية",
+    "title": "الهندسة الكهربائية",
+    "version": "EE-2025",
+    "year": 2025,
+    "source": "EE-2025.pdf",
+    "sha256": "f53f5c8aee5cc4c62198a1063144ba13938f390b6ed4025935e9db9d27546c29",
+    "firstLevel": 3,
+    "courses": [
+      {
+        "id": "najran-ee-2025/thqf111",
+        "code": "ثقف 111",
+        "name": "ثقافة المسلم 1",
+        "credits": 2,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/phys105",
+        "code": "فيز 105",
+        "name": "الفيزياء المتقدمة",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [
+          "فيز 141"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/math106",
+        "code": "ريض 106",
+        "name": "المدخل لحساب التكامل",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/chem101",
+        "code": "كيم 101",
+        "name": "الكيمياء العامة",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ge101",
+        "code": "هعم 101",
+        "name": "استاتيكا",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/nat102",
+        "code": "وطن 102",
+        "name": "الهوية الوطنية",
+        "credits": 2,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/it101",
+        "code": "نال 101",
+        "name": "المهارات الرقمية",
+        "credits": 2,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/thqf212",
+        "code": "ثقف 212",
+        "name": "ثقافة المسلم 2",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "ثقف 111"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/math203",
+        "code": "ريض 203",
+        "name": "التفاضل والتكامل المتقدم",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "ريض 106"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee251",
+        "code": "كهر 251",
+        "name": "التصميم المنطقي",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee252",
+        "code": "كهر 252",
+        "name": "معمل التصميم المنطقي",
+        "credits": 1,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [
+          "كهر 251"
+        ],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee216",
+        "code": "كهر 216",
+        "name": "الدوائر الكهربائية 1",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "ريض 106",
+          "فيز 105"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ge205",
+        "code": "هعم 205",
+        "name": "برمجة الحاسب للمهندسين",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "نال 101"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/me111",
+        "code": "همك 111",
+        "name": "المعادلات التفاضلية",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "ريض 106"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee202",
+        "code": "كهر 202",
+        "name": "الرياضيات الهندسية",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "ريض 203"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/arab101",
+        "code": "عرب 101",
+        "name": "المهارات اللغوية والكتابية",
+        "credits": 2,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee253",
+        "code": "كهر 253",
+        "name": "تطبيقات البرمجيات في الهندسة الكهربائية",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "هعم 204"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/math254",
+        "code": "ريض 254",
+        "name": "الطرق العددية",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "ريض 204"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/stat324",
+        "code": "إحص 324",
+        "name": "الاحتمالات والإحصاء الهندسي",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee217",
+        "code": "كهر 217",
+        "name": "الدوائر الكهربائية 2",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "كهر 216"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee213",
+        "code": "كهر 213",
+        "name": "معمل الدوائر الكهربائية",
+        "credits": 1,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [
+          "كهر 217"
+        ],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee214",
+        "code": "كهر 214",
+        "name": "الأجهزة والقياسات",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "كهر 216"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee215",
+        "code": "كهر 215",
+        "name": "معمل الأجهزة والقياسات",
+        "credits": 1,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [],
+        "corequisites": [
+          "كهر 214"
+        ],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee220",
+        "code": "كهر 220",
+        "name": "الآلات الكهربائية 1",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "كهر 217"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee242",
+        "code": "كهر 242",
+        "name": "تحليل الإشارات والنظم",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "كهر 202"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee231",
+        "code": "كهر 231",
+        "name": "إلكترونيات 1",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "كهر 216"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee240",
+        "code": "كهر 240",
+        "name": "الكهرومغناطيسية 1",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "كهر 202",
+          "فيز 105"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee340",
+        "code": "كهر 340",
+        "name": "الكهرومغناطيسية 2",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "كهر 240"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee354",
+        "code": "كهر 354",
+        "name": "مقدمة في المعالجات الدقيقة",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "كهر 251"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee355",
+        "code": "كهر 355",
+        "name": "معمل المعالجات الدقيقة",
+        "credits": 1,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [],
+        "corequisites": [
+          "كهر 354"
+        ],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee343",
+        "code": "كهر 343",
+        "name": "مبادئ أنظمة الاتصالات",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "كهر 242"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ge308",
+        "code": "هعم 308",
+        "name": "الاقتصاد والإدارة الهندسية",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee332",
+        "code": "كهر 332",
+        "name": "إلكترونيات 2",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "كهر 231"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee333",
+        "code": "كهر 333",
+        "name": "معمل الإلكترونيات",
+        "credits": 1,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [],
+        "corequisites": [
+          "كهر 332"
+        ],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee320",
+        "code": "كهر 320",
+        "name": "الآلات الكهربائية 2",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "كهر 220"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee321",
+        "code": "كهر 321",
+        "name": "معمل الآلات الكهربائية",
+        "credits": 1,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [
+          "كهر 320"
+        ],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee344",
+        "code": "كهر 344",
+        "name": "الاتصالات الرقمية",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "كهر 343"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee345",
+        "code": "كهر 345",
+        "name": "معمل الاتصالات",
+        "credits": 1,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [
+          "كهر 344"
+        ],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee391",
+        "code": "كهر 391",
+        "name": "مشروع التخرج 1",
+        "credits": 2,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "كهر 253",
+          "هعم 308"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "review": "يذكر الملف أيضًا إكمال 120 من 158 ساعة بصياغة غير واضحة؛ تأكد من شرط المشروع مع القسم."
+      },
+      {
+        "id": "najran-ee-2025/ee324",
+        "code": "كهر 324",
+        "name": "تحليل أنظمة القوى 1",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "كهر 217"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee325",
+        "code": "كهر 325",
+        "name": "معمل أنظمة القوى",
+        "credits": 1,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [
+          "كهر 324"
+        ],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee361",
+        "code": "كهر 361",
+        "name": "التحكم الآلي",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "كهر 242"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee362",
+        "code": "كهر 362",
+        "name": "معمل التحكم الآلي",
+        "credits": 1,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [
+          "كهر 361"
+        ],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee492",
+        "code": "كهر 492",
+        "name": "مشروع التخرج 2",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "كهر 391"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/slot-ee-1",
+        "code": "اختياري",
+        "name": "مقرر اختياري 1",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-ee-2025/slot-ee-2",
+        "code": "اختياري",
+        "name": "مقرر اختياري 2",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-ee-2025/slot-ee-3",
+        "code": "اختياري",
+        "name": "مقرر اختياري 3",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-ee-2025/slot-ee-4",
+        "code": "اختياري",
+        "name": "مقرر اختياري 4",
+        "credits": 3,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-ee-2025/slot-uni-1",
+        "code": "اختياري",
+        "name": "مقرر اختياري — متطلب جامعة",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-ee-2025/ee490",
+        "code": "كهر 490",
+        "name": "التدريب التعاوني",
+        "credits": 3,
+        "level": 10,
+        "page": 9,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "allPrevious": true
+      },
+      {
+        "id": "najran-ee-2025/ee430",
+        "code": "كهر 430",
+        "name": "التحريك الكهربائي",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "كهر 220"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee434",
+        "code": "كهر 434",
+        "name": "تصميم VLSI",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "كهر 332"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee446",
+        "code": "كهر 446",
+        "name": "النظم المضمنة",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "كهر 354"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee456",
+        "code": "كهر 456",
+        "name": "معالجات الإشارات الرقمية",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "كهر 242"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee441",
+        "code": "كهر 441",
+        "name": "هندسة الموجات الدقيقة",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "كهر 340"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee429",
+        "code": "كهر 429",
+        "name": "مواضيع مختارة في أنظمة القوى",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee435",
+        "code": "كهر 435",
+        "name": "تحليل وتصميم الدوائر المتكاملة",
+        "credits": 3,
+        "level": 0,
+        "page": 11,
+        "prerequisites": [
+          "كهر 332"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee431",
+        "code": "كهر 431",
+        "name": "حماية أنظمة القوى",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "كهر 324"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee432",
+        "code": "كهر 432",
+        "name": "تحليل أنظمة القوى 2",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "كهر 324"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee442",
+        "code": "كهر 442",
+        "name": "الهوائيات وانتشار الموجات",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "كهر 344"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee448",
+        "code": "كهر 448",
+        "name": "الاتصالات اللاسلكية",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "كهر 344"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee449",
+        "code": "كهر 449",
+        "name": "مواضيع مختارة في الاتصالات",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee451",
+        "code": "كهر 451",
+        "name": "معالجة الصور الرقمية",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "كهر 242"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee436",
+        "code": "كهر 436",
+        "name": "مواضيع مختارة في الإلكترونيات",
+        "credits": 3,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee464",
+        "code": "كهر 464",
+        "name": "مقدمة في الروبوتات",
+        "credits": 3,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [
+          "كهر 361"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee463",
+        "code": "كهر 463",
+        "name": "التحكم التطبيقي",
+        "credits": 1,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [
+          "كهر 361"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true,
+        "review": "ساعة واحدة في الجدول مع رمز ينتهي بثلاث ساعات؛ لا يُحتسب كاختياري ثلاث ساعات دون مراجعة."
+      },
+      {
+        "id": "najran-ee-2025/ee447",
+        "code": "كهر 447",
+        "name": "الشبكات واتصالات البيانات",
+        "credits": 3,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [
+          "كهر 344"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee418",
+        "code": "كهر 418",
+        "name": "أنظمة الطاقة المتجددة",
+        "credits": 3,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [
+          "كهر 324"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee419",
+        "code": "كهر 419",
+        "name": "كفاءة الطاقة",
+        "credits": 3,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [
+          "كهر 324"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/ee437",
+        "code": "كهر 437",
+        "name": "مقدمة في الإلكترونيات الدقيقة والنانو",
+        "credits": 3,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [
+          "كهر 332"
+        ],
+        "corequisites": [],
+        "pool": "ee",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/env122",
+        "code": "نهج 122",
+        "name": "الثقافة البيئية",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/it102",
+        "code": "نال 102",
+        "name": "مهارات رقمية متقدمة",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/psy334",
+        "code": "نفس 334",
+        "name": "المنطق والتفكير الناقد",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/bus110",
+        "code": "عمل 110",
+        "name": "مبادئ الإدارة",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/law116",
+        "code": "نظم 116",
+        "name": "قيم النزاهة",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/bus261",
+        "code": "عمل 261",
+        "name": "ريادة الأعمال",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/bus101",
+        "code": "عمل 101",
+        "name": "أخلاقيات المهنة",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/hist201",
+        "code": "ترخ 201",
+        "name": "التاريخ السعودي",
+        "credits": 2,
+        "level": 0,
+        "page": 14,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "uni",
+        "kind": "course",
+        "linkable": true
+      }
+    ],
+    "groups": [
+      {
+        "id": "ee",
+        "name": "المقررات الاختيارية — ee",
+        "slots": [
+          "najran-ee-2025/slot-ee-1",
+          "najran-ee-2025/slot-ee-2",
+          "najran-ee-2025/slot-ee-3",
+          "najran-ee-2025/slot-ee-4"
+        ]
+      },
+      {
+        "id": "uni",
+        "name": "متطلب جامعة",
+        "slots": [
+          "najran-ee-2025/slot-uni-1"
+        ]
+      }
+    ],
+    "notes": [
+      "الملف يبدأ من المستوى الثالث؛ مواد المسار الهندسي أو السنة التحضيرية غير مدرجة.",
+      "يعرض مِعيار المتطلبات كما وردت في الملف المرفوع؛ تأكد من خطتك الفعلية ومرشدك قبل التسجيل.",
+      "متطلبات ريض 204 وهعم 204 غير مدرجة بنفس الرموز في هذا الملف؛ لا نعتبر همك 111 أو هعم 205 بدائل تلقائيًا."
+    ],
+    "fileLabel": "EE-2025"
+  },
+  {
+    "id": "najran-arc-2026",
+    "university": "جامعة نجران",
+    "college": "كلية الهندسة",
+    "major": "العمارة",
+    "title": "الهندسة المعمارية",
+    "version": "ARC-2026",
+    "year": 2026,
+    "source": "ARC-2026.pdf",
+    "sha256": "d3fa73f3b4c3ec85dedd3de93d8a2129008289c8c5d648d8e93433e154b7b614",
+    "firstLevel": 3,
+    "courses": [
+      {
+        "id": "najran-arc-2026/thqf111",
+        "code": "ثقف 111",
+        "name": "ثقافة المسلم 1",
+        "credits": 2,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc111",
+        "code": "عمر 111",
+        "name": "أستوديو أساسيات التصميم",
+        "credits": 4,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc121",
+        "code": "عمر 121",
+        "name": "الرسم والإظهار المعماري",
+        "credits": 4,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc131",
+        "code": "عمر 131",
+        "name": "تاريخ ونظرية العمارة 1",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc171",
+        "code": "عمر 171",
+        "name": "مواد البناء",
+        "credits": 3,
+        "level": 3,
+        "page": 2,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/thqf212",
+        "code": "ثقف 212",
+        "name": "ثقافة المسلم 2",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc112",
+        "code": "عمر 112",
+        "name": "أستوديو التصميم المعماري 1",
+        "credits": 4,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "عمر 111"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc122",
+        "code": "عمر 122",
+        "name": "تطبيقات الحاسوب في التصميم 1",
+        "credits": 2,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "عمر 121"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc132",
+        "code": "عمر 132",
+        "name": "تاريخ ونظرية العمارة 2",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "عمر 131"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc141",
+        "code": "عمر 141",
+        "name": "تشييد المباني 1",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [
+          "عمر 121"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc181",
+        "code": "عمر 181",
+        "name": "الإستاتيكا ومقاومة المواد",
+        "credits": 3,
+        "level": 4,
+        "page": 3,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arab101",
+        "code": "عرب 101",
+        "name": "المهارات اللغوية والكتابية",
+        "credits": 2,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc213",
+        "code": "عمر 213",
+        "name": "أستوديو التصميم المعماري 2",
+        "credits": 4,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "عمر 112"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc223",
+        "code": "عمر 223",
+        "name": "تطبيقات الحاسوب في التصميم 2",
+        "credits": 2,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "عمر 122"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc251",
+        "code": "عمر 251",
+        "name": "العمارة المستدامة",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc242",
+        "code": "عمر 242",
+        "name": "تشييد المباني 2",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [
+          "عمر 141"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc261",
+        "code": "عمر 261",
+        "name": "مبادئ التخطيط العمراني",
+        "credits": 3,
+        "level": 5,
+        "page": 4,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/nat102",
+        "code": "وطن 102",
+        "name": "الهوية الوطنية",
+        "credits": 2,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc214",
+        "code": "عمر 214",
+        "name": "أستوديو التصميم المعماري 3",
+        "credits": 4,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "عمر 213"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc224",
+        "code": "عمر 224",
+        "name": "تطبيقات الحاسوب في التصميم 3",
+        "credits": 2,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "عمر 223"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc262",
+        "code": "عمر 262",
+        "name": "الإسكان والمستوطنات",
+        "credits": 2,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "عمر 261"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc272",
+        "code": "عمر 272",
+        "name": "المساحة للمعماريين",
+        "credits": 2,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc273",
+        "code": "عمر 273",
+        "name": "التراث والحفاظ على المباني",
+        "credits": 2,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "عمر 132"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc282",
+        "code": "عمر 282",
+        "name": "التحليل الإنشائي",
+        "credits": 3,
+        "level": 6,
+        "page": 5,
+        "prerequisites": [
+          "عمر 181"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc343",
+        "code": "عمر 343",
+        "name": "رسومات وتفاصيل التشييد",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "عمر 242"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc315",
+        "code": "عمر 315",
+        "name": "أستوديو التصميم المعماري 4",
+        "credits": 5,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "عمر 214"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc352",
+        "code": "عمر 352",
+        "name": "الإضاءة والصوتيات",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc353",
+        "code": "عمر 353",
+        "name": "التصميم المناخي",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "عمر 251"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc383",
+        "code": "عمر 383",
+        "name": "التصميم الإنشائي",
+        "credits": 3,
+        "level": 7,
+        "page": 6,
+        "prerequisites": [
+          "عمر 282"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/it101",
+        "code": "نال 101",
+        "name": "المهارات الرقمية",
+        "credits": 2,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc316",
+        "code": "عمر 316",
+        "name": "أستوديو التصميم المعماري 5",
+        "credits": 5,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [
+          "عمر 315"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc354",
+        "code": "عمر 354",
+        "name": "أنظمة خدمات المبنى",
+        "credits": 3,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc374",
+        "code": "عمر 374",
+        "name": "طرق البحث في العمارة",
+        "credits": 2,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/slot-arc1-1",
+        "code": "اختياري",
+        "name": "اختياري 1 — المجموعة الأولى",
+        "credits": 2,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "arc1",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-arc-2026/slot-arc1-2",
+        "code": "اختياري",
+        "name": "اختياري 2 — المجموعة الأولى",
+        "credits": 2,
+        "level": 8,
+        "page": 7,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "arc1",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-arc-2026/bus162",
+        "code": "عمل 162",
+        "name": "الابتكار وريادة الأعمال",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc463",
+        "code": "عمر 463",
+        "name": "أستوديو التصميم الحضري",
+        "credits": 5,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "عمر 261"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc475",
+        "code": "عمر 475",
+        "name": "نمذجة معلومات البناء BIM",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "عمر 354"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc491",
+        "code": "عمر 491",
+        "name": "مشروع التخرج",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [
+          "عمر 316"
+        ],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/slot-arc2-1",
+        "code": "اختياري",
+        "name": "اختياري 3 — المجموعة الثانية",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "arc2",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-arc-2026/slot-arc2-2",
+        "code": "اختياري",
+        "name": "اختياري 4 — المجموعة الثانية",
+        "credits": 2,
+        "level": 9,
+        "page": 8,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "arc2",
+        "kind": "slot",
+        "linkable": false
+      },
+      {
+        "id": "najran-arc-2026/arc433",
+        "code": "عمر 433",
+        "name": "مواضيع خاصة في العمارة",
+        "credits": 2,
+        "level": 10,
+        "page": 9,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc417",
+        "code": "عمر 417",
+        "name": "أستوديو التصميم المعماري 6",
+        "credits": 5,
+        "level": 10,
+        "page": 9,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "anyPrerequisites": [
+          "عمر 491",
+          "عمر 463"
+        ]
+      },
+      {
+        "id": "najran-arc-2026/arc444",
+        "code": "عمر 444",
+        "name": "حساب الكميات والمواصفات",
+        "credits": 3,
+        "level": 10,
+        "page": 9,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "review": "المتطلب عمر 243 غير مدرج في الملف؛ لا يُستبدل بعمر 343 تلقائيًا."
+      },
+      {
+        "id": "najran-arc-2026/arc492",
+        "code": "عمر 492",
+        "name": "الأخلاق والممارسة المهنية",
+        "credits": 2,
+        "level": 10,
+        "page": 9,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/ge408",
+        "code": "هعم 408",
+        "name": "الاقتصاد والإدارة الهندسية",
+        "credits": 3,
+        "level": 10,
+        "page": 9,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc493",
+        "code": "عمر 493",
+        "name": "التدريب التعاوني",
+        "credits": 3,
+        "level": 11,
+        "page": 10,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "allPrevious": true
+      },
+      {
+        "id": "najran-arc-2026/arc355",
+        "code": "عمر 355",
+        "name": "التصميم الموفر للطاقة",
+        "credits": 2,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "عمر 353"
+        ],
+        "corequisites": [],
+        "pool": "arc1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/ambiguous-daylight",
+        "code": "عمر 356",
+        "name": "تصميم الإضاءة الطبيعية",
+        "credits": 2,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "عمر 352"
+        ],
+        "corequisites": [],
+        "pool": "arc1",
+        "kind": "course",
+        "linkable": false,
+        "review": "الرمز عمر 356 مكرر مع مادة نظم المعلومات الجغرافية؛ يحتاج تصحيحًا."
+      },
+      {
+        "id": "najran-arc-2026/arc357",
+        "code": "عمر 357",
+        "name": "أداء المبنى ودورة الحياة",
+        "credits": 2,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "عمر 251"
+        ],
+        "corequisites": [],
+        "pool": "arc1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc364",
+        "code": "عمر 364",
+        "name": "المدن المستدامة",
+        "credits": 2,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "عمر 261"
+        ],
+        "corequisites": [],
+        "pool": "arc1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/ambiguous-gis",
+        "code": "عمر 356",
+        "name": "تطبيقات نظم المعلومات الجغرافية",
+        "credits": 2,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [
+          "عمر 261"
+        ],
+        "corequisites": [],
+        "pool": "arc1",
+        "kind": "course",
+        "linkable": false,
+        "review": "الرمز عمر 356 مكرر مع مادة الإضاءة الطبيعية؛ يحتاج تصحيحًا."
+      },
+      {
+        "id": "najran-arc-2026/arc376",
+        "code": "عمر 376",
+        "name": "تنسيق وتخطيط المواقع",
+        "credits": 2,
+        "level": 0,
+        "page": 12,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "arc1",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc425",
+        "code": "عمر 425",
+        "name": "تقنيات العرض بالحاسوب",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "arc2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc446",
+        "code": "عمر 446",
+        "name": "رسومات وتفاصيل التشييد المتقدمة",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [
+          "عمر 343"
+        ],
+        "corequisites": [],
+        "pool": "arc2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc458",
+        "code": "عمر 458",
+        "name": "السلامة والأمن في المباني",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "arc2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc466",
+        "code": "عمر 466",
+        "name": "العمارة المحلية",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "arc2",
+        "kind": "course",
+        "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/arc477",
+        "code": "عمر 477",
+        "name": "التصميم الداخلي",
+        "credits": 2,
+        "level": 0,
+        "page": 13,
+        "prerequisites": [],
+        "corequisites": [],
+        "pool": "arc2",
+        "kind": "course",
+        "linkable": true
+      }
+    ],
+    "groups": [
+      {
+        "id": "arc1",
+        "name": "المقررات الاختيارية — arc1",
+        "slots": [
+          "najran-arc-2026/slot-arc1-1",
+          "najran-arc-2026/slot-arc1-2"
+        ]
+      },
+      {
+        "id": "arc2",
+        "name": "المقررات الاختيارية — arc2",
+        "slots": [
+          "najran-arc-2026/slot-arc2-1",
+          "najran-arc-2026/slot-arc2-2"
+        ]
+      }
+    ],
+    "notes": [
+      "الملف يبدأ من المستوى الثالث؛ مواد المسار الهندسي أو السنة التحضيرية غير مدرجة.",
+      "يعرض مِعيار المتطلبات كما وردت في الملف المرفوع؛ تأكد من خطتك الفعلية ومرشدك قبل التسجيل.",
+      "اسم الملف ARC-2026؛ الغلاف يذكر 2025 / 1447 هـ. يُستخدم اسم الملف لتمييز النسخة دون ادعاء أنها إصدار رسمي لعام 2026."
+    ],
+    "majorAliases": [
+      "العمارة",
+      "الهندسة المعمارية"
+    ],
+    "fileLabel": "ARC-2026"
+  }
+]

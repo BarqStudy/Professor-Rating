@@ -1,3 +1,5 @@
+import { createStudyPlanner } from "./study.js";
+import "./study.css";
 import { REVIEW_TAGS } from "../supabase/functions/miyar/tags.js";
 import { createAssistant } from './assistant.js';
 import { createGradeMap } from "./grades.js";
@@ -84,6 +86,13 @@ const ic = (n, c = "") =>
   }</svg>`;
 const verifiedBadge = '<span class="verified" role="img" aria-label="موثق من إدارة مِعيار" title="موثق من إدارة مِعيار"><svg class="verified-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8.603 3.799a4.49 4.49 0 0 1 6.794 0 4.49 4.49 0 0 1 4.804 4.804 4.49 4.49 0 0 1 0 6.794 4.49 4.49 0 0 1-4.804 4.804 4.49 4.49 0 0 1-6.794 0 4.49 4.49 0 0 1-4.804-4.804 4.49 4.49 0 0 1 0-6.794 4.49 4.49 0 0 1 4.804-4.804Z"/><path d="m8.3 12 2.4 2.4 5-5.1" fill="none" stroke="#fff" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
 const gradeMap = createGradeMap({api,modal,ensureGuestSession:async()=>{guestProfile=await ensureGuestSession();},isMember:()=>!!googleSession,identityKey:()=>googleSession?.user.id||guestProfile?.id||null,configured:()=>configured,icon:ic});
+const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>configured,
+  universityName:()=>selectedUniversity()?.name,
+  ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest',
+  majorName:()=>cloudCatalogue?.majors.find(m=>m.id===cloudMe?.major_id)?.name||'',
+  onReview:(id,course,plan)=>reviewForm(id,false,{course,plan}),
+  onDoctor:(id,course)=>cloudDoctorDetail(id,course.name),
+});
 const logo =
   `<span class="miyar-mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M32 10v43M14 22h36M22 53h20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="m14 22-9 19h18l-9-19Zm36 0-9 19h18l-9-19Z" fill="currentColor" opacity=".22"/><path d="M5 41c3 8 15 8 18 0M41 41c3 8 15 8 18 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="m32 3 5 6-5 6-5-6Z" fill="#bf9354"/></svg></span><span class="logo-type">مِعيار<span>MIYAR</span></span>`;
 const initial = [{
@@ -157,7 +166,7 @@ function displayName() {
 let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
-const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant"];
+const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "plan"];
 let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
 const persist = () => {
@@ -220,7 +229,7 @@ function nav() {
         configured ? "لوحة الإدارة" : "إدارة تجريبية"
       }</span></button>`
       : cloudMe?.ambassadorUniversities?.length ? `<button data-page="ambassador" class="nav-item ${page === 'ambassador' ? 'active' : ''}">${ic('cap')}<span>مساحة السفير</span></button>` : ""
-  }</nav>`;
+  }<button data-page="plan" class="nav-item desktop-study-nav ${page==='plan'?'active':''}">${ic("cap")}<span>خطتي إلى التخرج</span></button></nav>`;
 }
 function setPage(next) {
   page = next;
@@ -252,6 +261,7 @@ function render() {
         admin: "لوحة الإدارة",
         ambassador: "مساحة السفير",
         assistant: "مساعد مِعيار",
+        plan: "خطتي إلى التخرج",
       })[page]
     }</b></div><div class="header-actions">${
       !googleSession
@@ -284,12 +294,15 @@ function render() {
         ? admin()
         : page === "ambassador"
         ? ambassadorPage()
+        : page === "plan"
+        ? studyPlanner.page()
         : page === "assistant"
         ? miyarAssistant.page()
         : developer()
     }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html">شروط الاستخدام</a></span><span>بُني بشغف لرحلتك الجامعية</span></footer>${page !== 'assistant' ? `<button type="button" class="assistant-launcher" data-page="assistant" aria-label="مساعد مِعيار"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2Z"/></svg><span>مساعد مِعيار</span></button>` : ''}</div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
   bind();
   if (page === 'assistant') miyarAssistant.bind();
+  if (page === 'plan') studyPlanner.bind();
   if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();
   if (page === "requests" && googleSession && requestsOwner !== googleSession.user.id && !requestsLoading) loadMyRequests();
   if (needsUniversity()) openUniversityChoice(true);
@@ -325,7 +338,7 @@ function home() {
     ic("plus")
   }</span><div><span class="tiny-label">تجربتك تستحق المشاركة</span><h2>إضافة دكتور بتقييم</h2><p>دكتور غير مضاف في الأقسام</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span><span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span></button></section><button class="doctor-request-start secondary" data-request-doctor>${ic("plus")} طلب إضافة دكتور بدون تقييم</button><section class="stats"><div><span class="stat-icon">${
+  }</span><span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span></button></section><button class="doctor-request-start secondary" data-request-doctor>${ic("plus")} طلب إضافة دكتور بدون تقييم</button><section class="panel study-home-link"><div><span class="study-entry-icon">${ic("cap")}</span><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد.</p></div><button type="button" class="secondary" data-page="plan">افتح خطتك ${ic("arrow")}</button></section><section class="stats"><div><span class="stat-icon">${
     ic("cap")
   }</span><div><b>+${
     configured
@@ -742,19 +755,19 @@ function labelScore(v) {
 function reviewPage() {
   return `<section class="review-landing"><div class="page-title"><div class="eyebrow">مساحة لتجربتك</div><h1>أضف تقييمًا</h1><p>تجربة واحدة منك تساعد زملاءك في الاختيار.</p></div><div class="panel review-intro">${ic("star")}<h2>شارك تجربتك بمعيارك</h2><p>قيّم الشرح والتعامل والمساعدة بالدرجات بكل خصوصية.</p><button class="primary" id="new-review">ابدأ التقييم</button></div></section>`;
 }
-async function reviewForm(id, pledged = false) {
+async function reviewForm(id, pledged = false, studySelection = null) {
   setPage("review");
   render();
   if(configured){
-    if(googleSession){if(!requireCloudAccount(()=>reviewForm(id)))return;}
+    if(googleSession){if(!requireCloudAccount(()=>reviewForm(id,false,studySelection)))return;}
     else {
       try{if(!pledged || !guestProfile) guestProfile=await ensureGuestSession();scopeCatalogue();}
-      catch(error){modal("تعذّر بدء التقييم",`<p role="alert">${escapeHtml(error.message)}</p><button class="primary" id="retry-guest-review">إعادة المحاولة</button>`);document.querySelector('#retry-guest-review').onclick=()=>reviewForm(id);return;}
-      if(!guestProfile.university_id){openUniversityChoice(true,()=>reviewForm(id));return;}
+      catch(error){modal("تعذّر بدء التقييم",`<p role="alert">${escapeHtml(error.message)}</p><button class="primary" id="retry-guest-review">إعادة المحاولة</button>`);document.querySelector('#retry-guest-review').onclick=()=>reviewForm(id,false,studySelection);return;}
+      if(!guestProfile.university_id){openUniversityChoice(true,()=>reviewForm(id,false,studySelection));return;}
       if(guestProfile.status!=='active'){toast('جلسة الزائر مقيّدة عن إضافة التقييمات.');return;}
     }
   }
-  if(!pledged){reviewPledge(()=>reviewForm(id,true));return;}
+  if(!pledged){reviewPledge(()=>reviewForm(id,true,studySelection));return;}
   window.scrollTo({ top: 0, behavior: "smooth" });
   const selectedDoctor = doctors.find((d) => d.id === id);
   const reviewCollege = selectedDoctor?.college || activeCollege || colleges[0];
@@ -807,6 +820,12 @@ async function reviewForm(id, pledged = false) {
       ).map((m) => `<option>${escapeHtml(m)}</option>`).join("");
     },
   );
+  studyPlanner.attachReview(document.querySelector('#review-form'),{
+    university:selectedUniversity()?.name||(!configured?'جامعة نجران':''),
+    college:studySelection?.plan.college,
+    major:studySelection ? majors.find(name=>[studySelection.plan.major,...(studySelection.plan.majorAliases||[])].includes(name)) : undefined,
+    courseId:studySelection?.course.id,
+  });
   document.querySelectorAll("[data-range]").forEach((el) =>
     el.oninput = () => {
       const v = +el.value;
@@ -845,6 +864,7 @@ async function reviewForm(id, pledged = false) {
       tags: chosenRatingTags(e.target),
       pledged: true,
       shareGrade: f.get("shareGrade") === "on",
+      ...(f.get("courseId") ? {courseId:f.get("courseId")} : {}),
     };
     if (configured) {
       const button = e.target.querySelector(".submit-review");
@@ -1243,7 +1263,7 @@ function openSettings() {
     };
   modal(
     "إعداداتك في مِعيار",
-    `<form id="settings-form"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button>${configured?`<button type="button" class="secondary my-reviews-settings" id="grade-sharing-settings">${ic("chart")} مشاركة الدرجات</button>`:""}${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
+    `<form id="settings-form"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="study-settings-link">${ic("cap")} خطتي إلى التخرج</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button>${configured?`<button type="button" class="secondary my-reviews-settings" id="grade-sharing-settings">${ic("chart")} مشاركة الدرجات</button>`:""}${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
       ic("users")
     }</span><div><h3>مساحتك، على طريقتك</h3><p>خصّص بياناتك وتجربة القراءة بما يناسبك.</p></div></div><label>اسم الطالب<input name="name" required maxlength="60" autocomplete="name" placeholder="كيف تحب أن نناديك؟" value="${
       escapeHtml(profile.name)
@@ -1313,6 +1333,7 @@ function openSettings() {
       fallback.querySelector('input').select();
     }
   });
+  document.querySelector('#study-settings-link')?.addEventListener('click',()=>{document.body.classList.remove('modal-open');setPage('plan');render();window.scrollTo({top:0});});
   document.querySelector("#install-app")?.addEventListener("click", () => installPlatform(modal,toast));
   document.querySelector("#grade-sharing-settings")?.addEventListener("click",gradeMap.manage);
   document.querySelector("#my-reviews-settings")?.addEventListener("click", () => myReviews());
@@ -2222,6 +2243,11 @@ window.addEventListener("miyar-auth", async ({ detail }) => {
     signedOut = false;
     storage.setItem("miyar-session", "active");
     if (cloudStatus === "ready") await connectCloudAccount(false);
+  }
+  if (page === 'plan' && previous?.user.id !== detail.session?.user.id) {
+    document.body.classList.remove('modal-open');
+    render();
+    return;
   }
   if (
     detail.event !== "TOKEN_REFRESHED" &&

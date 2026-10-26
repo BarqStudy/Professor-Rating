@@ -1,3 +1,4 @@
+import { studyCourse, courseDoctors } from "./study.js";
 import { handleGuest } from "./guest.js";
 import { gradeConsent, gradeParticipation, publicGrades } from "./grades.js";
 import { handleAi, checkAiConnection } from "./ai.js";
@@ -86,6 +87,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
       }
       if (action === "doctor.summary") return respond(await publicSummary(body, db));
       if (action === "doctor.grades") return respond(await publicGrades(body, db));
+      if (action === "course.doctors") return respond(await courseDoctors(body, db));
       if (action === "reviews") {
         const id = integer(body.doctor, 1, Number.MAX_SAFE_INTEGER, "الدكتور");
         const doctors = await db(
@@ -201,6 +203,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch }) {
             p_comment: r.comment,
             p_tags: r.tags,
             p_share_grade: gradeConsent(body.shareGrade),
+            ...studyCourse(body.courseId),
           },
         });
         return respond(result, 201);
