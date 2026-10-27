@@ -1,4 +1,4 @@
-import {createInstitutionMailer,institutionMailStatus} from './institution-mail.js';
+import {createInstitutionMailer,institutionMailStatus,institutionInbox} from './institution-mail.js';
 import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
 import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
@@ -273,18 +273,18 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
             "miyar_reviews?status=eq.pending&select=id,doctor_id,account_id,guest_id,subject,comment,tags,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
           ),
         ]);
-        const [extra, catalogueRequests, ambassadors, institutionRequests,assistants] = await Promise.all([
+        const [extra, catalogueRequests, ambassadors, institutions,assistants] = await Promise.all([
           db("rpc/miyar_community_queue", {method:"POST",body:{}}),
           db("rpc/miyar_catalogue_queue", {method:"POST",body:{}}),
           db("rpc/miyar_ambassador_list", {method:"POST",body:{}}),
-          db("miyar_institution_requests?status=eq.pending&select=id,name,colleges,contact_email,request_kind,account_id,guest_id,created_at,miyar_institution_mail(status,attempts,last_error,sent_at,retry_after)&order=created_at.asc&limit=100"),
+          institutionInbox(db,env),
           db('rpc/miyar_assistant_list',{method:'POST',body:{}}),
         ]);
         // Grade is deliberately excluded even from the moderation response.
         return respond({
-          institutionMail:institutionMailStatus(env),
+          ...institutions,
           edits: extra?.edits || [], reports: extra?.reports || [],
-          catalogueRequests: catalogueRequests || [], ambassadors: ambassadors || [], assistants:Array.isArray(assistants)?assistants:[], institutionRequests:institutionRequests||[],
+          catalogueRequests: catalogueRequests || [], ambassadors: ambassadors || [], assistants:Array.isArray(assistants)?assistants:[],
           doctors: doctors.map((
             { id, name, major_id, submitted_by_account, submitted_by_guest, requested_course, created_at },
           ) => ({

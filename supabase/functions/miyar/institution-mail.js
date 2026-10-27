@@ -6,6 +6,23 @@ export function institutionMailStatus(env){
  const valid=Boolean(env.SMTP_USER&&email.test(env.SMTP_USER.trim()));
  return {configured:!missing.length&&valid,recipient,missing,message:missing.length?'أضف أسرار البريد في Supabase: '+missing.join('، '):!valid?'راجع صيغة SMTP_USER؛ يجب أن يكون عنوان بريد إلكتروني.':'إعدادات البريد موجودة. افحص الاتصال للتأكد من قبول تسجيل الدخول.'};
 }
+// Optional institution/email metadata must not disable professor moderation.
+export async function institutionInbox(db,env){
+ const result={institutionMail:institutionMailStatus(env),institutionRequests:[]};
+ let rows;
+ try{rows=await db('miyar_institution_requests?status=eq.pending&select=id,name,colleges,contact_email,request_kind,account_id,guest_id,created_at&order=created_at.asc&limit=100');if(!Array.isArray(rows))throw new Error('INVALID_INBOX');}
+ catch{result.institutionRequestsError='تعذّر تحميل طلبات الجامعات والكليات. أعد تحديث القائمة.';return result;}
+ result.institutionRequests=rows;
+ const ids=rows.map(r=>r.id).filter(id=>Number.isSafeInteger(id)&&id>0);
+ if(!ids.length)return result;
+ try{
+  const deliveries=await db(`miyar_institution_mail?request_id=in.(${ids.join(',')})&select=request_id,status,attempts,last_error,sent_at,retry_after`);
+  if(!Array.isArray(deliveries))throw new Error('INVALID_MAIL_STATUS');
+  const byId=new Map(deliveries.map(row=>[row.request_id,row]));
+  result.institutionRequests=rows.map(row=>({...row,miyar_institution_mail:byId.get(row.id)||null}));
+ }catch{result.institutionMail.deliveryError='تعذّر تحميل حالة إرسال البريد. الطلبات محفوظة ويمكن مراجعتها، ثم إعادة تحديث القائمة.';}
+ return result;
+}
 export function mailError(error){
  if(error?.code==='EAUTH'||error?.responseCode===535)return 'رفض خادم البريد تسجيل الدخول. راجع SMTP_USER وكلمة مرور صندوق البريد في SMTP_PASSWORD.';
  if(error?.code==='EENVELOPE')return 'رفض خادم البريد عنوان المرسل أو المستلم. راجع صلاحية الإرسال من صندوق مِعيار.';
