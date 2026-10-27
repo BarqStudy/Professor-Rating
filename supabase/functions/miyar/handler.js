@@ -16,8 +16,8 @@ import {
   validateReview,
 } from "./security.js";
 
-export function createHandler({ db, env, authenticate, aiFetch = fetch, storageFetch = fetch, mailTransport, background }) {
-  const mailer=createInstitutionMailer({db,env,transportFactory:mailTransport});
+export function createHandler({ db, env, authenticate, aiFetch = fetch, storageFetch = fetch, mailTransport, mailFetch=fetch, background }) {
+  const mailer=createInstitutionMailer({db,env,transportFactory:mailTransport,mailFetch});
   const notifyInstitution=id=>{if(!id||!institutionMailStatus(env).configured)return;const task=mailer.deliver(id).catch(()=>{});if(background)background(task);return task;};
   const origins = (env.ALLOWED_ORIGINS || "https://barqstudy.github.io").split(
     ",",

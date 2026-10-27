@@ -36,7 +36,7 @@ test('SMTP uses verified TLS465, a fixed recipient and stored contact; errors pr
  assert.equal((await mailer.deliver(1)).sent,true);assert.equal(options[0].port,465);assert.equal(options[0].secure,true);assert.equal(options[0].tls.rejectUnauthorized,true);assert.equal(calls.at(-1).body.p_sent,true);
  fail=true;const failed=await mailer.deliver(1);assert.equal(failed.sent,false);assert.ok(!JSON.stringify(failed).includes(env.SMTP_PASSWORD));assert.equal(calls.at(-1).body.p_sent,false);assert.equal(closed,2);
  claim=false;assert.equal((await mailer.deliver(1)).skipped,true);assert.equal(options.length,2);
- const offline=createInstitutionMailer({db:()=>assert.fail('must not claim without configuration'),env:{}});assert.equal((await offline.deliver(1)).pending,true);assert.deepEqual(institutionMailStatus({}).missing,['SMTP_USER','SMTP_PASSWORD']);assert.equal(institutionMailStatus({...env,SMTP_USER:'bad\r\nBcc:x@example.test'}).configured,false);
+ const offline=createInstitutionMailer({db:()=>assert.fail('must not claim without configuration'),env:{}});assert.equal((await offline.deliver(1)).pending,true);assert.deepEqual(institutionMailStatus({}).missing,['RESEND_API_KEY']);assert.equal(institutionMailStatus({...env,SMTP_USER:'bad\r\nBcc:x@example.test'}).configured,false);
  assert.ok(!mailError(new Error(env.SMTP_PASSWORD)).includes(env.SMTP_PASSWORD));
 });
 
@@ -61,5 +61,40 @@ test('member and guest requests schedule notifications only after saving and kee
  const handle=createHandler({db,env,authenticate:async()=>({id:student}),background:p=>tasks.push(p),mailTransport:async()=>({sendMail:async()=>{throw Object.assign(new Error('secret error'),{code:'EAUTH'});},close(){}})});
  const response=await handle(new Request('https://test',{method:'POST',headers:guest?{'x-miyar-guest':'ab'.repeat(32)}:{authorization:'Bearer valid'},body:JSON.stringify({action:guest?'guest.institution.request':'institution.request',kind:'college',universityId:3,colleges:record.colleges,email:record.contact_email})}));
  assert.equal(response.status,201);assert.equal((await response.json()).id,1);await Promise.all(tasks);assert.equal(tasks.length,1);assert.ok(order.indexOf('rpc/miyar_request_institution_contact')<order.indexOf('rpc/miyar_claim_institution_mail'));assert.ok(order.includes('rpc/miyar_finish_institution_mail'));
+ }
+});
+
+test('forward-only mail uses Resend with a fixed stored request, idempotency and private credentials; SMTP remains available',async()=>{
+ const secret='re_test-private-key',settings={RESEND_API_KEY:secret},calls=[],updates=[];
+ const db=async(path,options)=>{if(path==='rpc/miyar_claim_institution_mail')return {lease:admin,request:record};updates.push(options.body);return true;};
+ const mailer=createInstitutionMailer({db,env:settings,transportFactory:()=>assert.fail('SMTP must not be used'),mailFetch:async(url,options)=>{calls.push({url,...options});return Response.json({id:'email-123'});}});
+ const status=institutionMailStatus(settings);assert.equal(status.provider,'resend');assert.equal(status.configured,true);assert.equal(status.from,'notifications@notify.miyar.website');assert.ok(!JSON.stringify(status).includes(secret));assert.equal(institutionMailStatus(env).provider,'smtp');
+ assert.equal(institutionMailStatus({...settings,RESEND_FROM_EMAIL:'a@example.test\r\nBcc:b@example.test'}).configured,false);
+ assert.equal((await mailer.deliver(1)).sent,true);assert.equal((await mailer.deliver(1)).sent,true);
+ assert.equal(calls[0].url,'https://api.resend.com/emails');assert.equal(calls[0].headers.Authorization,'Bearer '+secret);assert.equal(calls[0].headers['Idempotency-Key'],calls[1].headers['Idempotency-Key']);assert.equal(calls[0].redirect,'error');assert.ok(calls[0].signal instanceof AbortSignal);
+ const payload=JSON.parse(calls[0].body);assert.equal(payload.from,'مِعيار <notifications@notify.miyar.website>');assert.deepEqual(payload.to,['info@miyar.website']);assert.equal(payload.reply_to,record.contact_email);assert.match(payload.text,/كلية العلوم/);assert.equal(updates.at(-1).p_sent,true);
+});
+
+test('Resend checks verified sender domain without sending messages and explains limited keys, provider rejection and network failures safely',async()=>{
+ const secret='re_private-do-not-expose',settings={RESEND_API_KEY:secret,RESEND_FROM_EMAIL:'requests@notify.miyar.website'};
+ let response={data:[{name:'NOTIFY.MIYAR.WEBSITE',status:'verified'}]},code=200,network=false;const paths=[],updates=[];
+ const mailer=createInstitutionMailer({env:settings,db:async(path,options)=>{if(path==='rpc/miyar_claim_institution_mail')return {lease:admin,request:record};updates.push(options.body);return true;},mailFetch:async(url,options)=>{paths.push({url,method:options.method||'GET'});if(network)throw new Error(secret);return Response.json(response,{status:code});}});
+ assert.equal((await mailer.admin('institution.mail.check',{})).ok,true);assert.deepEqual(paths,[{url:'https://api.resend.com/domains?limit=100',method:'GET'}]);
+ for(const data of [[],[{name:'miyar.website',status:'verified'}],[{name:'notify.miyar.website',status:'pending'}]]){response={data};await assert.rejects(mailer.admin('institution.mail.check',{}),/غير موثّق/);}
+ for(const status of [401,403,422,429,500]){code=status;response={message:secret};const delivery=await mailer.deliver(1);assert.equal(delivery.sent,false);assert.ok(!JSON.stringify(delivery).includes(secret));assert.equal(updates.at(-1).p_sent,false);assert.ok(!updates.at(-1).p_error.includes(secret));}
+ network=true;await assert.rejects(mailer.admin('institution.mail.check',{}),/تعذّر الاتصال بخدمة Resend/);assert.equal((await mailer.deliver(1)).sent,false);network=false;code=200;response={};assert.equal((await mailer.deliver(1)).sent,false);
+});
+
+test('Resend admin operations require verified admin; member and guest requests retain background delivery and request safety',async()=>{
+ for(const guest of [false,true]){
+  const tasks=[],calls=[];let actor=student;
+  const db=async path=>{calls.push(path);if(path.startsWith('miyar_accounts?'))return [{status:'active',university_id:3}];if(path.startsWith('miyar_guest_sessions?'))return [{id:student,status:'active',university_id:3}];if(path==='rpc/miyar_request_institution_contact')return {id:1,status:'pending'};if(path==='rpc/miyar_claim_institution_mail')return {lease:admin,request:record};return true;};
+  let requests=0;
+  const handle=createHandler({db,env:{ADMIN_AUTH_IDS:admin,RESEND_API_KEY:'re_private'},authenticate:async()=>({id:actor}),background:task=>tasks.push(task),mailFetch:async(url,options)=>{requests++;if(url.includes('/domains'))return Response.json({data:[{name:'notify.miyar.website',status:'verified'}]});assert.deepEqual(JSON.parse(options.body).to,['info@miyar.website']);return Response.json({id:'accepted'});}});
+  const make=body=>new Request('https://test',{method:'POST',headers:guest?{'x-miyar-guest':'ab'.repeat(32)}:{authorization:'Bearer valid'},body:JSON.stringify(body)});
+  const payload={action:guest?'guest.institution.request':'institution.request',kind:'college',universityId:3,colleges:record.colleges,email:record.contact_email,to:'attacker@example.test'};
+  assert.equal((await handle(make(payload))).status,201);await Promise.all(tasks);assert.equal(tasks.length,1);assert.ok(calls.indexOf('rpc/miyar_request_institution_contact')<calls.indexOf('rpc/miyar_claim_institution_mail'));assert.ok(calls.includes('rpc/miyar_finish_institution_mail'));
+  const adminRequest=()=>new Request('https://test',{method:'POST',headers:{authorization:'Bearer valid'},body:JSON.stringify({action:'admin',operation:'institution.mail.check',isAdmin:true})});
+  const count=requests;assert.equal((await handle(adminRequest())).status,403);assert.equal(requests,count);actor=admin;assert.equal((await handle(adminRequest())).status,200);
  }
 });
