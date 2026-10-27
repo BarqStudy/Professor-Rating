@@ -4,6 +4,7 @@ import { createGoogleVerifier } from "./auth.js";
 
 // Values are configured in Supabase Edge Function Secrets, never in GitHub code.
 const env = {
+  INSTITUTION_NOTIFICATION_EMAIL: Deno.env.get("INSTITUTION_NOTIFICATION_EMAIL"),
   RESEND_API_KEY: Deno.env.get("RESEND_API_KEY"),
   RESEND_FROM_EMAIL: Deno.env.get("RESEND_FROM_EMAIL"),
   SMTP_USER: Deno.env.get("SMTP_USER"),

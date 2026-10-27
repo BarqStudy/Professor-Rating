@@ -98,3 +98,31 @@ test('Resend admin operations require verified admin; member and guest requests 
   const count=requests;assert.equal((await handle(adminRequest())).status,403);assert.equal(requests,count);actor=admin;assert.equal((await handle(adminRequest())).status,200);
  }
 });
+
+test('private server recipient overrides default for both providers; invalid settings block delivery and clients cannot redirect it',async()=>{
+ const destination='owner@gmail.com';
+ for(const provider of ['resend','smtp']){
+  let receiver;
+  const settings=provider==='smtp'?{...env,INSTITUTION_NOTIFICATION_EMAIL:destination}:{ADMIN_AUTH_IDS:admin,RESEND_API_KEY:'re_private',INSTITUTION_NOTIFICATION_EMAIL:destination};
+  const db=async path=>{if(path.startsWith('miyar_accounts?'))return [{status:'active',university_id:3}];if(path==='rpc/miyar_claim_institution_mail')return {lease:admin,request:record};return true;};
+  const handle=createHandler({db,env:settings,authenticate:async()=>({id:admin}),mailTransport:async()=>({sendMail:async message=>{receiver=message.to;return {accepted:[destination]};},close(){}}),mailFetch:async(url,options)=>{receiver=JSON.parse(options.body).to[0];return Response.json({id:'accepted'});}});
+  const response=await handle(new Request('https://test',{method:'POST',headers:{authorization:'Bearer valid'},body:JSON.stringify({action:'admin',operation:'institution.mail.retry',id:1,to:'attacker@example.test',recipient:'attacker@example.test',INSTITUTION_NOTIFICATION_EMAIL:'attacker@example.test'})}));
+  assert.equal(response.status,200);assert.equal((await response.json()).sent,true);assert.equal(receiver,destination);assert.equal(institutionMailStatus(settings).recipient,destination);
+ }
+ for(const recipient of ['owner@gmail.com\r\nBcc:attacker@example.test','owner@gmail.com,attacker@example.test','not-an-email']){
+  const settings={RESEND_API_KEY:'re_private',INSTITUTION_NOTIFICATION_EMAIL:recipient};assert.equal(institutionMailStatus(settings).configured,false);
+  const mailer=createInstitutionMailer({env:settings,db:()=>assert.fail('invalid recipient must not claim or send')});assert.equal((await mailer.deliver(1)).pending,true);await assert.rejects(mailer.admin('institution.mail.check',{}),/INSTITUTION_NOTIFICATION_EMAIL/);
+ }
+});
+
+test('Resend test sender checks API without requiring personal DNS, explains recipient restrictions, and keeps route-aware retry keys stable',async()=>{
+ const requests=[],settings={RESEND_API_KEY:'re_private',RESEND_FROM_EMAIL:'onboarding@resend.dev',INSTITUTION_NOTIFICATION_EMAIL:'owner@gmail.com'};
+ let code=200,checks=0;
+ const request=async(url,options)=>{if(url.includes('/domains')){checks++;return Response.json({data:[]});}requests.push(options);return Response.json(code===200?{id:'accepted'}:{message:'private provider response'},{status:code});};
+ const db=async path=>path==='rpc/miyar_claim_institution_mail'?{lease:admin,request:record}:true;
+ const mailer=createInstitutionMailer({env:settings,db,mailFetch:request});assert.equal(institutionMailStatus(settings).testSender,true);
+ const checked=await mailer.admin('institution.mail.check',{});assert.equal(checked.ok,true);assert.match(checked.message,/بريد حساب Resend/);assert.equal(requests.length,0);assert.equal(checks,1);
+ assert.equal((await mailer.deliver(1)).sent,true);assert.equal((await mailer.deliver(1)).sent,true);assert.equal(requests[0].headers['Idempotency-Key'],requests[1].headers['Idempotency-Key']);assert.equal(JSON.parse(requests[0].body).from,'مِعيار <onboarding@resend.dev>');
+ const changed=createInstitutionMailer({env:{...settings,INSTITUTION_NOTIFICATION_EMAIL:'another@gmail.com'},db,mailFetch:request});await changed.deliver(1);assert.notEqual(requests[0].headers['Idempotency-Key'],requests[2].headers['Idempotency-Key']);
+ code=403;const failed=await mailer.deliver(1);assert.equal(failed.sent,false);assert.match(failed.message,/بريد حسابك في Resend فقط/);assert.ok(!failed.message.includes('private provider response'));
+});

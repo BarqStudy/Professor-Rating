@@ -1,14 +1,16 @@
 import {ApiError,integer} from './security.js';
 import {createResendMailer} from './resend-mail.js';
-const recipient='info@miyar.website';
+const defaultRecipient='info@miyar.website';
 const email=/^[A-Za-z0-9.!#$%&'*+\/=\?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,}$/;
 export function institutionMailStatus(env){
  const provider=env.RESEND_API_KEY||(!env.SMTP_USER&&!env.SMTP_PASSWORD)?'resend':'smtp';
+ const recipient=env.INSTITUTION_NOTIFICATION_EMAIL?.trim()||defaultRecipient;
+ if(recipient.length>254||!email.test(recipient))return {provider,recipient:null,configured:false,missing:[],message:'راجع INSTITUTION_NOTIFICATION_EMAIL في أسرار Supabase؛ يجب أن يكون عنوان بريد واحدًا لاستقبال الطلبات.'};
  if(provider==='resend'){
   const from=env.RESEND_FROM_EMAIL?.trim()||'notifications@notify.miyar.website';
   const missing=env.RESEND_API_KEY?.trim()?[]:['RESEND_API_KEY'];
   const valid=email.test(from);
-  return {provider,from,configured:!missing.length&&valid,recipient,missing,message:missing.length?'بريد مِعيار للاستقبال والتحويل فقط. فعّل الإرسال بإضافة RESEND_API_KEY في أسرار Supabase بعد توثيق نطاق الإرسال في Resend.':!valid?'راجع RESEND_FROM_EMAIL؛ يجب أن يكون عنوانًا من نطاق موثّق في Resend.':'إعدادات Resend موجودة. افحص الاتصال وتوثيق نطاق الإرسال.'};
+  return {provider,from,testSender:from.toLowerCase()==='onboarding@resend.dev',configured:!missing.length&&valid,recipient,missing,message:missing.length?'فعّل إرسال الطلبات بإضافة RESEND_API_KEY في أسرار Supabase.':!valid?'راجع RESEND_FROM_EMAIL؛ يجب أن يكون عنوانًا من نطاق موثّق في Resend.':from.toLowerCase()==='onboarding@resend.dev'?'المرسل التجريبي في Resend يرسل إلى بريد حسابك في Resend فقط. افحص الاتصال، ثم أرسل إشعار أحد الطلبات للتأكد من الوصول.':'إعدادات Resend موجودة. افحص الاتصال وتوثيق نطاق الإرسال.'};
  }
  const missing=['SMTP_USER','SMTP_PASSWORD'].filter(key=>!env[key]);
  const valid=Boolean(env.SMTP_USER&&email.test(env.SMTP_USER.trim()));
@@ -36,7 +38,7 @@ export function mailError(error){
  if(error?.code==='EENVELOPE')return 'رفض خادم البريد عنوان المرسل أو المستلم. راجع صلاحية الإرسال من صندوق مِعيار.';
  return 'تعذّر الاتصال بخادم البريد أو إرسال الرسالة. حاول مجددًا وتحقق من إعدادات IONOS وTLS على المنفذ 465.';
 }
-export function institutionMessage(record,user){
+export function institutionMessage(record,user,recipient=defaultRecipient){
  const colleges=Array.isArray(record.colleges)?record.colleges:[];
  const kind=record.request_kind==='university'?'جامعة':'كلية';
  const lines=['وصل طلب جديد إلى مِعيار','',`نوع الطلب: إضافة ${kind}`,`الجامعة: ${record.name}`,...colleges.flatMap(c=>[`الكلية: ${c.name}`,`التخصصات: ${(c.majors||[]).join('، ')||'لم تُذكر تخصصات'}`]),`بريد التواصل: ${record.contact_email||'لم يُذكر'}`,`رقم الطلب: ${record.id}`,'','راجع الطلب واعتمده أو ارفضه من لوحة الإدارة:','https://miyar.website/#admin'];
@@ -56,19 +58,20 @@ export function createInstitutionMailer({db,env,transportFactory,mailFetch=fetch
   return transportFactory({host:'smtp.ionos.com',port:465,secure:true,auth:{user:env.SMTP_USER.trim(),pass:env.SMTP_PASSWORD},tls:{rejectUnauthorized:true,minVersion:'TLSv1.2'},connectionTimeout:4000,greetingTimeout:4000,socketTimeout:8000,logger:false,debug:false,disableFileAccess:true,disableUrlAccess:true});
  }
  async function deliver(id){
-  if(!institutionMailStatus(env).configured)return {sent:false,pending:true};
+  const config=institutionMailStatus(env);
+  if(!config.configured)return {sent:false,pending:true};
   const claim=await db('rpc/miyar_claim_institution_mail',{method:'POST',body:{p_id:id}});
   if(!claim)return {sent:false,skipped:true,message:'أُرسلت الرسالة سابقًا أو يجري إرسالها. انتظر قليلًا قبل إعادة المحاولة.'};
   let client,sent=false,error=null;
   try{
-   if(institutionMailStatus(env).provider==='resend'){await resend().send(institutionMessage(claim.request,institutionMailStatus(env).from),id);sent=true;}
-   else{client=await transport();const result=await bounded(client,()=>client.sendMail(institutionMessage(claim.request,env.SMTP_USER.trim())));sent=Array.isArray(result.accepted)&&result.accepted.some(address=>String(address).toLowerCase()===recipient);if(!sent)throw new Error('Recipient not accepted');}
+   if(config.provider==='resend'){await resend().send(institutionMessage(claim.request,config.from,config.recipient),id);sent=true;}
+   else{client=await transport();const result=await bounded(client,()=>client.sendMail(institutionMessage(claim.request,env.SMTP_USER.trim(),config.recipient)));sent=Array.isArray(result.accepted)&&result.accepted.some(address=>String(address).toLowerCase()===config.recipient.toLowerCase());if(!sent)throw new Error('Recipient not accepted');}
   }
   catch(failure){error=institutionMailStatus(env).provider==='resend'?(failure instanceof ApiError?failure.message:'تعذّر إرسال الرسالة عبر Resend. أعد المحاولة لاحقًا.'):mailError(failure);}
   finally{client?.close();}
   // A fenced update prevents a stale attempt from overwriting a newer lease.
   await db('rpc/miyar_finish_institution_mail',{method:'POST',body:{p_id:id,p_lease:claim.lease,p_sent:sent,p_error:error}});
-  return {sent,message:sent?'قَبِلت خدمة البريد الرسالة إلى '+recipient+'؛ راجع الوارد والرسائل غير المرغوب فيها.':error};
+  return {sent,message:sent?'قَبِلت خدمة البريد الرسالة إلى '+config.recipient+'؛ راجع الوارد والرسائل غير المرغوب فيها.':error};
  }
  return {deliver,async admin(operation,body){
   if(operation==='institution.mail.check'){
