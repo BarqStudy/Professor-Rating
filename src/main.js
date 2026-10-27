@@ -193,7 +193,7 @@ function displayName() {
 let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
-const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "plan", "advisor"];
+const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "plan", "advisor", "universities"];
 let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
 const persist = () => {
@@ -266,7 +266,7 @@ function previousPage(){
 }
 
 function render() {
-  if(!signedOut&&configured&&(cloudStatus==='loading'||cloudStatus==='ready'&&needsUniversity())){renderUniversityLanding();return;}
+  if(!signedOut&&configured&&(page==='universities'||cloudStatus==='loading'||cloudStatus==='ready'&&needsUniversity())){renderUniversityLanding();return;}
   if (signedOut) {
     renderSignedOut();
     return;
@@ -431,9 +431,13 @@ async function chooseUniversity(universityId,onSelected){
 }
 function renderUniversityLanding(){
   const selector=universitySelector();
-  document.querySelector('#app').innerHTML=`<div class="university-entry"><div class="university-entry-bar"><a class="brand" href="#" aria-label="معيار">${logo}</a><div class="university-entry-actions">${cloudMe?.isAdmin?'<button type="button" class="secondary" id="entry-admin">لوحة الإدارة</button>':''}${googleSession?`<span>${escapeHtml(displayName().trim().split(/\s+/)[0])}${roleBadge(cloudMe,cloudCatalogue)}</span>`:'<button type="button" class="secondary" id="entry-google">دخول Google</button>'}<button type="button" class="icon-btn" id="entry-theme" aria-label="تبديل المظهر">${ic('moon')}</button></div></div><main class="university-entry-main">${cloudStatus==='ready'?'':connectionBanner()}${selector.content()}</main><div class="university-entry-legal"><span>مِعيار · من الطلاب، لأجل الطلاب</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html">شروط الاستخدام</a></span></div></div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
-  selector.bind();document.querySelector('#entry-admin')?.addEventListener('click',()=>{setPage('admin');render();});document.querySelector('#entry-google')?.addEventListener('click',openGoogleMessage);document.querySelector('#retry-cloud')?.addEventListener('click',loadCloud);
+  document.querySelector('#app').innerHTML=`<div class="university-entry"><div class="university-entry-bar"><a class="brand" href="#" aria-label="معيار">${logo}</a><div class="university-entry-actions">${cloudMe?.isAdmin?'<button type="button" class="secondary" id="entry-admin">لوحة الإدارة</button>':''}${googleSession?`<span>${escapeHtml(displayName().trim().split(/\s+/)[0])}${roleBadge(cloudMe,cloudCatalogue)}</span>`:'<button type="button" class="secondary" id="entry-google">دخول Google</button>'}<button type="button" class="icon-btn" id="entry-theme" aria-label="تبديل المظهر">${ic('moon')}</button></div></div><main class="university-entry-main">${page==='universities'&&selectedUniversity()?.enabled?`<button type="button" class="page-close" id="university-entry-back">${ic('arrow')} رجوع</button>`:''}${cloudStatus==='ready'?'':connectionBanner()}${selector.content()}</main><div class="university-entry-legal"><span>مِعيار · من الطلاب، لأجل الطلاب</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html">شروط الاستخدام</a></span></div></div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
+  selector.bind();document.querySelector('#university-entry-back')?.addEventListener('click',previousPage);document.querySelector('#entry-admin')?.addEventListener('click',()=>{setPage('admin');render();});document.querySelector('#entry-google')?.addEventListener('click',openGoogleMessage);document.querySelector('#retry-cloud')?.addEventListener('click',loadCloud);
   document.querySelector('#entry-theme').onclick=()=>{const theme=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=theme;storage.setItem('athar-theme',theme);};
+}
+function changeUniversityPage(){
+  document.body.classList.remove('modal-open');
+  setPage('universities');render();window.scrollTo({top:0});
 }
 function openUniversityChoice(required=false,onSelected){
   const selector=universitySelector(onSelected);modal('اختر جامعتك',selector.content());document.querySelector('.modal').classList.add('university-picker-modal');selector.bind();
@@ -1159,7 +1163,7 @@ function bind() {
   );
   document.querySelectorAll("[data-university-request]").forEach(button=>button.onclick=institutionRequestForm);
   document.querySelectorAll("[data-add-doctor]").forEach(button=>button.onclick=()=>requestDoctorForm());
-  document.querySelector("#header-change-university")?.addEventListener("click",()=>openUniversityChoice(false));
+  document.querySelector("#header-change-university")?.addEventListener("click",changeUniversityPage);
   document.querySelector("#my-requests-page")?.addEventListener("click", openRequests);
   bindAmbassadorPage();
   document.querySelector("#requests-refresh")?.addEventListener("click", loadMyRequests);
@@ -1395,7 +1399,7 @@ function openSettings() {
   document.querySelector("#install-app")?.addEventListener("click", () => installPlatform(modal,toast));
   document.querySelector("#grade-sharing-settings")?.addEventListener("click",gradeMap.manage);
   document.querySelector("#my-reviews-settings")?.addEventListener("click", () => myReviews());
-  document.querySelector("#change-university")?.addEventListener("click", () => openUniversityChoice(false));
+  document.querySelector("#change-university")?.addEventListener("click", changeUniversityPage);
   document.querySelectorAll("[data-color-option]").forEach((button) => {
     button.onclick = () => {
       applyPlatformColor(button.dataset.colorOption);
