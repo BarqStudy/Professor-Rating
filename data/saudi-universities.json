@@ -19,7 +19,7 @@
     "city": "الرياض",
     "region": "الوسطى",
     "domain": "imamu.edu.sa",
-    "logo": "https://i.ibb.co/SmvY7V6/imam.png"
+    "logo": "universities/102.png"
   },
   {
     "key": "103",
@@ -52,7 +52,7 @@
     "city": "المجمعة",
     "region": "الوسطى",
     "domain": "mu.edu.sa",
-    "logo": "https://i.ibb.co/F8bkqFy/mu.png"
+    "logo": "universities/105.jpg"
   },
   {
     "key": "106",
@@ -63,7 +63,7 @@
     "city": "الرياض",
     "region": "الوسطى",
     "domain": "pnu.edu.sa",
-    "logo": "https://i.ibb.co/J3nYkcp/pnu.png"
+    "logo": "universities/106.jpg"
   },
   {
     "key": "107",
@@ -85,7 +85,7 @@
     "city": "القصيم",
     "region": "الوسطى",
     "domain": "qu.edu.sa",
-    "logo": "https://i.ibb.co/4tHj7N9/qu.png"
+    "logo": "universities/108.png"
   },
   {
     "key": "109",
@@ -96,7 +96,7 @@
     "city": "الرياض",
     "region": "الوسطى",
     "domain": "seu.edu.sa",
-    "logo": "https://i.ibb.co/tBBX3wW/seu.png"
+    "logo": "universities/109.png"
   },
   {
     "key": "110",
@@ -118,7 +118,7 @@
     "city": "حفر الباطن",
     "region": "الشرق",
     "domain": "uhb.edu.sa",
-    "logo": "https://i.ibb.co/xqhKmjP/uohb.png"
+    "logo": "universities/201.jpg"
   },
   {
     "key": "202",
@@ -129,7 +129,7 @@
     "city": "الدمام",
     "region": "الشرق",
     "domain": "iau.edu.sa",
-    "logo": "https://i.ibb.co/7b93SgJ/iau.png"
+    "logo": "universities/202.jpg"
   },
   {
     "key": "203",
@@ -151,7 +151,7 @@
     "city": "الأحساء",
     "region": "الشرق",
     "domain": "kfu.edu.sa",
-    "logo": "https://i.ibb.co/37FNvmq/kfu.png"
+    "logo": "universities/204.jpg"
   },
   {
     "key": "301",
@@ -162,7 +162,7 @@
     "city": "سكاكا",
     "region": "الشمال",
     "domain": "ju.edu.sa",
-    "logo": "https://i.ibb.co/wCfVPC5/ju.gif"
+    "logo": "universities/301.jpg"
   },
   {
     "key": "302",
@@ -184,7 +184,7 @@
     "city": "تبوك",
     "region": "الشمال",
     "domain": "ut.edu.sa",
-    "logo": "https://i.ibb.co/1XZpMJt/tu.png"
+    "logo": "universities/303.png"
   },
   {
     "key": "401",
@@ -195,7 +195,7 @@
     "city": "الباحة",
     "region": "الجنوب",
     "domain": "bu.edu.sa",
-    "logo": "https://i.ibb.co/dKSnkpQ/bu.png"
+    "logo": "universities/401.jpg"
   },
   {
     "key": "402",
@@ -251,7 +251,7 @@
     "city": "المدينة المنورة",
     "region": "الغرب",
     "domain": "iu.edu.sa",
-    "logo": "https://i.ibb.co/4mp8LCR/iu.png"
+    "logo": "universities/501.png"
   },
   {
     "key": "502",
@@ -284,7 +284,7 @@
     "city": "المدينة المنورة",
     "region": "الغرب",
     "domain": "taibahu.edu.sa",
-    "logo": "https://i.ibb.co/ZWMTFTj/tu.png"
+    "logo": "universities/504.png"
   },
   {
     "key": "505",
@@ -306,6 +306,6 @@
     "city": "مكة المكرمة",
     "region": "الغرب",
     "domain": "uqu.edu.sa",
-    "logo": "https://firebasestorage.googleapis.com/v0/b/universities-directory.appspot.com/o/Universities%20Logo%2Falqura_logo.png?alt=media&token=de160ea2-ab0d-40d5-a654-0a92beebc1d8"
+    "logo": "universities/506.png"
   }
 ]

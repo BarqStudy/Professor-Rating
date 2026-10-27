@@ -6,8 +6,9 @@
   },
   {
     "university": "جامعة الإمام محمد بن سعود الإسلامية",
-    "file": "https://i.ibb.co/SmvY7V6/imam.png",
-    "source": "https://i.ibb.co/SmvY7V6/imam.png"
+    "file": "universities/102.png",
+    "source": "https://github.com/Mohamedali654321/Imam-University/blob/3e56f01ec83df761651bfe81c47716336ebe94be/src/assets/images/imam-logo.png",
+    "sha256": "22e3683670d976dcbb87760e8e328e807f61e2c7cf55fd16c7544b4e1dc4212e"
   },
   {
     "university": "جامعة الملك سعود بن عبدالعزيز للعلوم الصحية",
@@ -21,13 +22,15 @@
   },
   {
     "university": "جامعة المجمعة",
-    "file": "https://i.ibb.co/F8bkqFy/mu.png",
-    "source": "https://i.ibb.co/F8bkqFy/mu.png"
+    "file": "universities/105.jpg",
+    "source": "https://github.com/yusra-js/CPSU2/blob/de7f6a9a3d601fa4a1154ddd3e4f8fb9ff0897d0/images/uni/majmaah.jpg",
+    "sha256": "08565e6b38dea1637ad9722278b019f3bedd9960e8a9be9c082ef811734a54ef"
   },
   {
     "university": "جامعة الأميرة نورة بنت عبدالرحمن",
-    "file": "https://i.ibb.co/J3nYkcp/pnu.png",
-    "source": "https://i.ibb.co/J3nYkcp/pnu.png"
+    "file": "universities/106.jpg",
+    "source": "https://github.com/yusra-js/CPSU2/blob/de7f6a9a3d601fa4a1154ddd3e4f8fb9ff0897d0/images/uni/nora.jpg",
+    "sha256": "1a09a56e7579353ca0d0c6c62085fe6fa0711b2176a1879c7f49993281e3adb3"
   },
   {
     "university": "جامعة الأمير سطام بن عبدالعزيز",
@@ -36,13 +39,16 @@
   },
   {
     "university": "جامعة القصيم",
-    "file": "https://i.ibb.co/4tHj7N9/qu.png",
-    "source": "https://i.ibb.co/4tHj7N9/qu.png"
+    "file": "universities/108.png",
+    "source": "https://github.com/coc-it/qu-thesis-template/blob/46bb0ed7f053094a521ce730ff4f04932e2d7b68/figures/samples/qu.png",
+    "sha256": "8d0401c46469c871d2af078f82c0ade3ec37d641198774c4cd2042132cc84808"
   },
   {
     "university": "الجامعة السعودية الإلكترونية",
-    "file": "https://i.ibb.co/tBBX3wW/seu.png",
-    "source": "https://i.ibb.co/tBBX3wW/seu.png"
+    "file": "universities/109.png",
+    "source": "https://github.com/Turki-Faisal-Alotaibi/it353project/blob/9eeeb490a9e2696a838e97a8cca6165df5ac662a/IT353%20Project.docx",
+    "note": "Original PNG extracted from word/media/image1.png in the source document, without image editing.",
+    "sha256": "0e7532a38e615d1239acb016d49dab61ee7b97b13c1f540f3aa4bb308b0cbd84"
   },
   {
     "university": "جامعة شقراء",
@@ -51,13 +57,15 @@
   },
   {
     "university": "جامعة حفر الباطن",
-    "file": "https://i.ibb.co/xqhKmjP/uohb.png",
-    "source": "https://i.ibb.co/xqhKmjP/uohb.png"
+    "file": "universities/201.jpg",
+    "source": "https://github.com/yusra-js/CPSU2/blob/de7f6a9a3d601fa4a1154ddd3e4f8fb9ff0897d0/images/uni/hafr.jpg",
+    "sha256": "746eeb961e95f0405586faf5b9103fdeeab4c5e5d797ddf10183f36825f56131"
   },
   {
     "university": "جامعة الإمام عبدالرحمن بن فيصل",
-    "file": "https://i.ibb.co/7b93SgJ/iau.png",
-    "source": "https://i.ibb.co/7b93SgJ/iau.png"
+    "file": "universities/202.jpg",
+    "source": "https://github.com/yusra-js/CPSU2/blob/de7f6a9a3d601fa4a1154ddd3e4f8fb9ff0897d0/images/uni/imam.jpg",
+    "sha256": "b31e1d053cbe22d2af66b510754de07ed5cb20d815c64ae8a504b06dff08f036"
   },
   {
     "university": "جامعة الملك فهد للبترول والمعادن",
@@ -66,13 +74,15 @@
   },
   {
     "university": "جامعة الملك فيصل",
-    "file": "https://i.ibb.co/37FNvmq/kfu.png",
-    "source": "https://i.ibb.co/37FNvmq/kfu.png"
+    "file": "universities/204.jpg",
+    "source": "https://github.com/yusra-js/CPSU2/blob/de7f6a9a3d601fa4a1154ddd3e4f8fb9ff0897d0/images/uni/uf.jpg",
+    "sha256": "9c039f92903868cbe2e70dbbaaa285c1b39be7b4eee038672b26b1b5940c8e23"
   },
   {
     "university": "جامعة الجوف",
-    "file": "https://i.ibb.co/wCfVPC5/ju.gif",
-    "source": "https://i.ibb.co/wCfVPC5/ju.gif"
+    "file": "universities/301.jpg",
+    "source": "https://github.com/yusra-js/CPSU2/blob/de7f6a9a3d601fa4a1154ddd3e4f8fb9ff0897d0/images/uni/ju.jpg",
+    "sha256": "c409614ceee4dee97eacbabd90cfa45658504a6c8a42c00cbb8d0dc2587f6f76"
   },
   {
     "university": "جامعة الحدود الشمالية",
@@ -81,13 +91,15 @@
   },
   {
     "university": "جامعة تبوك",
-    "file": "https://i.ibb.co/1XZpMJt/tu.png",
-    "source": "https://i.ibb.co/1XZpMJt/tu.png"
+    "file": "universities/303.png",
+    "source": "https://github.com/amir58/TabukUniversityApp/blob/09bdb4fa39f8b9ca9a7f484f21b04b7ba57ea19b/app/src/main/ic_launcher-playstore.png",
+    "sha256": "2d8aec196a30fc2ac98aca66e4ac58b8f7ca4b372bbcd454cdfb279c764d96fe"
   },
   {
     "university": "جامعة الباحة",
-    "file": "https://i.ibb.co/dKSnkpQ/bu.png",
-    "source": "https://i.ibb.co/dKSnkpQ/bu.png"
+    "file": "universities/401.jpg",
+    "source": "https://github.com/yusra-js/CPSU2/blob/de7f6a9a3d601fa4a1154ddd3e4f8fb9ff0897d0/images/uni/ub.jpg",
+    "sha256": "588a88012a017650e50537d8a1876ca4e67653c2da1f04816f0abb3056939fca"
   },
   {
     "university": "جامعة بيشة",
@@ -111,8 +123,9 @@
   },
   {
     "university": "الجامعة الإسلامية",
-    "file": "https://i.ibb.co/4mp8LCR/iu.png",
-    "source": "https://i.ibb.co/4mp8LCR/iu.png"
+    "file": "universities/501.png",
+    "source": "https://github.com/M-DashBoard/Islamic-University/blob/4d49dc8ea4c252d696adea0511ca472ea9ed6a5d/%D8%B4%D8%B9%D8%A7%D8%B1%20%D8%A7%D9%84%D8%AC%D8%A7%D9%85%D8%B9%D8%A9%20%D8%A7%D9%84%D8%A7%D8%B3%D9%84%D8%A7%D9%85%D9%8A%D8%A9.png",
+    "sha256": "30e18c290d259b2433d9c2b410fd1ed7bcf2354af353e68990f4fac4a28d9351"
   },
   {
     "university": "جامعة جدة",
@@ -126,8 +139,9 @@
   },
   {
     "university": "جامعة طيبة",
-    "file": "https://i.ibb.co/ZWMTFTj/tu.png",
-    "source": "https://i.ibb.co/ZWMTFTj/tu.png"
+    "file": "universities/504.png",
+    "source": "https://github.com/KhawlahIbrahim/Basmatuna/blob/6c7ff5e926e0dce5e594ca742a8fafca8146d6c7/public/assets/logos/taibah-university-1200.png",
+    "sha256": "05a06aacebab34dc444c18f6e8a5b1a6fe6627c0230469a3ea2f3c380038f1a9"
   },
   {
     "university": "جامعة الطائف",
@@ -136,7 +150,8 @@
   },
   {
     "university": "جامعة أم القرى",
-    "file": "https://firebasestorage.googleapis.com/v0/b/universities-directory.appspot.com/o/Universities%20Logo%2Falqura_logo.png?alt=media&token=de160ea2-ab0d-40d5-a654-0a92beebc1d8",
-    "source": "https://firebasestorage.googleapis.com/v0/b/universities-directory.appspot.com/o/Universities%20Logo%2Falqura_logo.png?alt=media&token=de160ea2-ab0d-40d5-a654-0a92beebc1d8"
+    "file": "universities/506.png",
+    "source": "https://github.com/dahm-cs/student-grades-system/blob/14bcdd14b025d9014e31e975704da3d6df8432be/src/main/resources/com/example/demo1/Umm_Al-Qura_University_logo.png",
+    "sha256": "c6f89e39a356847a9183281b3fe1b779736db86c69b9ab517b391ec459e53b78"
   }
 ]
