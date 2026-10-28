@@ -33,6 +33,7 @@ header{border-top:0;border-radius:0 0 24px 24px}
 .action-card.browse{background:linear-gradient(135deg,var(--glass-strong),var(--glass))}
 .icon-btn,.action-icon,.user-avatar,.filter-button,.google-account-button,.college-option,.major-chip{border-radius:15px;background:var(--glass);border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
 aside nav{border-radius:24px}
+.platform-startup{min-height:100dvh;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted)}.platform-startup .brand{margin:0 auto 24px}.platform-startup p{line-height:1.8}
 .nav-item{border-radius:18px}.nav-item.active{background:hsl(var(--brand-hue,218) 28.3% 56.3% / .18);box-shadow:inset 0 1px 0 rgba(255,255,255,.45);color:var(--green)}
 input:not([type=range]),select,textarea{background:var(--glass-strong);color:var(--ink);border-radius:14px;border-color:var(--line)}
 .modal-backdrop{z-index:1000;background:hsl(var(--brand-hue,218) 35.5% 12.2% / .44);-webkit-backdrop-filter:blur(22px) saturate(75%);backdrop-filter:blur(22px) saturate(75%);padding:24px 16px}

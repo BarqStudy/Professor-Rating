@@ -44,12 +44,12 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);re
   // Neither slow catalogue/profile fetches nor background guest setup may show a chooser.
   for(const width of [390,1440]){
    const test=await setup({width,delayed:true,hash:width===1440?'#ratings':''});const {page}=test;
-   await page.locator('#header-change-university').waitFor();await test.reached.catalogue.promise;await test.reached.guest.promise;
-   assert.equal(await page.locator('#university-directory').count(),0);assert.equal(await page.locator('aside').count(),1);
+   await page.locator('.platform-startup').waitFor();await test.reached.catalogue.promise;await test.reached.guest.promise;
+   assert.equal(await page.locator('#university-directory').count(),0);assert.equal(await page.locator('aside,#google-account').count(),0);
    test.gates.catalogue.resolve();await test.reached.me.promise;assert.deepEqual(await page.evaluate(()=>window.automaticDirectories),[]);
-   if(width===390){await page.locator('#new-review').click();await page.getByText('انتظر اكتمال تحميل المنصة، أو أعد المحاولة.',{exact:true}).waitFor();assert.equal(await page.locator('.modal-backdrop,#university-directory').count(),0);await page.locator('aside [data-page="home"]').click();}
-   test.gates.me.resolve();await test.reached.guest.promise;assert.equal(await page.locator('#university-directory').count(),0);
-   test.gates.guest.resolve();await page.locator('.connection-banner.live').waitFor();
+   assert.equal(await page.locator('.welcome,#google-account').count(),0);
+   test.gates.me.resolve();await page.locator('.connection-banner.live').waitFor();assert.equal(await page.locator('#university-directory').count(),0);
+   test.gates.guest.resolve();
    assert.equal(new URL(page.url()).hash,width===1440?'#ratings':'');assert.deepEqual(await page.evaluate(()=>window.automaticDirectories),[]);
    await page.reload();await page.locator('.connection-banner.live').waitFor();assert.deepEqual(await page.evaluate(()=>window.automaticDirectories),[]);
    await page.evaluate(()=>{window.allowUniversityDirectory=true;});await page.locator('#header-change-university').click();
@@ -64,7 +64,7 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);re
   // Plan progress must not render/edit under the guest owner while restoring a member.
   for(const hash of ['#plan','#advisor']){
    const test=await setup({hash,delayed:true}),{page}=test;
-   await page.locator('#header-change-university').waitFor();await test.reached.catalogue.promise;
+   await page.locator('.platform-startup').waitFor();await test.reached.catalogue.promise;
    assert.equal(await page.locator('#study-plan-select,#advisor-plan').count(),0);
    test.gates.catalogue.resolve();await test.reached.me.promise;
    assert.equal(await page.locator('#study-plan-select,#advisor-plan').count(),0);

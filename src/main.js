@@ -55,6 +55,7 @@ let cloudMe = null,
   cloudCatalogue = null,
   cloudQueue = null;
 let cloudAuthPending = null;
+let cloudBooting = configured, cloudLoadPending = null, authGeneration = 0, localSignOut = false;
 let cloudQueueLoading = false;
 const miyarAssistant = createAssistant({
   api,
@@ -273,7 +274,11 @@ function previousPage(){
  if(!navigation.back()){page='home';render();window.scrollTo({top:0});}
 }
 
+function renderStartup() {
+  if (!document.querySelector('.platform-startup')) document.querySelector('#app').innerHTML = `<main class="platform-startup" aria-busy="true"><div><div class="brand">${logo}</div><p role="status">جارٍ تجهيز مِعيار…</p></div></main>`;
+}
 function render() {
+  if (cloudBooting) { renderStartup(); return; }
   // Older links used a placeholder page solely behind the review dialog.
   if(page==='review'){
     page='home';
@@ -1440,9 +1445,11 @@ function openSettings() {
       button.disabled = true;
       if (configured) {
         try {
+          localSignOut = true;
           await signOutGoogle();
           googleSession = null;
         } catch (error) {
+          localSignOut = false;
           button.disabled = false;
           toast(error.message);
           return;
@@ -1460,6 +1467,7 @@ function openSettings() {
       storage.removeItem("miyar-profile");
       storage.setItem("miyar-session", "signed-out");
       document.body.classList.remove("modal-open");
+      localSignOut = false;
       render();
     };
   });
@@ -1529,74 +1537,85 @@ async function refreshCloudCatalogue() {
   cloudError = "";
 }
 async function loadCloud() {
-  cloudStatus = "loading";
-  cloudError = "";
-  try {
-    googleSession = await initializeAuth();
-  } catch (error) {
-    authNotice = error.message;
-  }
-  // Guest setup/presence must not add another serial request to member entry.
-  const guestSession=ensureGuestSession().catch(()=>null);
-  try {
-    await refreshCloudCatalogue();
-    cloudStatus='loading';
-    if (googleSession) await connectCloudAccount(false);
-    const guest=await guestSession;
-    if(guest){guestProfile=guest;if(!googleSession)scopeCatalogue();}else presenceCount=null;
-    cloudStatus='ready';
-    refreshPresence();
-  } catch (error) {
-    cloudStatus = "error";
-    cloudError = error.message;
-  }
-  if (!document.querySelector(".modal-backdrop")) render();
-  const id = Number(new URLSearchParams(location.search).get("doctor"));
-  if (!needsUniversity() && doctors.some((d) => d.id === id)) detail(id);
-  refreshSavedUpdates();
+  if (cloudLoadPending) return cloudLoadPending;
+  cloudLoadPending = (async () => {
+    cloudStatus = 'loading';
+    cloudError = '';
+    const guestSession = ensureGuestSession().then(guest => { guestProfile = guest; return guest; }).catch(() => null);
+    let catalogueError = null;
+    const catalogue = refreshCloudCatalogue().catch(error => { catalogueError = error; });
+    let loadedGeneration = -1;
+    const restoreAccount = async () => {
+      while (googleSession) {
+        const owner = googleSession.user.id, generation = authGeneration;
+        await connectCloudAccount(false);
+        if (owner === googleSession?.user.id && generation === authGeneration) break;
+      }
+      loadedGeneration = authGeneration;
+    };
+    const account = (async () => {
+      const generation = authGeneration;
+      try {
+        const session = await initializeAuth();
+        // A newer sign-in/sign-out event wins over an older startup result.
+        if (generation === authGeneration || googleSession?.user.id === session?.user.id) googleSession = session;
+      } catch (error) { authNotice = error.message; }
+      await restoreAccount();
+    })();
+    await Promise.all([catalogue, account]);
+    // Member entry never waits for the independent guest/presence request.
+    do {
+      if (loadedGeneration !== authGeneration) await restoreAccount();
+      if (!googleSession) await guestSession;
+    } while (loadedGeneration !== authGeneration);
+    scopeCatalogue();
+    if (cloudMe && studentProfile) studentProfile.major = cloudCatalogue?.majors.find(major => major.id === cloudMe.major_id)?.name || '';
+    cloudStatus = catalogueError ? 'error' : 'ready';
+    cloudError = catalogueError?.message || '';
+    cloudBooting = false;
+    if (!document.querySelector('.modal-backdrop')) render();
+    const id = Number(new URLSearchParams(location.search).get('doctor'));
+    if (!needsUniversity() && doctors.some(doctor => doctor.id === id)) detail(id);
+    void guestSession.then(() => refreshPresence());
+    refreshSavedUpdates();
+  })().finally(() => { cloudLoadPending = null; });
+  return cloudLoadPending;
 }
 async function connectCloudAccount(update = true) {
   let session;
-  try {
-    session = await getGoogleSession();
-  } catch (error) {
-    cloudMe = null;
-    if (update) toast(error.message);
+  const generation = authGeneration;
+  try { session = await getGoogleSession(); }
+  catch (error) {
+    if (generation === authGeneration) {
+      cloudMe = null;
+      if (update) toast(error.message);
+    }
     return null;
   }
-  googleSession = session;
-  if (!session) {
-    cloudMe = null;
-    return null;
-  }
-  if (!cloudAuthPending) {
-    cloudAuthPending = api("me").then((me) => {
-      // Ignore responses for a session that was signed out or replaced while loading.
-      if (googleSession?.user.id !== session.user.id) return null;
+  if (!session || session.user.id !== googleSession?.user.id || generation !== authGeneration) return null;
+  const owner = session.user.id;
+  if (!cloudAuthPending || cloudAuthPending.owner !== owner || cloudAuthPending.generation !== generation) {
+    const request = { owner, generation, promise: null };
+    request.promise = api('me').then(me => {
+      if (googleSession?.user.id !== owner || authGeneration !== generation) return null;
       cloudMe = me;
       scopeCatalogue();
       queueMicrotask(refreshSavedUpdates);
-      const major = cloudCatalogue?.majors.find((m) => m.id === me.major_id);
-      studentProfile = {
-        name: me.name,
-        major: major?.name || "",
-        level: me.level || 1,
-      };
+      studentProfile = { name: me.name, major: cloudCatalogue?.majors.find(major => major.id === me.major_id)?.name || '', level: me.level || 1 };
       signedOut = false;
-      storage.setItem("miyar-session", "active");
+      storage.setItem('miyar-session', 'active');
       return me;
-    }).catch((error) => {
-      cloudMe = null;
-      if (update) toast(error.message);
+    }).catch(error => {
+      if (googleSession?.user.id === owner && authGeneration === generation) {
+        cloudMe = null;
+        if (update) toast(error.message);
+      }
       return null;
-    }).finally(() => {
-      cloudAuthPending = null;
-    });
+    }).finally(() => { if (cloudAuthPending === request) cloudAuthPending = null; });
+    cloudAuthPending = request;
   }
-  const me = await cloudAuthPending;
-  if (
-    me && update && !document.querySelector(".modal-backdrop") && !signedOut
-  ) render();
+  const me = await cloudAuthPending.promise;
+  if (me && generation === authGeneration && update && !cloudBooting && !document.querySelector('.modal-backdrop') && !signedOut) render();
   return me;
 }
 async function startGoogleLogin() {
@@ -2255,7 +2274,7 @@ function reviewTagLabels(tags){
 }
 function onlineCountText(){return presenceCount===null?(presenceBusy?'جارٍ حساب المتصلين…':'عدد المتصلين غير متاح حاليًا'):`عدد المتصلين حاليًا ${presenceCount.toLocaleString('ar')}`;}
 async function refreshPresence(visible=!document.hidden){
- if(!configured||presenceBusy||(!visible&&!guestProfile))return;
+ if(!configured||cloudBooting||presenceBusy||(!visible&&!guestProfile))return;
  presenceBusy=true;
  try{
   if(!guestProfile)guestProfile=await ensureGuestSession();
@@ -2265,37 +2284,31 @@ async function refreshPresence(visible=!document.hidden){
  finally{presenceBusy=false;document.querySelectorAll('[data-online-count]').forEach((element)=>element.textContent=onlineCountText());}
 }
 
-window.addEventListener("miyar-auth", async ({ detail }) => {
-  const previous = googleSession;
-  if (previous?.user.id !== detail.session?.user.id) miyarAssistant.reset();
+window.addEventListener('miyar-auth', async ({ detail }) => {
+  const previous = googleSession?.user.id || null;
+  const owner = detail.session?.user.id || null;
   googleSession = detail.session;
-  if (!detail.session) {
-    cloudMe = null;
-    scopeCatalogue();
-    cloudQueue = null;
-    studentProfile = null;
-    storage.removeItem("miyar-profile");
-    if (detail.event === "SIGNED_OUT") {
-      storage.setItem("miyar-session", signedOut ? "signed-out" : "guest");
-    }
-  } else if (!previous || previous.user.id !== detail.session.user.id) {
-    cloudMe = null;
-    scopeCatalogue();
-    cloudQueue = null;
-    studentProfile = null;
+  // Supabase also emits SIGNED_IN when a tab becomes visible. A new token for
+  // the same account must not replace the DOM, reset scrolling or lose drafts.
+  if (previous === owner) return;
+  const generation = ++authGeneration;
+  miyarAssistant.reset();
+  cloudMe = null;
+  cloudQueue = null;
+  studentProfile = null;
+  storage.removeItem('miyar-profile');
+  scopeCatalogue();
+  if (owner) {
     signedOut = false;
-    storage.setItem("miyar-session", "active");
-    if (cloudStatus === "ready") await connectCloudAccount(false);
-  }
-  if (['plan','advisor'].includes(page) && previous?.user.id !== detail.session?.user.id) {
-    document.body.classList.remove('modal-open');
-    render();
-    return;
-  }
-  if (
-    detail.event !== "TOKEN_REFRESHED" &&
-    !document.querySelector(".modal-backdrop")
-  ) render();
+    storage.setItem('miyar-session', 'active');
+  } else if (detail.event === 'SIGNED_OUT') storage.setItem('miyar-session', signedOut ? 'signed-out' : 'guest');
+  // Startup owns the first complete render; local logout owns its confirmation.
+  if (cloudBooting || localSignOut) return;
+  document.body.classList.remove('modal-open');
+  if (owner) { renderStartup(); await connectCloudAccount(false); }
+  if (generation !== authGeneration) return;
+  render();
+  refreshSavedUpdates();
 });
 document.addEventListener('click',event=>{
  const link=event.target.closest?.('a[href^="#"]');
