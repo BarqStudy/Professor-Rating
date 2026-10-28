@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {repairPlanDraft} from '../supabase/functions/miyar/plan-repair.js';
 import {normalizePublishedPlan} from '../supabase/functions/miyar/plan-format.js';
-import {choiceCandidates,cleanProgress,progressSummary,selectedCourse} from '../src/study-engine.js';
+import {choiceCandidates,cleanProgress,progressSummary,selectedCourse,courseStatus} from '../src/study-engine.js';
 
 const course=(code,name,level=1,extra={})=>({code,name,level,credits:3,kind:'course',pool:null,prerequisites:[],corequisites:[],anyPrerequisites:[],minimumCredits:null,completedLevel:null,allPrevious:false,review:null,page:1,...extra});
 const draft=courses=>({id:'plan-12345678-1234-4234-8234-123456789012',title:'خطة الهندسة',fileLabel:'نسخة الاختبار',sha256:'a'.repeat(64),courses});
@@ -44,4 +44,12 @@ test('ordinary mandatory courses, explicit cross-type conflicts, missing academi
  const types={...draft([course('U 1','متطلب جامعة',2,{kind:'slot',pool:'قائمة مشتركة',requirementType:'university'}),course('REQ 101','English',0,{pool:'قائمة مشتركة',requirementType:'required'})]),requirementLists:true};await assert.rejects(normalizePublishedPlan(types),/افصل قائمة/);
  const credits=draft([course('EL 1','مقرر اختياري',2,{kind:'slot',pool:'اختياري',credits:2}),course('EL 2','مقرر اختياري',3,{kind:'slot',pool:'اختياري',credits:3}),course('UNI 201','مادة بساعتين',0,{pool:'اختياري',credits:2}),course('UNI 301','مادة بثلاث ساعات',0,{pool:'اختياري',credits:3})]);
  const plan=await normalizePublishedPlan(credits);for(const slot of plan.courses.filter(row=>row.kind==='slot'))assert.deepEqual(choiceCandidates(plan,slot).map(row=>row.credits),[slot.credits]);
+});
+
+test('a repaired traditional elective keeps both the placeholder and selected material prerequisites',async()=>{
+ const input=draft([course('CE 101','مقدمة هندسية'),course('CE 102','رياضيات هندسية'),course('EL 1','مقرر اختياري',3,{prerequisites:['CE 101']}),course('CE 501','موضوع متقدم',0,{prerequisites:['CE 102']})]);
+ const plan=await normalizePublishedPlan(input),slot=plan.courses.find(row=>row.kind==='slot'),option=choiceCandidates(plan,slot)[0];
+ const state=cleanProgress(plan,{electiveChoices:{[slot.id]:option.id}});
+ assert.deepEqual(selectedCourse(plan,slot,state).prerequisites,['CE 101','CE 102']);assert.equal(courseStatus(plan,slot,state).key,'locked');
+ state.completed=plan.courses.filter(row=>['CE 101','CE 102'].includes(row.code)).map(row=>row.id);assert.equal(courseStatus(plan,slot,state).key,'ready');
 });

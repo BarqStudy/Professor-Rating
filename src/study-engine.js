@@ -24,7 +24,7 @@ export function cleanProgress(plan,raw={}) {
 export function selectedCourse(plan,item,state) {
  if(item.kind!=='slot')return item;
  const course=choiceCandidates(plan,item).find(c=>c.id===state.electiveChoices[item.id]&&c.linkable);
- if(!course||!item.requirementType)return course;
+ if(!course)return course;
  const slotAny=item.anyPrerequisites||[],courseAny=course.anyPrerequisites||[];
  const conflictingAlternatives=slotAny.length&&courseAny.length&&(slotAny.length!==courseAny.length||slotAny.some(code=>!courseAny.includes(code)));
  return {...course,prerequisites:[...new Set([...item.prerequisites,...course.prerequisites])],corequisites:[...new Set([...item.corequisites,...course.corequisites])],anyPrerequisites:slotAny.length?slotAny:courseAny,
