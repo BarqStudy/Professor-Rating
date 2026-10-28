@@ -396,42 +396,30 @@ const server = http.createServer((req, res) => {
     await page.locator("#compare-clear").click();
     await page.locator("[data-page=ratings]").first().click();
     assert.equal(await page.locator("[data-college]").count(), 2);
-    assert.equal(await page.locator("[data-major]").count(), 3);
+    assert.equal(await page.locator(".directory-major").count(), 2);
+    assert.equal(await page.locator("[data-major]").count(), 0);
     assert.equal(await page.locator(".doctor-card").count(), 4);
     await page.locator('[data-college="كلية الهندسة"]').click();
     assert.equal(await page.locator(".doctor-card").count(), 4);
     for(const id of [17,18,19,21]) await page.locator(`[data-compare="${id}"]`).click();
     assert.equal(await page.locator('[data-compare][aria-pressed="true"]').count(),3);
     await page.locator("#compare-clear").click();
-    assert.equal(await page.locator('[data-major="الفيزياء"]').count(), 0);
-    await page.locator('[data-major="الهندسة الكهربائية"]').click();
-    assert.equal(await page.locator(".doctor-card").count(), 1);
-    assert.match(
-      await page.locator(".doctor-card").innerText(),
-      /عبدالله سعد القحطاني/,
-    );
+    assert.equal(await page.locator('.directory-major').filter({hasText:'الفيزياء'}).count(),0);
+    await page.locator('#search').fill('عبدالله سعد القحطاني');
+    assert.equal(await page.locator('.doctor-card').count(),1);
+    assert.match(await page.locator('.directory-major h3').innerText(),/الهندسة الكهربائية/);
+    await page.locator('#clear-search').click();
     await page.locator('[data-college="كلية العلوم"]').click();
-    assert.equal(await page.locator(".doctor-card").count(), 1);
-    assert.equal(
-      await page.locator('[data-major="الهندسة المدنية"]').count(),
-      0,
-    );
+    assert.equal(await page.locator('.doctor-card').count(),1);
+    assert.equal(await page.locator('.directory-major').count(),1);
     await page.locator('[data-college="كلية الهندسة"]').click();
-    assert.equal(
-      await page.locator('[data-major="الكل"]').getAttribute("aria-pressed"),
-      "true",
-    );
-    await page.waitForFunction(() =>
-      !document.querySelector("#doctors-next").disabled
-    );
-    await page.locator("#doctors-next").click();
-    await page.waitForFunction(() =>
-      Math.abs(document.querySelector("#doctor-grid").scrollLeft) > 20
-    );
-    await page.locator("#doctors-previous").click();
-    await page.waitForFunction(() =>
-      document.querySelector("#doctors-previous").disabled
-    );
+    assert.equal(await page.locator('.directory-major').count(),2);
+    const civil=page.locator('.directory-major').filter({has:page.locator('h3').filter({hasText:'الهندسة المدنية'})});
+    await page.setViewportSize({width:390,height:844});
+    await civil.locator('[data-carousel-next]').click();
+    await page.waitForFunction(()=>Math.abs(document.querySelector('.directory-major .doctor-carousel').scrollLeft)>20);
+    await civil.locator('[data-carousel-previous]').click();
+    await page.waitForFunction(()=>document.querySelector('[data-carousel-previous]').disabled);
     await page.locator("#page-close").click();
     await page.setViewportSize({ width: 390, height: 844 });
     assert.ok(await page.locator(".hero-art").isVisible());

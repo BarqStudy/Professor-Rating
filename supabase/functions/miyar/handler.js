@@ -3,6 +3,7 @@ import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
 import {loadEditablePlan,updateStudyPlan,deleteStudyPlan} from './plan-editor.js';
 import {publishedReviewAdmin} from './published-reviews.js';
+import {majorAdministration} from './major-removal.js';
 import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
 import { handleGuest, verifiedGuest } from "./guest.js";
 import { gradeConsent, gradeParticipation, publicGrades } from "./grades.js";
@@ -204,7 +205,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         const major = body.majorId == null ? null : integer(body.majorId, 1, Number.MAX_SAFE_INTEGER, "التخصص");
         if (!user.university_id) throw new ApiError(400, "اختر جامعتك أولًا.");
         if (major !== null) {
-          const found = await db(`miyar_majors?id=eq.${major}&select=id,miyar_colleges!inner(university_id)&miyar_colleges.university_id=eq.${user.university_id}`);
+          const found = await db(`miyar_majors?id=eq.${major}&deleted_at=is.null&select=id,miyar_colleges!inner(university_id)&miyar_colleges.university_id=eq.${user.university_id}`);
           if (!found.length) throw new ApiError(400, "التخصص لا يتبع جامعتك المختارة.");
         }
         await db(`miyar_accounts?auth_id=eq.${identity.id}`, {
@@ -249,6 +250,10 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      if(['major.preview-delete','major.delete','major.add'].includes(operation)){
+        if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
+        return respond(await majorAdministration(operation,body,identity.id,db));
+      }
       if(['review.published.list','review.remove'].includes(operation)){
         if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
         return respond(await publishedReviewAdmin(operation,body,identity.id,db));
@@ -348,18 +353,6 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         });
       } else if (operation === "college.delete") {
         await db(`miyar_colleges?id=eq.${validId(body.id)}`, {
-          method: "DELETE",
-        });
-      } else if (operation === "major.add") {
-        await db("miyar_majors", {
-          method: "POST",
-          body: {
-            college_id: validId(body.collegeId),
-            name: text(body.name, 2, 100, "التخصص"),
-          },
-        });
-      } else if (operation === "major.delete") {
-        await db(`miyar_majors?id=eq.${validId(body.id)}`, {
           method: "DELETE",
         });
       } else if (operation === "doctor.add") {

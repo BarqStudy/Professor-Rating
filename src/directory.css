@@ -1,7 +1,6 @@
 /* Native RTL strips keep the directory compact on phones. */
 @media (max-width: 650px) {
-  .directory-actions,
-  .major-filter .chips {
+  .directory-actions {
     display: flex;
     flex-flow: row nowrap;
     align-items: center;
@@ -18,13 +17,24 @@
     scroll-padding-inline: 3px;
   }
   .directory-actions { margin-bottom: 20px; }
-  .directory-actions > button,
-  .major-filter .chips > .chip {
+  .directory-actions > button {
     flex: 0 0 auto;
     width: auto;
     min-height: 44px;
     white-space: nowrap;
   }
-  .major-filter { min-width: 0; }
-  .major-filter .chips { margin-bottom: 10px; }
 }
+.directory-search{margin-block:16px 28px;max-width:680px}
+.directory-search>label{display:block;color:var(--muted);font-size:14px;margin-bottom:10px}
+.directory-search-field{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:6px 16px;color:var(--green)}
+.directory-search-field:focus-within{outline:2px solid var(--green);outline-offset:2px}
+.directory-search-field>input{flex:1;min-width:0;width:100%;border:0;background:transparent;padding:13px 0;color:var(--ink);outline:none}
+.directory-search-field>input::-webkit-search-cancel-button{display:none}
+.directory-search-field>[hidden]{display:none}
+.directory-rows,.directory-major{min-width:0;max-width:100%}
+.directory-major{margin-block:0 30px}
+.directory-major-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px}
+.directory-major-heading>div:first-child{display:flex;align-items:baseline;flex-wrap:wrap;gap:12px}
+.directory-major-heading h3{margin:0;font-size:21px}
+.directory-major-heading .muted{font-size:13px}
+.major-removal-counts{padding:18px 30px;border:1px solid var(--line);border-radius:16px;background:var(--soft);line-height:2.1;margin-block:20px}.major-removal-actions{display:flex;gap:12px;flex-wrap:wrap}#major-removal-content>p{line-height:1.9}#major-removal-content h3{overflow-wrap:anywhere}

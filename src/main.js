@@ -1,5 +1,6 @@
 import {createUniversitySelector} from './university-selector.js';
 import {homeIcon} from './home-icons.js';
+import {openMajorRemoval} from './major-removal.js';
 import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
 import {createFileManager} from './files.js';
@@ -473,54 +474,14 @@ function syncHomeSearch() {
   section.querySelector(".section-heading p").textContent = searching ? "اختر الدكتور لاستعراض تقييماته أو إضافة تجربتك." : "الأعلى في متوسط التقييم، وعند التعادل نقدّم الأكثر تقييمات.";
 }
 function listSection() {
-  const expanded = collegeSelected || page === "ratings";
-  return `<section class="doctors-section"><div class="section-heading"><div><span class="eyebrow">تجارب تستحق الاطلاع</span><h2>${
-    page === "ratings" ? "دليل الدكاترة والتقييمات" : "دكاترة تركوا أثرًا"
-  } <span class="small-star">✦</span></h2><p>اختر كليتك، ثم تخصصك، واكتشف تجارب زملائك</p></div><div class="section-tools"><button class="text-button" ${
-    page === "home" ? 'data-page="ratings"' : 'id="saved-filter"'
-  }>${
-    page === "home"
-      ? "عرض جميع الدكاترة"
-      : savedOnly
-      ? "عرض الجميع"
-      : "المحفوظات"
-  } ${
-    ic(page === "home" ? "arrow" : "bookmark")
-  }</button><div class="carousel-controls"><button class="carousel-control previous" id="doctors-previous" aria-label="الدكاترة السابقون" aria-controls="doctor-grid">${
-    ic("arrow")
-  }</button><button class="carousel-control" id="doctors-next" aria-label="الدكاترة التاليون" aria-controls="doctor-grid">${
-    ic("arrow")
-  }</button></div></div></div><div class="college-tabs" role="group" aria-label="الكليات">${
-    colleges.map((college) =>
-      `<button class="college-tab ${
-        expanded && college === activeCollege ? "selected" : ""
-      }" data-college="${escapeHtml(college)}" aria-pressed="${
-        expanded && college === activeCollege
-      }" aria-expanded="${
-        expanded && college === activeCollege
-      }" aria-controls="major-options"><span class="college-tab-icon">${
-        ic("cap")
-      }</span><span>${escapeHtml(college)}</span><small>${
-        doctors.filter((d) => (d.college || "كلية الهندسة") === college).length
-          .toLocaleString("ar")
-      } دكتور</small></button>`
-    ).join("")
-  }</div><div id="major-options">${
-    expanded
-      ? `<div class="major-filter"><span class="filter-caption">تخصصات ${
-        escapeHtml(activeCollege)
-      }</span><div class="chips" role="group" aria-label="التخصصات" tabindex="0">${
-        ["الكل", ...majors.filter((m) => majorBelongs(m, activeCollege))].map(
-          (m) =>
-            `<button class="chip ${
-              activeMajor === m ? "selected" : ""
-            }" data-major="${escapeHtml(m)}" aria-pressed="${
-              activeMajor === m
-            }">${escapeHtml(m)}</button>`,
-        ).join("")
-      }</div></div>`
-      : '<p class="college-hint">اختر كلية لعرض تخصصاتها</p>'
-  }</div><div class="doctor-carousel" id="doctor-grid" role="region" aria-label="بطاقات الدكاترة" tabindex="0">${cards()}</div></section>`;
+  return `<section class="doctors-section directory-section"><div class="section-heading"><div><span class="eyebrow">تجارب تستحق الاطلاع</span><h2>دليل الدكاترة والتقييمات <span class="small-star">✦</span></h2><p>اختر كليتك، وابحث عن الدكتور أو تصفّح دكاترة كل تخصص</p></div><button class="text-button" id="saved-filter">${savedOnly ? "عرض الجميع" : "المحفوظات"} ${ic("bookmark")}</button></div><div class="college-tabs" role="group" aria-label="الكليات">${colleges.map(college=>`<button class="college-tab ${college===activeCollege?'selected':''}" data-college="${escapeHtml(college)}" aria-pressed="${college===activeCollege}" aria-controls="doctor-grid"><span class="college-tab-icon">${ic('cap')}</span><span>${escapeHtml(college)}</span><small>${doctors.filter(d=>(d.college||'كلية الهندسة')===college).length.toLocaleString('ar')} دكتور</small></button>`).join('')}</div><div class="directory-search"><label for="search">ابحث في ${escapeHtml(activeCollege||'دليل الدكاترة')}</label><div class="directory-search-field">${ic('search')}<input type="search" id="search" value="${escapeHtml(query)}" placeholder="اسم الدكتور أو المادة…" autocomplete="off" aria-controls="doctor-grid"><button type="button" class="icon-btn" id="clear-search" aria-label="مسح البحث" ${query?'':'hidden'}>${ic('close')}</button></div></div><div id="doctor-grid" class="directory-rows" aria-live="polite">${directoryRows()}</div></section>`;
+}
+function directoryRows() {
+  const matches=filteredDoctors();
+  const names=majors.filter(name=>majorBelongs(name,activeCollege));
+  const groups=names.map((name,index)=>({name,index,list:matches.filter(doctor=>doctor.major===name)})).filter(group=>!(query||savedOnly)||group.list.length);
+  if(!matches.length&&(query||savedOnly||!names.length))return cards([]);
+  return groups.map(({name,index,list})=>`<section class="directory-major" aria-labelledby="directory-major-${index}"><div class="directory-major-heading"><div><h3 id="directory-major-${index}">${escapeHtml(name)}</h3><span class="muted">${list.length.toLocaleString('ar')} دكتور</span></div><div class="carousel-controls"><button type="button" class="carousel-control previous" data-carousel-previous="major-doctors-${index}" aria-label="الدكاترة السابقون في ${escapeHtml(name)}" aria-controls="major-doctors-${index}">${ic('arrow')}</button><button type="button" class="carousel-control" data-carousel-next="major-doctors-${index}" aria-label="الدكاترة التاليون في ${escapeHtml(name)}" aria-controls="major-doctors-${index}">${ic('arrow')}</button></div></div><div class="doctor-carousel" id="major-doctors-${index}" role="region" aria-label="دكاترة ${escapeHtml(name)}" tabindex="0">${list.length?cards(list):'<p class="empty">لا يوجد دكاترة مضافون لهذا التخصص بعد.</p>'}</div></section>`).join('');
 }
 function selectCollege(college) {
   activeCollege = college;
@@ -529,44 +490,28 @@ function selectCollege(college) {
   render();
 }
 function updateCarouselControls() {
-  const track = document.querySelector("#doctor-grid");
-  if (!track) return;
-  const maximum = Math.max(0, track.scrollWidth - track.clientWidth),
-    offset = Math.abs(track.scrollLeft);
-  const previous = document.querySelector("#doctors-previous"),
-    next = document.querySelector("#doctors-next");
-  if (previous) previous.disabled = offset <= 2;
-  if (next) next.disabled = offset >= maximum - 2;
+  document.querySelectorAll('.doctor-carousel').forEach(track=>track.onscroll?.());
 }
 function bindCarousel() {
-  const track = document.querySelector("#doctor-grid");
-  if (!track) return;
-  const move = (direction) => {
-    const card = track.querySelector(".doctor-card");
-    if (!card) return;
-    const step = card.getBoundingClientRect().width +
-      parseFloat(getComputedStyle(track).gap || 0);
-    track.scrollBy({
-      left: direction * step,
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-    });
-  };
-  const next = document.querySelector("#doctors-next"), previous = document.querySelector("#doctors-previous");
-  if (next) next.onclick = () => move(-1);
-  if (previous) previous.onclick = () => move(1);
-  track.addEventListener("scroll", updateCarouselControls, { passive: true });
-  requestAnimationFrame(updateCarouselControls);
+  document.querySelectorAll('.doctor-carousel').forEach(track=>{
+    const next=document.querySelector(`[data-carousel-next="${track.id}"]`) || (track.id==='doctor-grid'?document.querySelector('#doctors-next'):null);
+    const previous=document.querySelector(`[data-carousel-previous="${track.id}"]`) || (track.id==='doctor-grid'?document.querySelector('#doctors-previous'):null);
+    const update=()=>{const offset=Math.abs(track.scrollLeft),maximum=Math.max(0,track.scrollWidth-track.clientWidth);if(previous)previous.disabled=offset<=2;if(next)next.disabled=offset>=maximum-2;};
+    const move=direction=>{const card=track.querySelector('.doctor-card');if(!card)return;track.scrollBy({left:direction*(card.getBoundingClientRect().width+parseFloat(getComputedStyle(track).gap||0)),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};
+    if(next)next.onclick=()=>move(-1);if(previous)previous.onclick=()=>move(1);
+    track.onscroll=update;requestAnimationFrame(update);
+  });
 }
-function cards() {
-  let filtered = doctors.filter((d) =>
-    (page === "home" || page === "saved" || !(collegeSelected || page === "ratings") ||
-      (d.college || "كلية الهندسة") === activeCollege) &&
-    (page === "home" || page === "saved" || activeMajor === "الكل" || d.major === activeMajor) &&
-    (!(savedOnly || page === "saved") || saved.includes(d.id)) &&
-    (!query || [d.name, ...d.subjects].some((s) => s.includes(query)))
+const searchKey=value=>String(value??'').normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').toLowerCase().replace(/\s+/g,' ').trim();
+function filteredDoctors() {
+  return doctors.filter(d=>
+    (page==='home'||page==='saved'||(d.college||'كلية الهندسة')===activeCollege)&&
+    (!(savedOnly||page==='saved')||saved.includes(d.id))&&
+    (!query||[d.name,...d.subjects].some(value=>searchKey(value).includes(searchKey(query))))
   );
+}
+function cards(list) {
+  let filtered = list ?? filteredDoctors();
   if (page === "home" && !query) {
     filtered = filtered.filter((doctor) => doctor.count > 0)
       .sort((a, b) => b.score - a.score || b.count - a.count || a.id - b.id)
@@ -1117,7 +1062,7 @@ function bind() {
     const clear = document.querySelector("#clear-search");
     if (clear) clear.hidden = !e.target.value;
     syncHomeSearch();
-    document.querySelector("#doctor-grid").innerHTML = cards();
+    document.querySelector("#doctor-grid").innerHTML = page === "ratings" ? directoryRows() : cards();
     bindCards();
     bindCarousel();
   });
@@ -1131,25 +1076,9 @@ function bind() {
     b.onclick = () => selectCollege(b.dataset.college)
   );
   bindCarousel();
-  document.querySelectorAll("[data-major]").forEach((b) =>
-    b.onclick = () => {
-      const strip=b.closest('.major-filter .chips'),offset=strip?.scrollLeft;
-      activeMajor = b.dataset.major;
-      render();
-      if(strip){
-        const next=document.querySelector('.major-filter .chips');
-        if(next)next.scrollLeft=offset;
-        document.querySelector('.major-filter .chip.selected')?.focus({preventScroll:true});
-      }
-    }
-  );
   bindCards();
   document.querySelector("#filter")?.addEventListener("click", () => {
     setPage("ratings");
-    render();
-  });
-  document.querySelector("#major-filter")?.addEventListener("change", (e) => {
-    activeMajor = e.target.value;
     render();
   });
   document.querySelector("#college-filter")?.addEventListener("change", (e) => {
@@ -1842,6 +1771,7 @@ async function cloudAdminAction(operation, data) {
       await connectCloudAccount(false);
       if (guestProfile?.university_id === data.id) guestProfile = await ensureGuestSession();
     }
+    if(operation==='major.delete')await connectCloudAccount(false);
     await Promise.all([refreshCloudCatalogue(), loadCloudQueue(false)]);
     requestsOwner="";
     document.body.classList.remove("modal-open");
@@ -1939,6 +1869,11 @@ function bindCloudOperations(root = document) {
     b.onclick = () => {
       const operation = b.dataset.cloudOperation;
       const data = { id: Number(b.dataset.id) };
+      if(operation==='major.delete'){
+        b.disabled=true;
+        openMajorRemoval({id:data.id,api,modal,remove:values=>cloudAdminAction('major.delete',values),ownerKey:()=>googleSession?.user.id||''}).finally(()=>{if(b.isConnected)b.disabled=false;});
+        return;
+      }
       if(operation==='doctor.head'){
         const doctor=cloudCatalogue?.doctors.find(d=>d.id===data.id);
         b.disabled=true;cloudAdminAction('doctor.office',{id:data.id,role:doctor?.office_role==='head'?null:'head'}).finally(()=>b.disabled=false);return;
