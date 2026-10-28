@@ -1,7 +1,7 @@
 import {createInstitutionMailer,institutionMailStatus,institutionInbox} from './institution-mail.js';
 import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
-import {loadEditablePlan,updateStudyPlan} from './plan-editor.js';
+import {loadEditablePlan,updateStudyPlan,deleteStudyPlan} from './plan-editor.js';
 import {publishedReviewAdmin} from './published-reviews.js';
 import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
 import { handleGuest, verifiedGuest } from "./guest.js";
@@ -253,8 +253,9 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
         return respond(await publishedReviewAdmin(operation,body,identity.id,db));
       }
-      if(['study.list','study.get'].includes(operation)){
+      if(['study.list','study.get','study.delete'].includes(operation)){
         if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
+        if(operation==='study.delete')return respond(await deleteStudyPlan(body,identity.id,db));
         return respond(operation==='study.list'?await db('rpc/miyar_admin_study_plans',{method:'POST',body:{}}):await loadEditablePlan(body.id,db));
       }
       if(typeof operation==='string'&&operation.startsWith('institution.mail.')){

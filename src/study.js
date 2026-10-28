@@ -86,7 +86,7 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
   function update(preselect){
     const choices=getStudyPlans().filter(p=>p.university===university);
    section.hidden=!choices.length;
-   section.innerHTML=choices.length?`<label>خطة المادة<select id="review-study-plan">${choices.map(p=>`<option value="${p.id}" ${preselect?.startsWith(p.id+'/')||(!preselect&&p.id===current()?.id)?'selected':''}>${esc(p.fileLabel)}</option>`).join('')}</select></label><label>المادة من الخطة<select name="courseId" id="review-study-course"><option value="">مادة أخرى أو غير محددة في الخطة</option></select></label><small class="muted">اختيار مادة من الخطة يربط هذا الدكتور بها بعد اعتماد التقييم.</small>`:'';
+   section.innerHTML=choices.length?`<label>خطة المادة<select id="review-study-plan">${choices.map(p=>`<option value="${p.id}" ${preselect?.startsWith(p.id+'/')||(!preselect&&p.id===current()?.id)?'selected':''}>${esc(p.title)} · ${esc(p.fileLabel)}</option>`).join('')}</select></label><label>المادة من الخطة<select name="courseId" id="review-study-course"><option value="">مادة أخرى أو غير محددة في الخطة</option></select></label><small class="muted">اختيار مادة من الخطة يربط هذا الدكتور بها بعد اعتماد التقييم.</small>`:'';
    subject.readOnly=false;
    if(!choices.length)return;
    const fill=()=>{

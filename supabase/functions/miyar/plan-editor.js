@@ -9,7 +9,7 @@ const references=(value,label)=>{
 };
 export function editablePlanId(value){const id=text(value,3,80,'الخطة');if(!/^[a-z0-9-]+$/.test(id))fail('تحقق من معرّف الخطة.');return id;}
 export async function loadEditablePlan(id,db){
- const rows=await db(`miyar_study_plans?id=eq.${editablePlanId(id)}&select=id,metadata,revision`);
+ const rows=await db(`miyar_study_plans?id=eq.${editablePlanId(id)}&deleted_at=is.null&select=id,metadata,revision`);
  if(!rows?.length)throw new ApiError(404,'الخطة غير موجودة.');
  return {plan:rows[0].metadata,revision:rows[0].revision};
 }
@@ -73,7 +73,7 @@ export async function normalizeEditedPlan(base,draft,revision){
  if(draft.levels!=null&&(!Array.isArray(draft.levels)||draft.levels.length>20))fail('تحقق من المستويات.');
  const levels=[...new Set([...(draft.levels||[]).map(level=>integer(level,1,20,'المستوى')),...courses.filter(row=>row.level>0).map(row=>row.level)])].sort((a,b)=>a-b);
  courses.sort((a,b)=>(a.level||99)-(b.level||99));
- return {...base,courses,levels,groups:groups.map(group=>({...group,slots:courses.filter(row=>row.kind==='slot'&&row.pool===group.id).map(row=>row.id)})),revision:revision+1,firstLevel:Math.min(...courses.filter(row=>row.level>0).map(row=>row.level)),uncertainCredits:courses.some(row=>row.credits===null)};
+ return {...base,title:draft.title===undefined?base.title:courseLabel(draft.title,2,100,'اسم الخطة'),courses,levels,groups:groups.map(group=>({...group,slots:courses.filter(row=>row.kind==='slot'&&row.pool===group.id).map(row=>row.id)})),revision:revision+1,firstLevel:Math.min(...courses.filter(row=>row.level>0).map(row=>row.level)),uncertainCredits:courses.some(row=>row.credits===null)};
 }
 export async function updateStudyPlan(body,admin,db){
  const id=editablePlanId(body.id),revision=integer(body.revision,0,2147483646,'نسخة التعديل');
@@ -81,4 +81,8 @@ export async function updateStudyPlan(body,admin,db){
  if(current.revision!==revision)throw new ApiError(409,'تغيّرت الخطة منذ فتحها. أعد تحميلها قبل الحفظ حتى لا تفقد تعديلًا آخر.');
  const plan=await normalizeEditedPlan(current.plan,body.draft,revision);
  return db('rpc/miyar_update_study_plan',{method:'POST',body:{p_admin:admin,p_id:id,p_revision:revision,p_plan:plan}});
+}
+export async function deleteStudyPlan(body,admin,db){
+ if(body.confirmed!==true)fail('أكد حذف الخطة أولًا.');
+ return db('rpc/miyar_delete_study_plan',{method:'POST',body:{p_admin:admin,p_id:editablePlanId(body.id),p_revision:integer(body.revision,0,2147483646,'نسخة التعديل')}});
 }
