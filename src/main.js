@@ -23,6 +23,7 @@ import "./style.css";
 import "./interactions.css";
 import "./theme.css";
 import "./home-actions.css";
+import "./directory.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
@@ -272,6 +273,11 @@ function previousPage(){
 }
 
 function render() {
+  // Older links used a placeholder page solely behind the review dialog.
+  if(page==='review'){
+    page='home';
+    history.replaceState({...history.state,...(history.state?.miyar?{miyar:{...history.state.miyar,page:'home'}}:{})},'',location.pathname+location.search);
+  }
   // Keep the requested page visible while auth/data load. Members only open the
   // directory explicitly; the first-visit university gate is for guests.
   if(!signedOut&&configured&&(page==='universities'||!googleSession&&needsUniversity())){renderUniversityLanding();return;}
@@ -329,8 +335,6 @@ function render() {
         ? requestsPage()
         : page === "saved"
         ? savedPage()
-        : page === "review"
-        ? reviewPage()
         : page === "admin"
         ? admin()
         : page === "ambassador"
@@ -505,7 +509,7 @@ function listSection() {
     expanded
       ? `<div class="major-filter"><span class="filter-caption">تخصصات ${
         escapeHtml(activeCollege)
-      }</span><div class="chips" role="group" aria-label="التخصصات">${
+      }</span><div class="chips" role="group" aria-label="التخصصات" tabindex="0">${
         ["الكل", ...majors.filter((m) => majorBelongs(m, activeCollege))].map(
           (m) =>
             `<button class="chip ${
@@ -607,7 +611,7 @@ function cards() {
     : `<div class="empty">${page === 'saved' ? 'لم تحفظ أي دكتور بعد. اضغط علامة الحفظ على بطاقة الدكتور ليظهر هنا.' : selectedUniversity() && !colleges.length ? 'لم تُضف كليات جامعتك بعد. يمكنك تعبئة طلب الإضافة أو تغيير الجامعة من الزر أعلى الموقع.' : page === 'home' && !query ? 'ستظهر هنا أعلى تقييمات الدكاترة بعد نشر أول تقييمات الطلاب.' : 'لم نجد نتائج مطابقة. جرّب اسمًا آخر.'}${page!=='saved'&&query?'<section class="missing-course-doctor"><h3>ألم تجد دكتور المادة؟</h3><button type="button" class="primary" data-request-doctor>أضف الدكتور الآن</button></section>':''}</div>`;
 }
 function ratings() {
-  return `${connectionBanner()}<div class="directory-actions"><button class="secondary" data-add-doctor>${ic("plus")} إضافة دكتور</button><button class="secondary" id="my-requests-page">${ic("bell")} متابعة طلباتي</button><button class="secondary" id="my-reviews-page">${ic("star")} تقييماتي وطلبات التعديل</button></div>${listSection()}`;
+  return `${connectionBanner()}<div class="directory-actions" role="group" aria-label="إجراءات دليل الدكاترة" tabindex="0"><button class="secondary" data-add-doctor>${ic("plus")} إضافة دكتور</button><button class="secondary" id="my-requests-page">${ic("bell")} متابعة طلباتي</button><button class="secondary" id="my-reviews-page">${ic("star")} تقييماتي وطلبات التعديل</button></div>${listSection()}`;
 }
 function savedPage() {
   return `${connectionBanner()}<div class="page-title"><div class="eyebrow">اختياراتك في مكان واحد</div><h1>المحفوظات</h1><p>الدكاترة الذين حفظتهم للرجوع إليهم لاحقًا.</p></div><section class="doctors-section"><div class="doctor-carousel" id="doctor-grid" role="region" aria-label="الدكاترة المحفوظون" tabindex="0">${cards()}</div></section>`;
@@ -772,13 +776,10 @@ function labelScore(v) {
     ? "جيد جدًا"
     : "ممتاز";
 }
-function reviewPage() {
-  return `<section class="review-landing"><div class="page-title"><div class="eyebrow">مساحة لتجربتك</div><h1>إضافة دكتور</h1><p>ساهم في توسيع دليل الدكاترة في جامعتك.</p></div><div class="panel review-intro">${ic("plus")}<h2>أضف الدكتور إلى مِعيار</h2><p>أرسل بيانات الدكتور، وأضف تقييمًا لتجربتك إذا رغبت.</p><button class="primary" id="new-review">إضافة دكتور</button></div></section>`;
-}
 async function reviewForm(id, pledged = false, studySelection = null) {
   const addingDoctor=id==null;
-  setPage("review");
-  render();
+  const sourcePage=page,sourceDialog=document.querySelector('.modal-backdrop');
+  const stillCurrent=()=>page===sourcePage&&document.querySelector('.modal-backdrop')===sourceDialog&&!sourceDialog?.classList.contains('closing');
   if(configured&&cloudStatus==='loading'){
     toast('انتظر اكتمال تحميل المنصة، أو أعد المحاولة.');
     return;
@@ -786,8 +787,8 @@ async function reviewForm(id, pledged = false, studySelection = null) {
   if(configured){
     if(googleSession){if(!requireCloudAccount(()=>reviewForm(id,false,studySelection)))return;}
     else {
-      try{if(!pledged || !guestProfile) guestProfile=await ensureGuestSession();scopeCatalogue();}
-      catch(error){modal("تعذّر بدء التقييم",`<p role="alert">${escapeHtml(error.message)}</p><button class="primary" id="retry-guest-review">إعادة المحاولة</button>`);document.querySelector('#retry-guest-review').onclick=()=>reviewForm(id,false,studySelection);return;}
+      try{if(!pledged || !guestProfile){const profile=await ensureGuestSession();if(!stillCurrent())return;guestProfile=profile;}scopeCatalogue();}
+      catch(error){if(!stillCurrent())return;modal("تعذّر بدء التقييم",`<p role="alert">${escapeHtml(error.message)}</p><button class="primary" id="retry-guest-review">إعادة المحاولة</button>`);document.querySelector('#retry-guest-review').onclick=()=>reviewForm(id,false,studySelection);return;}
       if(!guestProfile.university_id){openUniversityChoice(true,()=>reviewForm(id,false,studySelection));return;}
       if(guestProfile.status!=='active'){toast('جلسة الزائر مقيّدة عن إضافة التقييمات.');return;}
     }
@@ -796,18 +797,17 @@ async function reviewForm(id, pledged = false, studySelection = null) {
     const owner=googleSession?.user.id||guestProfile?.id;
     try{
       const eligibility=await api(googleSession?'review.eligibility':'guest.review.eligibility',{doctor:id});
-      if(owner!==(googleSession?.user.id||guestProfile?.id))return;
+      if(!stillCurrent()||owner!==(googleSession?.user.id||guestProfile?.id))return;
       if(eligibility.eligible===false){
         modal('تقييمك موجود بالفعل',`<p>سبق أن أرسلت تقييمًا لهذا الدكتور${eligibility.status==='pending'?'، وهو الآن قيد المراجعة':''}. تقييمك واحد ومشترك بين خطة التخرج وقسم التقييمات، حتى لو تغيّرت المادة.</p>${eligibility.canEdit?'<button class="primary" id="existing-review-edit">عرض تقييمي وطلب تعديله</button>':''}<button class="secondary" id="existing-review-ratings">الانتقال إلى التقييمات</button>`);
         document.querySelector('#existing-review-edit')?.addEventListener('click',()=>myReviews(id));
         document.querySelector('#existing-review-ratings').onclick=()=>{closeModal();setPage('ratings');render();};
         return;
       }
-    }catch(error){modal('تعذّر التحقق من التقييم',`<p role="alert">${escapeHtml(error.message)}</p><button class="primary" id="retry-review-check">إعادة المحاولة</button>`);document.querySelector('#retry-review-check').onclick=()=>reviewForm(id,false,studySelection);return;}
+    }catch(error){if(!stillCurrent())return;modal('تعذّر التحقق من التقييم',`<p role="alert">${escapeHtml(error.message)}</p><button class="primary" id="retry-review-check">إعادة المحاولة</button>`);document.querySelector('#retry-review-check').onclick=()=>reviewForm(id,false,studySelection);return;}
   }
   if(addingDoctor&&configured&&!studentMajors().length){modal('إضافة دكتور','<p>لم تُضف تخصصات جامعتك بعد.</p><button type="button" class="primary" id="request-missing-institution">طلب إضافة كلية أو تخصص</button>');document.querySelector('#request-missing-institution').onclick=institutionRequestForm;return;}
   if(!addingDoctor&&!pledged){reviewPledge(()=>reviewForm(id,true,studySelection));return;}
-  window.scrollTo({ top: 0, behavior: "smooth" });
   const selectedDoctor = doctors.find((d) => d.id === id);
   const reviewCollege = selectedDoctor?.college || activeCollege || colleges[0];
   modal(
@@ -1133,8 +1133,14 @@ function bind() {
   bindCarousel();
   document.querySelectorAll("[data-major]").forEach((b) =>
     b.onclick = () => {
+      const strip=b.closest('.major-filter .chips'),offset=strip?.scrollLeft;
       activeMajor = b.dataset.major;
       render();
+      if(strip){
+        const next=document.querySelector('.major-filter .chips');
+        if(next)next.scrollLeft=offset;
+        document.querySelector('.major-filter .chip.selected')?.focus({preventScroll:true});
+      }
     }
   );
   bindCards();
@@ -2144,7 +2150,7 @@ function ambassadorPage() {
  const context=stored&&typeof stored==='object'&&!Array.isArray(stored)?stored:{};
  if(!universities.some((university)=>university.id===Number(context.university)))context.university=universities[0]?.id;
  if(!proposalNames[context.kind])context.kind='doctor.add';
- return `<div class="page-title"><div class="eyebrow">سفراء مِعيار</div><h1>مساحة الفريق</h1><p>ساهم في ترتيب دليل جامعتك. جميع الإضافات والتصحيحات تُراجعها الإدارة قبل النشر.</p><div class="directory-actions"><button class="secondary" id="ambassador-refresh">تحديث الصلاحيات والبيانات</button><button class="secondary" id="ambassador-requests">متابعة مقترحاتي</button></div></div><section class="panel ambassador-workspace"><h2>إضافة أو تصحيح بيانات</h2><div class="form-grid"><label>الجامعة<select id="ambassador-university">${universities.map((university)=>`<option value="${university.id}" ${university.id===Number(context.university)?'selected':''}>${escapeHtml(university.name)}</option>`).join('')}</select></label><label>نوع المقترح<select id="ambassador-kind">${Object.entries(proposalNames).map(([kind,label])=>`<option value="${kind}" ${kind===context.kind?'selected':''}>${label}</option>`).join('')}</select></label></div><p class="muted">لإضافة تخصص أو دكتور إلى قسم جديد، انتظر اعتماد الكلية أو التخصص أولًا. لا تتيح صلاحية السفير نشر التقييمات أو حذف السجلات أو إدارة الحسابات.</p><div id="ambassador-fields"></div></section>`;
+ return `<div class="page-title"><div class="eyebrow">سفراء مِعيار</div><h1>مساحة الفريق</h1><p>ساهم في ترتيب دليل جامعتك. جميع الإضافات والتصحيحات تُراجعها الإدارة قبل النشر.</p><div class="directory-actions" role="group" aria-label="إجراءات دليل الدكاترة" tabindex="0"><button class="secondary" id="ambassador-refresh">تحديث الصلاحيات والبيانات</button><button class="secondary" id="ambassador-requests">متابعة مقترحاتي</button></div></div><section class="panel ambassador-workspace"><h2>إضافة أو تصحيح بيانات</h2><div class="form-grid"><label>الجامعة<select id="ambassador-university">${universities.map((university)=>`<option value="${university.id}" ${university.id===Number(context.university)?'selected':''}>${escapeHtml(university.name)}</option>`).join('')}</select></label><label>نوع المقترح<select id="ambassador-kind">${Object.entries(proposalNames).map(([kind,label])=>`<option value="${kind}" ${kind===context.kind?'selected':''}>${label}</option>`).join('')}</select></label></div><p class="muted">لإضافة تخصص أو دكتور إلى قسم جديد، انتظر اعتماد الكلية أو التخصص أولًا. لا تتيح صلاحية السفير نشر التقييمات أو حذف السجلات أو إدارة الحسابات.</p><div id="ambassador-fields"></div></section>`;
 }
 function bindAmbassadorPage() {
  const root=document.querySelector('#ambassador-fields');
@@ -2288,7 +2294,8 @@ function bindAdminDirectory(){
 function reviewPledge(next,cancel){
  modal('تنبيه!',`<div class="pledge-copy"><p>نرجو مخافة الله في التقييم.</p><p>تتم مراجعة التقييم قبل نشره.</p><p>التقييمات غير الملائمة تعرّض صاحبها للحظر أو التقييد.</p><p class="muted">أتعهد بأن تقييمي يعبّر عن تجربتي بصدق واحترام، دون إساءة أو معلومات شخصية.</p><button class="primary" type="button" id="accept-review-pledge">موافق وأتعهّد</button></div>`);
  document.querySelector('.modal').classList.add('pledge-card');
- document.querySelector('#accept-review-pledge').onclick=next;
+ const accept=document.querySelector('#accept-review-pledge');
+ accept.onclick=async()=>{if(accept.disabled)return;accept.disabled=true;try{await next();}finally{if(accept.isConnected)accept.disabled=false;}};
  if(cancel){
   document.querySelector('.close-modal').onclick=cancel;
   document.querySelector('.modal-backdrop').onclick=event=>{if(event.target.classList.contains('modal-backdrop'))cancel();};

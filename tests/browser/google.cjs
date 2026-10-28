@@ -579,7 +579,8 @@ const server = http.createServer((req, res) => {
     await page.locator('[name=includeReview]').click();
     await page.locator("#accept-review-pledge").click();
 
-    assert.equal(new URL(page.url()).hash, "#review");
+    assert.equal(new URL(page.url()).hash, "");
+    assert.equal(await page.locator('.review-landing').count(), 0);
     assert.equal(await page.locator(".main-wrap").evaluate((el) => el.inert), true);
     assert.match(await page.locator(".modal-backdrop").evaluate((el) => getComputedStyle(el).backdropFilter), /blur/);
     await page.screenshot({ path: "/tmp/miyar-glass-review.png" });
