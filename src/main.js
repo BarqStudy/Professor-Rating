@@ -1,6 +1,7 @@
 import {createUniversitySelector} from './university-selector.js';
 import {homeIcon} from './home-icons.js';
 import {openMajorRemoval} from './major-removal.js';
+import {startupSkeleton} from './startup.js';
 import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
 import {createFileManager} from './files.js';
@@ -25,6 +26,7 @@ import "./interactions.css";
 import "./theme.css";
 import "./home-actions.css";
 import "./directory.css";
+import "./startup.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
@@ -275,7 +277,7 @@ function previousPage(){
 }
 
 function renderStartup() {
-  if (!document.querySelector('.platform-startup')) document.querySelector('#app').innerHTML = `<main class="platform-startup" aria-busy="true"><div><div class="brand">${logo}</div><p role="status">جارٍ تجهيز مِعيار…</p></div></main>`;
+  if (!document.querySelector('.platform-startup')) document.querySelector('#app').innerHTML = startupSkeleton(page);
 }
 function render() {
   if (cloudBooting) { renderStartup(); return; }
