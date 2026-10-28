@@ -77,7 +77,15 @@ export async function normalizePublishedPlan(input){
  function visit(course){if(visited.has(course.code))return;if(visiting.has(course.code))throw issue(`يوجد تعارض دائري في متطلبات «${course.name}»؛ صححه قبل الحفظ.`);visiting.add(course.code);for(const code of course.prerequisites){const previous=byCode.get(code);if(previous)visit(previous);}visiting.delete(course.code);visited.add(course.code);}
  for(const course of byCode.values())visit(course);
  if(!courses.some(c=>c.level>0))throw issue('الخطة تحتاج مقررات أساسية بمستويات محددة.');
- for(const course of courses.filter(c=>c.kind==='slot'))if(course.credits===null||!courses.some(c=>c.level===0&&c.kind==='course'&&c.pool===course.pool&&c.credits===course.credits))throw issue(`المتطلب «${course.name}» يحتاج بدائل اختيارية من مجموعته وبنفس الساعات.`);
+ for(const course of courses.filter(c=>c.kind==='slot')){
+  const alternatives=courses.filter(c=>c.level===0&&c.kind==='course'&&c.pool===course.pool);
+  if(course.credits===null)throw issue(`لم تتضح ساعات المتطلب «${course.name}» لمطابقتها بالبدائل. أعد قراءة صفحة الخانة من الملف الأصلي.`);
+  if(!alternatives.length)throw issue(`لم تُقرأ بدائل المجموعة المرتبطة بالمتطلب «${course.name}». أعد القراءة بصفحات قوائم الاختيار كاملة.`);
+  if(!alternatives.some(c=>c.credits===course.credits)){
+   const hours=[...new Set(alternatives.map(c=>c.credits===null?'غير واضحة':String(c.credits)))].join('، ');
+   throw issue(`المتطلب «${course.name}» مسجل بـ ${course.credits} ساعات، بينما ساعات بدائل مجموعته: ${hours}. أعد قراءة الخانة وقائمتها للتحقق؛ لا تُغيّر الساعات لتجاوز الخطأ.`);
+  }
+ }
  for(const [name,type] of groupTypes)if(type&&!courses.some(c=>c.kind==='slot'&&c.pool===groupNames.get(name)))throw issue(`القائمة «${name}» تحتاج خانة متطلب مرتبطة بها في الخطة.`);
  const warnings=Array.isArray(input.warnings)?input.warnings.slice(0,30).map(w=>arabicLabel(w,2,300,'ملاحظة الخطة')):[];
  courses.sort((a,b)=>(a.level||99)-(b.level||99));

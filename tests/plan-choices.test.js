@@ -53,3 +53,33 @@ test('a repaired traditional elective keeps both the placeholder and selected ma
  assert.deepEqual(selectedCourse(plan,slot,state).prerequisites,['CE 101','CE 102']);assert.equal(courseStatus(plan,slot,state).key,'locked');
  state.completed=plan.courses.filter(row=>['CE 101','CE 102'].includes(row.code)).map(row=>row.id);assert.equal(courseStatus(plan,slot,state).key,'ready');
 });
+
+test('interior-design style numbered pools unify Arabic digits, ordinal names and Roman labels without mixing group 1 and 2',async()=>{
+ const input=draft([course('ID 101','أساسيات التصميم'),course('EL 1','مقرر اختياري (مجموعة 1)',3,{pool:'مجموعة ١',credits:2}),course('EL 2','مقرر اختياري (مجموعة 2)',4,{kind:'slot',pool:'اختياري مجموعة۲',credits:2}),course('ID 201','تصميم الأثاث',0,{pool:'قائمة المجموعة الأولى',credits:2}),course('ID 202','الإضاءة الداخلية',5,{pool:'المجموعة الثانية',credits:2}),course('ID 203','تصميم المعارض',0,{pool:'Elective Group II',credits:2})]);
+ const plan=await normalizePublishedPlan(input),one=plan.courses.find(row=>row.code==='EL 1'),two=plan.courses.find(row=>row.code==='EL 2');
+ assert.equal(one.kind,'slot');assert.equal(plan.groups.length,2);assert.notEqual(one.pool,two.pool);
+ assert.deepEqual(choiceCandidates(plan,one).map(row=>row.code),['ID 201']);assert.deepEqual(choiceCandidates(plan,two).map(row=>row.code),['ID 202','ID 203']);
+ const repaired=repairPlanDraft(input);assert.deepEqual(repairPlanDraft(repaired.draft).draft.courses,repaired.draft.courses);
+});
+
+test('an explicit group number links a missing placeholder pool even when several groups have identical hours',async()=>{
+ const plan=await normalizePublishedPlan(draft([course('ID 101','أساسيات التصميم'),course('EL 2','اختياري 4 — المجموعة الثانية',4,{kind:'slot',credits:2}),course('ID 201','أثاث',0,{pool:'مجموعة 1',credits:2}),course('ID 202','تصميم المعارض',0,{pool:'مجموعة 2',credits:2})]));
+ const slot=plan.courses.find(row=>row.kind==='slot');assert.deepEqual(choiceCandidates(plan,slot).map(row=>row.code),['ID 202']);
+});
+
+test('same-number university and major pools, and separately named design pools, remain distinct',async()=>{
+ const input={...draft([course('U 2','متطلب جامعة (مجموعة 2)',2,{kind:'slot',pool:'متطلبات الجامعة مجموعة2',requirementType:'university',credits:2}),course('D 2','اختياري تخصص (مجموعة2)',4,{kind:'slot',pool:'اختياري تخصص المجموعة الثانية',credits:2}),course('UNI 201','العمل التطوعي',0,{pool:'متطلبات الجامعة Group 2',requirementType:'university',credits:2}),course('ID 202','تصميم الأثاث',0,{pool:'تخصص مجموعة ٢',credits:2})]),requirementLists:true};
+ const plan=await normalizePublishedPlan(input);assert.equal(plan.groups.length,2);assert.deepEqual(choiceCandidates(plan,plan.courses.find(row=>row.code==='U 2')).map(row=>row.code),['UNI 201']);assert.deepEqual(choiceCandidates(plan,plan.courses.find(row=>row.code==='D 2')).map(row=>row.code),['ID 202']);
+ const inferred=await normalizePublishedPlan({...draft([course('U 2','متطلب جامعة (مجموعة 2)',2,{pool:'مجموعة 2',credits:2}),course('UNI 201','العمل التطوعي',0,{pool:'المجموعة الثانية',credits:2})]),requirementLists:true});assert.ok(inferred.courses.every(row=>row.requirementType==='university'));
+ const named=repairPlanDraft(draft([course('A 1','اختياري مجموعة2',3,{kind:'slot',pool:'مجموعة 2 تصميم'}),course('A 2','اختياري مجموعة2',3,{kind:'slot',pool:'مجموعة 2 إنشاءات'})]));assert.notEqual(named.draft.courses[0].pool,named.draft.courses[1].pool);
+});
+
+test('real credit mismatches and missing appendix pages give specific diagnostics and never change academic hours',async()=>{
+ const input=draft([course('EL 2','مقرر اختياري (مجموعة 2)',4,{kind:'slot',pool:'مجموعة2',credits:2}),course('ID 202','تصميم الأثاث',0,{pool:'المجموعة الثانية',credits:3})]);
+ const before=structuredClone(input);await assert.rejects(normalizePublishedPlan(input),error=>/2 ساعات/.test(error.message)&&/بدائل مجموعته: 3/.test(error.message));assert.deepEqual(input,before);
+ await assert.rejects(normalizePublishedPlan(draft([course('EL 2','مقرر اختياري (مجموعة 2)',4,{kind:'slot',pool:'مجموعة2',credits:2})])),/لم تُقرأ بدائل/);
+ // Uploaded interior-design PDF: page 8 has a 3-credit slot; page 13's
+ // three alternative rows each say 2, although its heading says 3 credits.
+ const source=draft([course('EL 2','مقرر اختياري (مجموعة 2)',7,{kind:'slot',pool:'المجموعة 2',credits:3,page:8}),...['تقنيات العرض','تنسيق المواقع الداخلية','المهارات الرقمية والوسائط المتعددة'].map((name,index)=>course('تصـد '+(472+index),name,0,{pool:'المجموعة الثانية',credits:2,page:13}))]);
+ const original=structuredClone(source);await assert.rejects(normalizePublishedPlan(source),error=>/3 ساعات/.test(error.message)&&/بدائل مجموعته: 2/.test(error.message));assert.deepEqual(source,original);
+});
