@@ -1,6 +1,7 @@
 import {createInstitutionMailer,institutionMailStatus,institutionInbox} from './institution-mail.js';
 import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
+import {loadEditablePlan,updateStudyPlan} from './plan-editor.js';
 import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
 import { handleGuest, verifiedGuest } from "./guest.js";
 import { gradeConsent, gradeParticipation, publicGrades } from "./grades.js";
@@ -55,7 +56,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if(fileOperation!==null&&studyOperation!==null)throw new ApiError(400,'اختر عملية واحدة للرفع.');
       let studyAdmin=null;
       if(studyOperation!==null||fileOperation!==null){
-        if(studyOperation!==null&&!['extract','publish'].includes(studyOperation))throw new ApiError(400,'عملية خطة غير معروفة.');
+        if(studyOperation!==null&&!['extract','publish','update'].includes(studyOperation))throw new ApiError(400,'عملية خطة غير معروفة.');
         if(!authenticate)throw new ApiError(401,'سجّل الدخول باستخدام Google.');
         const identity=await authenticate(request);
         if(!admins.has(String(identity.id)))throw new ApiError(403,'رفع الملفات واستيراد الخطط متاحان للأدمن فقط.');
@@ -63,7 +64,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         if(rows[0]?.status!=='active')throw new ApiError(403,'حساب الإدارة غير متاح للاستيراد.');
         studyAdmin=identity.id;
       }
-      const limit=fileOperation==='upload'?21*1024*1024:studyOperation==='extract'?8*1024*1024:studyOperation==='publish'?768*1024:16384;
+      const limit=fileOperation==='upload'?21*1024*1024:studyOperation==='extract'?8*1024*1024:['publish','update'].includes(studyOperation)?768*1024:16384;
       let size = 0;
       const chunks = [];
       const reader = request.body?.getReader();
@@ -104,6 +105,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         throw new ApiError(400, "طلب غير صالح.");
       }
       if(studyOperation==='publish')return respond(await publishStudyPlan(body,studyAdmin,db));
+      if(studyOperation==='update')return respond(await updateStudyPlan(body,studyAdmin,db));
       const action = body.action;
       const aiResult = await handleAi(request, body, db, env, aiFetch);
       if (aiResult) return respond(aiResult);
@@ -246,6 +248,10 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      if(['study.list','study.get'].includes(operation)){
+        if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
+        return respond(operation==='study.list'?await db('rpc/miyar_admin_study_plans',{method:'POST',body:{}}):await loadEditablePlan(body.id,db));
+      }
       if(typeof operation==='string'&&operation.startsWith('institution.mail.')){
         if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
         const result=await mailer.admin(operation,body);if(result!==null)return respond(result);
