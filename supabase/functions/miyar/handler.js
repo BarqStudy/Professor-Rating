@@ -2,6 +2,7 @@ import {createInstitutionMailer,institutionMailStatus,institutionInbox} from './
 import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
 import {loadEditablePlan,updateStudyPlan} from './plan-editor.js';
+import {publishedReviewAdmin} from './published-reviews.js';
 import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
 import { handleGuest, verifiedGuest } from "./guest.js";
 import { gradeConsent, gradeParticipation, publicGrades } from "./grades.js";
@@ -248,6 +249,10 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      if(['review.published.list','review.remove'].includes(operation)){
+        if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
+        return respond(await publishedReviewAdmin(operation,body,identity.id,db));
+      }
       if(['study.list','study.get'].includes(operation)){
         if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
         return respond(operation==='study.list'?await db('rpc/miyar_admin_study_plans',{method:'POST',body:{}}):await loadEditablePlan(body.id,db));
