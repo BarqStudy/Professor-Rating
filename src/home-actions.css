@@ -32,3 +32,25 @@
   .quick-actions .action-card { padding: 20px 17px; gap: 15px; }
   .quick-actions .action-card h2 { font-size: calc(19px * var(--font-scale, 1)); }
 }
+
+/* Decorative 3D icons inherit the accent; no image downloads or canvas runtime. */
+.quick-actions .action-card .action-icon.action-icon-3d {
+  --object-accent: var(--accent-solid);
+  --object-light: color-mix(in srgb, var(--accent-solid) 52%, #fff);
+  --object-edge: color-mix(in srgb, var(--accent-solid) 65%, #102238);
+  width: 64px; height: 64px; flex: 0 0 64px;
+  background: transparent; border: 0; border-radius: 0; box-shadow: none;
+  overflow: visible; pointer-events: none;
+}
+.quick-actions .rate-existing .action-icon.action-icon-3d {
+  --object-accent: color-mix(in srgb, var(--accent-solid) 65%, #fff);
+  --object-light: color-mix(in srgb, var(--accent-solid) 26%, #fff);
+}
+.home-3d-icon { display: block; width: 100%; height: 100%; overflow: visible; }
+@media (max-width: 650px) {
+  .quick-actions .action-card .action-icon.action-icon-3d { width: 56px; height: 56px; flex-basis: 56px; }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .home-3d-icon { transition: translate .35s ease; }
+  .action-card:hover .home-3d-icon { translate: 0 -2px; }
+}

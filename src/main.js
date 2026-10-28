@@ -1,4 +1,5 @@
 import {createUniversitySelector} from './university-selector.js';
+import {homeIcon} from './home-icons.js';
 import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
 import {createFileManager} from './files.js';
@@ -372,15 +373,11 @@ function home() {
     ic("filter")
   }<span>${
     escapeHtml(collegeSelected ? activeCollege : "كل الكليات")
-  }</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></section><section class="quick-actions"><button class="action-card browse rate-existing" data-page="ratings"><span class="action-icon">${
-    ic("book")
-  }</span><div><span class="tiny-label">قرار أفضل يبدأ من هنا</span><h2>الدكاترة وتقييماتهم</h2><p>استعرض الدكاترة وتقييمات الطلاب، وشارك تجربتك</p></div><span class="action-arrow">${
+  }</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></section><section class="quick-actions"><button class="action-card browse rate-existing" data-page="ratings">${homeIcon("ratings")}<div><span class="tiny-label">قرار أفضل يبدأ من هنا</span><h2>الدكاترة وتقييماتهم</h2><p>استعرض الدكاترة وتقييمات الطلاب، وشارك تجربتك</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span></button><button class="action-card new-review add-new-doctor" id="new-review"><span class="action-icon">${
-    ic("plus")
-  }</span><div><span class="tiny-label">تجربتك تستحق المشاركة</span><h2>إضافة دكتور</h2><p>دكتور غير مضاف في الأقسام</p></div><span class="action-arrow">${
+  }</span></button><button class="action-card new-review add-new-doctor" id="new-review">${homeIcon("add")}<div><span class="tiny-label">تجربتك تستحق المشاركة</span><h2>إضافة دكتور</h2><p>دكتور غير مضاف في الأقسام</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span><span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span></button><button type="button" class="action-card browse study-action" data-page="plan"><span class="action-icon">${ic("cap")}</span><div><span class="tiny-label">خطوة بخطوة نحو التخرج</span><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button><button type="button" class="action-card browse advisor-action" data-page="advisor"><span class="action-icon">${ic("star")}</span><div><span class="tiny-label">اختيارك يبدأ من المادة</span><h2>اختيار الدكتور المناسب</h2><p>اختر المادة من خطتك وقارن دكاترتها حسب تقييمات الطلاب</p></div><span class="action-arrow">${ic("arrow")}</span></button></section><section class="stats"><div><span class="stat-icon">${
+  }</span><span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span></button><button type="button" class="action-card browse study-action" data-page="plan">${homeIcon("plan")}<div><span class="tiny-label">خطوة بخطوة نحو التخرج</span><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button><button type="button" class="action-card browse advisor-action" data-page="advisor">${homeIcon("advisor")}<div><span class="tiny-label">اختيارك يبدأ من المادة</span><h2>اختيار الدكتور المناسب</h2><p>اختر المادة من خطتك وقارن دكاترتها حسب تقييمات الطلاب</p></div><span class="action-arrow">${ic("arrow")}</span></button></section><section class="stats"><div><span class="stat-icon">${
     ic("cap")
   }</span><div><b>+${
     configured
