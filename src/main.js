@@ -266,7 +266,9 @@ function previousPage(){
 }
 
 function render() {
-  if(!signedOut&&configured&&(page==='universities'||cloudStatus==='loading'||cloudStatus==='ready'&&needsUniversity())){renderUniversityLanding();return;}
+  // Keep the requested page visible while auth/data load. Members only open the
+  // directory explicitly; the first-visit university gate is for guests.
+  if(!signedOut&&configured&&(page==='universities'||!googleSession&&needsUniversity())){renderUniversityLanding();return;}
   if (signedOut) {
     renderSignedOut();
     return;
@@ -311,7 +313,9 @@ function render() {
         } رجوع</button>`
         : ""
     }${
-      page === "home"
+      configured&&cloudStatus==='loading'&&['plan','advisor'].includes(page)
+        ? connectionBanner()
+        : page === "home"
         ? home()
         : page === "ratings"
         ? ratings()
@@ -339,7 +343,6 @@ function render() {
   if (page === 'advisor') courseAdvisor.bind();
   if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();
   if (page === "requests" && googleSession && requestsOwner !== googleSession.user.id && !requestsLoading) loadMyRequests();
-  if (needsUniversity()) openUniversityChoice(true);
 }
 function home() {
   return `${connectionBanner()}<section class="welcome"><div><div class="eyebrow"><span></span> معك في كل خطوة جامعية</div><h1>أهلًا ${
@@ -431,7 +434,7 @@ async function chooseUniversity(universityId,onSelected){
 }
 function renderUniversityLanding(){
   const selector=universitySelector();
-  document.querySelector('#app').innerHTML=`<div class="university-entry"><div class="university-entry-bar"><a class="brand" href="#" aria-label="معيار">${logo}</a><div class="university-entry-actions">${cloudMe?.isAdmin?'<button type="button" class="secondary" id="entry-admin">لوحة الإدارة</button>':''}${googleSession?`<span>${escapeHtml(displayName().trim().split(/\s+/)[0])}${roleBadge(cloudMe,cloudCatalogue)}</span>`:'<button type="button" class="secondary" id="entry-google">دخول Google</button>'}<button type="button" class="icon-btn" id="entry-theme" aria-label="تبديل المظهر">${ic('moon')}</button></div></div><main class="university-entry-main">${page==='universities'&&selectedUniversity()?.enabled?`<button type="button" class="page-close" id="university-entry-back">${ic('arrow')} رجوع</button>`:''}${cloudStatus==='ready'?'':connectionBanner()}${selector.content()}</main><div class="university-entry-legal"><span>مِعيار · من الطلاب، لأجل الطلاب</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html">شروط الاستخدام</a></span></div></div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
+  document.querySelector('#app').innerHTML=`<div class="university-entry"><div class="university-entry-bar"><a class="brand" href="#" aria-label="معيار">${logo}</a><div class="university-entry-actions">${cloudMe?.isAdmin?'<button type="button" class="secondary" id="entry-admin">لوحة الإدارة</button>':''}${googleSession?`<span>${escapeHtml(displayName().trim().split(/\s+/)[0])}${roleBadge(cloudMe,cloudCatalogue)}</span>`:'<button type="button" class="secondary" id="entry-google">دخول Google</button>'}<button type="button" class="icon-btn" id="entry-theme" aria-label="تبديل المظهر">${ic('moon')}</button></div></div><main class="university-entry-main">${page==='universities'&&(googleSession||selectedUniversity()?.enabled)?`<button type="button" class="page-close" id="university-entry-back">${ic('arrow')} رجوع</button>`:''}${cloudStatus==='ready'?'':connectionBanner()}${selector.content()}</main><div class="university-entry-legal"><span>مِعيار · من الطلاب، لأجل الطلاب</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html">شروط الاستخدام</a></span></div></div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
   selector.bind();document.querySelector('#university-entry-back')?.addEventListener('click',previousPage);document.querySelector('#entry-admin')?.addEventListener('click',()=>{setPage('admin');render();});document.querySelector('#entry-google')?.addEventListener('click',openGoogleMessage);document.querySelector('#retry-cloud')?.addEventListener('click',loadCloud);
   document.querySelector('#entry-theme').onclick=()=>{const theme=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=theme;storage.setItem('athar-theme',theme);};
 }
@@ -774,6 +777,10 @@ async function reviewForm(id, pledged = false, studySelection = null) {
   const addingDoctor=id==null;
   setPage("review");
   render();
+  if(configured&&cloudStatus==='loading'){
+    toast('انتظر اكتمال تحميل المنصة، أو أعد المحاولة.');
+    return;
+  }
   if(configured){
     if(googleSession){if(!requireCloudAccount(()=>reviewForm(id,false,studySelection)))return;}
     else {
@@ -1592,10 +1599,15 @@ async function loadCloud() {
   } catch (error) {
     authNotice = error.message;
   }
+  // Guest setup/presence must not add another serial request to member entry.
+  const guestSession=ensureGuestSession().catch(()=>null);
   try {
     await refreshCloudCatalogue();
+    cloudStatus='loading';
     if (googleSession) await connectCloudAccount(false);
-    try{guestProfile=await ensureGuestSession();if(!googleSession)scopeCatalogue();}catch{presenceCount=null;}
+    const guest=await guestSession;
+    if(guest){guestProfile=guest;if(!googleSession)scopeCatalogue();}else presenceCount=null;
+    cloudStatus='ready';
     refreshPresence();
   } catch (error) {
     cloudStatus = "error";
@@ -1673,7 +1685,15 @@ function openGoogleMessage() {
   document.querySelector("#google-signin").onclick = startGoogleLogin;
 }
 function requireCloudAccount(next) {
-  if (needsUniversity()) { openUniversityChoice(true); return false; }
+  if(cloudStatus==='loading'){
+    toast('انتظر اكتمال تحميل المنصة، أو أعد المحاولة.');
+    return false;
+  }
+  if (needsUniversity()) {
+    if(googleSession)toast('حدّد جامعتك من زر «تغيير الجامعة» أعلى المنصة لإكمال هذه الخطوة.');
+    else openUniversityChoice(true);
+    return false;
+  }
   if (!googleSession) {
     openGoogleMessage();
     return false;

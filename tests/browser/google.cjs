@@ -545,7 +545,7 @@ const server = http.createServer((req, res) => {
     assert.equal(oauth.searchParams.get("code_challenge_method"), "s256");
     assert.ok(oauth.searchParams.get("code_challenge"));
     await page.goto(url + "?code=mock-authorization-code");
-    await page.locator(".university-entry-actions").filter({hasText:"سارة"}).waitFor();
+    await page.locator(".welcome h1").filter({hasText:"سارة"}).waitFor();
     assert.equal(new URL(page.url()).searchParams.has("code"), false);
     assert.ok(
       calls.some((c) =>
@@ -553,13 +553,14 @@ const server = http.createServer((req, res) => {
         c.code_verifier
       ),
     );
-    await page.locator("#university-directory").waitFor();
-    assert.equal(await page.locator(".mandatory-university .close-modal").count(), 0);
+    assert.equal(await page.locator("#university-directory,.university-picker-modal").count(), 0);
     await page.keyboard.press("Escape");
-    assert.equal(await page.locator("#university-directory").isVisible(), true);
+    assert.equal(await page.locator(".welcome").isVisible(), true);
     await page.reload();
+    await page.locator('.connection-banner.live').waitFor();
+    assert.equal(await page.locator('#university-directory,.university-picker-modal').count(),0);
+    await page.locator('#header-change-university').click();
     await page.locator("#university-directory").waitFor();
-    // The directory skeleton renders before the authenticated catalogue is ready.
     await page.locator('.uni-card.is-open[data-select-university="405"]').waitFor();
     await page.locator('#university-search').fill('جامعة نجران');await page.locator('[data-select-university="405"]').click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
