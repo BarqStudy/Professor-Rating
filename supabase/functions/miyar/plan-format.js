@@ -53,7 +53,7 @@ export async function normalizePublishedPlan(input){
   if(requirementType&&(!requirementLists||!pool||(kind==='course'&&level!==0)))throw issue(`${label}: فعّل قوائم المتطلبات وحدد الخانة أو مادة القائمة بالمستوى صفر.`);
   if(pool&&groupTypes.has(pool)&&groupTypes.get(pool)!==requirementType)throw issue(`${label}: افصل قائمة متطلبات الجامعة عن قائمة المقررات الإجبارية والاختيارية.`);
   if(pool)groupTypes.set(pool,requirementType);
-  if((kind==='slot'||level===0)&&!pool)throw issue(`${label}: حدد المجموعة الاختيارية.`);
+  if((kind==='slot'||level===0)&&!pool)throw issue(`تعذّر ربط «${name}» بقائمة واحدة من الملف. أعد قراءة الخطة مع صفحات القوائم كاملة؛ اختيار المادة لاحقًا للطالب.`);
   if(kind==='slot'&&level===0)throw issue(`${label}: حدد مستوى المتطلب الاختياري.`);
   const prerequisites=list(row.prerequisites,`${label} — المتطلبات السابقة`),corequisites=list(row.corequisites,`${label} — المتطلبات المتزامنة`),anyPrerequisites=list(row.anyPrerequisites,`${label} — المتطلبات البديلة`);
   if(kind==='course'&&codes.has(codeKey(code)))throw issue(`${label}: الرمز ${code} مكرر؛ راجع المواد المكررة قبل الحفظ.`);

@@ -1,3 +1,4 @@
+import {repairChoiceRows} from './plan-choices.js';
 // Deterministic OCR/format repairs. Academic conflicts still require review.
 const digits=value=>value.replace(/[٠-٩۰-۹]/g,c=>String(c.charCodeAt(0)-(c<='٩'?0x660:0x6f0)));
 const clean=value=>typeof value==='string'?value.normalize('NFKC').replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,'').replace(/\s+/g,' ').trim():value;
@@ -44,6 +45,6 @@ export function repairPlanDraft(input){
   }
   courses.push(row);
  }
- draft.courses=courses;
+ draft.courses=repairChoiceRows(courses,input.requirementLists===true,record);
  return {draft,corrections};
 }

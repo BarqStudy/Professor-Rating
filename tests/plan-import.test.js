@@ -43,9 +43,9 @@ test('uploaded plans publish atomically under the selected major, remain idempot
  }finally{await db.close();}
 });
 
-function fixture(){let actor=admin,finish='STOP',providerStatus=200;const calls=[],modelCalls=[];
+function fixture(modelDraft=draft()){let actor=admin,finish='STOP',providerStatus=200;const calls=[],modelCalls=[];
  const db=async(path,options={})=>{calls.push({path,...options});if(path.startsWith('miyar_accounts?'))return[{auth_id:actor,status:'active',university_id:3}];if(path==='rpc/miyar_study_import_target')return{majorId:1,major:'الهندسة المدنية',college:'كلية الهندسة',university:'جامعة نجران'};if(path==='rpc/miyar_uploaded_study_plans')return[];return{ok:true};};
- const aiFetch=async(url,options)=>{modelCalls.push({url,...options});if(providerStatus!==200)return new Response(JSON.stringify({error:{message:'secret-provider-error'}}),{status:providerStatus});return new Response(JSON.stringify({candidates:[{finishReason:finish,content:{parts:[{text:JSON.stringify(draft())}]}}]}),{status:200});};
+ const aiFetch=async(url,options)=>{modelCalls.push({url,...options});if(providerStatus!==200)return new Response(JSON.stringify({error:{message:'secret-provider-error'}}),{status:providerStatus});return new Response(JSON.stringify({candidates:[{finishReason:finish,content:{parts:[{text:JSON.stringify(modelDraft)}]}}]}),{status:200});};
  const handle=createHandler({db,env:{ADMIN_AUTH_IDS:admin,AI_PROVIDER:'gemini',GEMINI_API_KEY:'private-test-key'},authenticate:async request=>{if(!request.headers.has('authorization'))throw new ApiError(401,'unauthorized');return{id:actor};},aiFetch});
  const upload=(bytes='%PDF-1.7\nfixture',auth=true)=>{const form=new FormData();form.set('file',new Blob([bytes],{type:'application/pdf'}),'mixed-plan.pdf');form.set('majorId','1');form.set('fileLabel','خطة ١٤٤٨');return new Request('https://test?study=extract',{method:'POST',headers:auth?{authorization:'Bearer verified'}:{},body:form});};
  return {handle,calls,modelCalls,upload,setActor:value=>actor=value,setFinish:value=>finish=value,setStatus:value=>providerStatus=value};
@@ -132,4 +132,14 @@ test('AI extraction carries the explicit per-plan requirement-list switch and in
  const response=await f.handle(new Request('https://test?study=extract',{method:'POST',headers:{authorization:'Bearer verified'},body:form}));assert.equal(response.status,200);assert.equal((await response.json()).draft.requirementLists,true);
  const input=JSON.parse(f.modelCalls[0].body);assert.equal(JSON.parse(input.contents[0].parts[0].text.split(': ').at(-1)).requirementLists,true);assert.ok(input.systemInstruction.parts[0].text.includes('لا تخلط القائمتين'));assert.ok(input.systemInstruction.parts[0].text.includes('كلمة أو اختصار إنجليزي'));assert.deepEqual(input.generationConfig.responseSchema.properties.courses.items.properties.requirementType.enum,['university','required']);
  const ordinary=fixture();assert.equal((await (await ordinary.handle(ordinary.upload())).json()).draft.requirementLists,false);
+});
+
+test('extract then publish repairs missing group labels and scheduled appendix alternatives before an administrator has to choose any material',async()=>{
+ const input=choiceDraft();input.courses[2].pool=null;
+ for(const row of input.courses.filter(row=>row.level===0))row.level=5;
+ const f=fixture(input),form=await f.upload().formData();form.set('requirementLists','true');
+ const response=await f.handle(new Request('https://test?study=extract',{method:'POST',headers:{authorization:'Bearer verified'},body:form}));assert.equal(response.status,200);
+ const extracted=(await response.json()).draft;assert.equal(extracted.courses.filter(row=>row.kind==='course'&&row.level===0).length,4);assert.ok(extracted.courses.find(row=>row.code==='REQ-U-1').pool);assert.ok(extracted.warnings.length>0);
+ const published=await f.handle(new Request('https://test?study=publish',{method:'POST',headers:{authorization:'Bearer verified','Content-Type':'application/json'},body:JSON.stringify({majorId:1,draft:extracted})}));assert.equal(published.status,200);
+ const plan=f.calls.find(call=>call.path==='rpc/miyar_publish_study_plan').body.p_plan;assert.equal(plan.courses.filter(row=>row.level>0).length,5);assert.equal(plan.groups.length,2);assert.equal(plan.electiveChoices,undefined);
 });
