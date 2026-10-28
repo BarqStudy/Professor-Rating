@@ -132,7 +132,7 @@ export function repairChoiceRows(input,enabled,record){
  }
  const codes=new Set(valid.map(row=>row.code).filter(Boolean));let serial=0;
  for(const row of valid.filter(row=>row.kind==='slot')){
-  if(!row.code||/^[-—–]+$/.test(row.code)){
+  if(!row.code||/^[-—–]+$/.test(row.code)||typeof row.code==='string'&&row.code.includes('*')){
    let code;do{code='CHOICE '+(++serial);}while(codes.has(code));
    codes.add(code);row.code=code;record('أُنشئت رموز تنظيمية لخانات الاختيار دون رموز رسمية؛ ليست رموز مواد دراسية.');
   }

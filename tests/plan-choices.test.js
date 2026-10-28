@@ -1,11 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {repairPlanDraft} from '../supabase/functions/miyar/plan-repair.js';
+import {repairCourseCode,repairPlanDraft} from '../supabase/functions/miyar/plan-repair.js';
 import {normalizePublishedPlan} from '../supabase/functions/miyar/plan-format.js';
 import {choiceCandidates,cleanProgress,progressSummary,selectedCourse,courseStatus} from '../src/study-engine.js';
 
 const course=(code,name,level=1,extra={})=>({code,name,level,credits:3,kind:'course',pool:null,prerequisites:[],corequisites:[],anyPrerequisites:[],minimumCredits:null,completedLevel:null,allPrevious:false,review:null,page:1,...extra});
 const draft=courses=>({id:'plan-12345678-1234-4234-8234-123456789012',title:'خطة الهندسة',fileLabel:'نسخة الاختبار',sha256:'a'.repeat(64),courses});
+
+test('asterisk placeholders get distinct organizational slot codes, and complete footnoted codes retain prerequisite identity',async()=>{
+ const input=draft([course('CE 101***','مادة أساسية'),course('CHOICE 1','مادة أخرى'),...['***','3-تصد***','تصد***-3'].map((code,index)=>course(code,'مقرر اختياري '+(index+1),3+index,{pool:'اختياري'})),course('CE 501***','مادة متقدمة',0,{pool:'اختياري',prerequisites:['CE101***']})]);
+ const original=structuredClone(input),repaired=repairPlanDraft(input),plan=await normalizePublishedPlan(input),slots=plan.courses.filter(row=>row.kind==='slot');
+ assert.deepEqual(input,original);assert.equal(slots.length,3);assert.equal(new Set(slots.map(row=>row.code)).size,3);assert.ok(slots.every(row=>!row.code.includes('*')&&row.code!=='CHOICE 1'&&!row.linkable));
+ assert.deepEqual(repairPlanDraft(repaired.draft).draft.courses,repaired.draft.courses);
+ assert.equal(plan.courses.find(row=>row.name==='مادة أساسية').code,'CE 101');assert.deepEqual(choiceCandidates(plan,slots[0])[0].prerequisites,['CE 101']);
+ assert.equal(repairCourseCode('تصـد ٤٧٢***'),'تصد 472');assert.equal(repairCourseCode('***CE101'),'CE 101');assert.equal(repairCourseCode('3-تصد***'),'3-تصد***');
+ // No invented identity for a masked, named academic course, nor ignored duplicates.
+ await assert.rejects(normalizePublishedPlan(draft([course('تصد***','تصميم المعارض')])) ,/الرمز/);
+ await assert.rejects(normalizePublishedPlan(draft([course('CE101***','مادة أولى'),course('CE101','مادة ثانية')])),/مكرر/);
+});
+
+test('the owner-confirmed interior-design credit correction applies only to the exact source and three identified courses',async()=>{
+ const source='de1cfd1709f4f7af10d0f26872d8a057cd0d259c4e7789bbdd898bce08e5601f';
+ const input={...draft([course('3-تصد***','مقرر اختياري (مجموعة 2)',7,{pool:'المجموعة 2',page:8}),...['تقنيات العرض','تنسيق المواقع الداخلية','المهارات الرقمية والوسائط المتعددة'].map((name,index)=>course(index===2?'تصد474-3':'3-تصـد'+(472+index),name,0,{pool:'المجموعة الثانية',credits:'٢',page:13}))]),sha256:source};
+ const before=structuredClone(input),repaired=repairPlanDraft(input),plan=await normalizePublishedPlan(input),slot=plan.courses.find(row=>row.kind==='slot');
+ assert.deepEqual(input,before);assert.deepEqual(choiceCandidates(plan,slot).map(row=>row.credits),[3,3,3]);assert.equal(progressSummary(plan,cleanProgress(plan,{})).totalCredits,3);
+ assert.ok(plan.autoCorrections.some(note=>note.includes('وفق تصحيح صاحب المنصة')));assert.deepEqual(repairPlanDraft(repaired.draft).draft.courses,repaired.draft.courses);
+ await assert.rejects(normalizePublishedPlan({...input,sha256:'b'.repeat(64)}),/بدائل مجموعته: 2/);
+ const different=structuredClone(input);different.courses[1].name='مقرر آخر';assert.equal(repairPlanDraft(different).draft.courses[1].credits,2);
+ different.courses[2].code='3-تصد499';assert.equal(repairPlanDraft(different).draft.courses[2].credits,2);
+ different.courses[3].credits=4;assert.equal(repairPlanDraft(different).draft.courses[3].credits,4);
+});
 
 test('row 47 missing its elective group is linked automatically to the sole matching appendix without selecting a material',async()=>{
  const input=draft([...Array.from({length:46},(_,i)=>course('CE '+(100+i),'مادة أساسية '+i)),course('EL 1','مقرر اختياري ١',8,{kind:'slot'}),course('CE 901','إدارة المشاريع',0,{pool:'اختياري التخصص'}),course('CE 902','هندسة الطرق',0,{pool:'اختياري التخصص'})]);

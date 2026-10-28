@@ -1,7 +1,7 @@
 const {chromium}=require('playwright-core');const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),http=require('node:http');
 const root=path.resolve(__dirname,'../../dist'),admin='11111111-1111-4111-8111-111111111111';
 const course=(code,name,level)=>({code,name,level,credits:3,kind:'course',pool:null,prerequisites:[],corequisites:[],anyPrerequisites:[],minimumCredits:null,completedLevel:null,allPrevious:false,review:null,page:1});
-const draft={id:'plan-12345678-1234-4234-8234-123456789012',majorId:8,title:'خطة اللغة العربية',fileLabel:'خطة ١٤٤٨',scopeNote:'',sha256:'a'.repeat(64),warnings:[],courses:[course('عرب١٠١','النحو العربي Grammar',1),{...course('عرب 202','الصرف العربي',2),prerequisites:['عرب101']}]};
+const draft={id:'plan-12345678-1234-4234-8234-123456789012',majorId:8,title:'خطة اللغة العربية',fileLabel:'خطة ١٤٤٨',scopeNote:'',sha256:'a'.repeat(64),warnings:[],courses:[course('عرب١٠١***','النحو العربي Grammar',1),{...course('عرب 202','الصرف العربي',2),prerequisites:['عرب101***']}]};
 
 const slot=(code,name,type,pool)=>({...course(code,name,1),kind:'slot',requirementType:type,pool,credits:3});
 const alternative=(code,name,type,pool)=>({...course(code,name,0),requirementType:type,pool});
@@ -11,7 +11,7 @@ draft.courses.push(slot('REQ-U-1','متطلب جامعة','university','متطل
 draft.courses[2].pool=null;draft.courses[2].kind='course';
 draft.courses[4].level=5;draft.courses[5].pool=null;
 draft.courses[6].level=6;draft.courses[7].level=6;
-draft.courses.push({...course('EL 1','مقرر اختياري (مجموعة 2)',4),pool:null},{...course('ARB 301','التحليل النصي',5),pool:'المجموعة الثانية'},{...course('ARB 302','مهارات البحث',0),pool:'Group II'});
+draft.courses.push({...course('3-تصد***','مقرر اختياري (مجموعة 2)',4),pool:null},{...course('ARB 301','التحليل النصي',5),pool:'المجموعة الثانية'},{...course('ARB 302','مهارات البحث',0),pool:'Group II'});
 const target={majorId:8,major:'اللغة العربية',college:'كلية الآداب',university:'جامعة أخرى'};
 const catalogue={universities:[{id:3,name:'جامعة نجران',enabled:true},{id:4,name:'جامعة أخرى',enabled:true}],colleges:[{id:1,name:'كلية الهندسة',university_id:3},{id:2,name:'كلية الآداب',university_id:4}],majors:[{id:1,name:'الهندسة المدنية',college_id:1},{id:8,name:'اللغة العربية',college_id:2}],doctors:[{id:17,name:'أحمد محمد العتيبي',major:'الهندسة المدنية',college:'كلية الهندسة',major_id:1,count:1,score:80,scores:[80,80,80],subjects:[],verified:false}],stats:{doctors:1,reviews:1}};
 const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new URL(req.url,'http://test').pathname).replace(/^\/Professor-Rating\/?/,'');const file=path.resolve(root,relative||'index.html');if(!file.startsWith(root+path.sep))return res.writeHead(403).end();fs.readFile(file,(error,data)=>{if(error)return res.writeHead(404).end();res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.otf':'font/otf','.pdf':'application/pdf','.svg':'image/svg+xml'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
@@ -85,7 +85,8 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
  assert.equal(await page.locator('#study-plan-select option').count(),1);assert.equal(await page.locator('.study-advisory').count(),0,'a complete non-engineering plan must not show the old engineering-track notice');
  assert.match(await page.locator('.study-page').innerText(),/النحو العربي/);assert.ok((await page.locator('.study-page').innerText()).includes('Grammar'));
  const first=uploaded[0].courses[0],second=uploaded[0].courses.find(c=>c.code==='عرب 202');await page.locator(`[data-study-complete="${first.id}"]`).check();assert.equal(await page.locator(`[data-study-course="${second.id}"] .study-status`).innerText(),'متاحة مبدئيًا');
- const elective=uploaded[0].courses.find(c=>c.code==='EL 1'),electiveOption=uploaded[0].courses.find(c=>c.code==='ARB 301');
+ const elective=uploaded[0].courses.find(c=>c.name==='مقرر اختياري (مجموعة 2)'),electiveOption=uploaded[0].courses.find(c=>c.code==='ARB 301');
+ assert.match(elective.code,/^CHOICE /);assert.ok(!elective.code.includes('*'));assert.equal(first.code,'عرب 101');assert.deepEqual(second.prerequisites,['عرب 101']);
  const uni=uploaded[0].courses.find(c=>c.code==='REQ-U-1'),required=uploaded[0].courses.find(c=>c.code==='REQ-R-1'),uOption=uploaded[0].courses.find(c=>c.code==='UNI 101'),rOption=uploaded[0].courses.find(c=>c.code==='REQ 101');
  assert.equal(await page.locator(`[data-study-complete="${uni.id}"]`).isDisabled(),true);
  assert.deepEqual(await page.locator(`[data-study-elective="${uni.id}"] option`).evaluateAll(nodes=>nodes.slice(1).map(n=>n.textContent)),['UNI 101 · مهارات التواصل Communication','UNI 102 · العمل التطوعي']);

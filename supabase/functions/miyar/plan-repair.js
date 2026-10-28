@@ -6,6 +6,10 @@ export function repairCourseCode(value){
  if(typeof value!=='string')return value;
  let code=digits(clean(value)).replace(/[ـ\u064b-\u065f\u0670]/g,'').replace(/[‐‑‒–—−]/g,'-').replace(/^[\s([{"'«]+|[\s)\]}"'»،,؛;]+$/g,'').trim();
  code=code.replace(/^(?:رمز\s*(?:المقرر|المادة)|course\s*code)\s*[:：]\s*/i,'').toUpperCase();
+ // Asterisks after a complete code are footnotes, not part of its identity.
+ // Keep masked codes (3-تصد***) intact for choice-placeholder repair below.
+ const unmarked=code.replace(/^\*+\s*|\s*\*+$/g,'');
+ if(unmarked!==code&&/[\p{L}]/u.test(unmarked)&&/\d/.test(unmarked.replace(/^\d+\s*-\s*(?=\p{L})/u,'')))code=unmarked;
  const standard=code.match(/^([\p{L}][\p{L}\s]*)[\s._-]*(\d+[A-Z]?)$/u);
  if(standard)code=standard[1].replace(/\s/g,'')+' '+standard[2];
  const reversed=code.match(/^(\d+)\s+([\p{Script=Arabic}]+)$/u);
@@ -18,6 +22,11 @@ const refs=value=>{
  return Array.isArray(rows)?[...new Set(rows.filter(v=>!absent(v)).map(repairCourseCode))]:rows;
 };
 const numeric=value=>typeof value==='string'&&/^\d+(?:\.\d+)?$/.test(digits(value.trim()))?Number(digits(value.trim())):value;
+// The platform owner confirmed these three courses are 3-credit options.
+// Scope the correction to the exact uploaded PDF; never infer credits from
+// arbitrary numeric course-code prefixes or bypass unrelated credit conflicts.
+const interior2026='de1cfd1709f4f7af10d0f26872d8a057cd0d259c4e7789bbdd898bce08e5601f';
+const interiorCreditCorrections=new Map([['تصد472','تقنيات العرض'],['تصد473','تنسيق المواقع الداخلية'],['تصد474','المهارات الرقمية والوسائط المتعددة']]);
 export function repairPlanDraft(input){
  if(!input||typeof input!=='object'||Array.isArray(input))return {draft:input,corrections:[]};
  const draft={...input},corrections=[];
@@ -46,5 +55,12 @@ export function repairPlanDraft(input){
   courses.push(row);
  }
  draft.courses=repairChoiceRows(courses,input.requirementLists===true,record);
+ if(input.sha256===interior2026)for(const row of draft.courses){
+  if(row?.kind!=='course'||row.credits!==2||typeof row.code!=='string')continue;
+  const code=row.code.replace(/\s/g,'').replace(/^3-|-3$/g,''),name=interiorCreditCorrections.get(code);
+  if(name&&typeof row.name==='string'&&row.name.replace(/\s/g,'')===name.replace(/\s/g,'')){
+   row.credits=3;record('صُحّحت ساعات بدائل المجموعة الثانية في ملف التصميم الداخلي إلى ثلاث ساعات، وفق تصحيح صاحب المنصة لهذه النسخة.');
+  }
+ }
  return {draft,corrections};
 }

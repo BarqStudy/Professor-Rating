@@ -143,3 +143,14 @@ test('extract then publish repairs missing group labels and scheduled appendix a
  const published=await f.handle(new Request('https://test?study=publish',{method:'POST',headers:{authorization:'Bearer verified','Content-Type':'application/json'},body:JSON.stringify({majorId:1,draft:extracted})}));assert.equal(published.status,200);
  const plan=f.calls.find(call=>call.path==='rpc/miyar_publish_study_plan').body.p_plan;assert.equal(plan.courses.filter(row=>row.level>0).length,5);assert.equal(plan.groups.length,2);assert.equal(plan.electiveChoices,undefined);
 });
+
+test('asterisk slots publish through the API while source-specific corrections use the file digest, never an AI-claimed digest',async()=>{
+ const input={...draft(),sha256:'de1cfd1709f4f7af10d0f26872d8a057cd0d259c4e7789bbdd898bce08e5601f',courses:[course('CE101***','مادة أساسية'),{...course('3-تصد***','مقرر اختياري (مجموعة 2)',7),pool:'المجموعة 2'},{...course('3-تصد472','تقنيات العرض',0),pool:'المجموعة الثانية',credits:2}]};
+ const f=fixture(input),response=await f.handle(f.upload());assert.equal(response.status,200);const extracted=(await response.json()).draft;
+ assert.notEqual(extracted.sha256,input.sha256);assert.equal(extracted.courses[2].credits,2);assert.match(extracted.courses[1].code,/^CHOICE /);assert.equal(extracted.courses[0].code,'CE 101');
+ // This unrelated PDF must still report its academic conflict.
+ const publish=draft=>f.handle(new Request('https://test?study=publish',{method:'POST',headers:{authorization:'Bearer verified','Content-Type':'application/json'},body:JSON.stringify({majorId:1,draft})}));
+ assert.equal((await publish(extracted)).status,400);assert.equal(f.calls.some(call=>call.path==='rpc/miyar_publish_study_plan'),false);
+ extracted.courses[2].credits=3;extracted.courses[1].code='***';assert.equal((await publish(extracted)).status,200);
+ const plan=f.calls.find(call=>call.path==='rpc/miyar_publish_study_plan').body.p_plan;assert.match(plan.courses.find(row=>row.kind==='slot').code,/^CHOICE /);assert.equal(plan.courses.filter(row=>row.kind==='course').length,2);
+});
