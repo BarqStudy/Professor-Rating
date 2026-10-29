@@ -4,6 +4,7 @@ import {openMajorRemoval} from './major-removal.js';
 import {startupSkeleton} from './startup.js';
 import {statNumber,animateStats} from './stats.js';
 import {setupCursor} from './cursor.js';
+import {setupReveals} from './reveal.js';
 import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
 import {createFileManager} from './files.js';
@@ -31,6 +32,7 @@ import "./directory.css";
 import "./startup.css";
 import "./stats.css";
 import "./cursor.css";
+import "./reveal.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
@@ -2326,6 +2328,7 @@ document.addEventListener("keydown", (e) => {
 setupPwa();
 setupInteractions();
 setupCursor();
+setupReveals();
 render();
 if (configured) loadCloud();
 const sharedId = +new URLSearchParams(location.search).get("doctor");

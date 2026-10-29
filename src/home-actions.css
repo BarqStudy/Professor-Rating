@@ -58,30 +58,28 @@
 /* A separate surface leaves a real, curved notch around the existing arrow. */
 .quick-actions .action-card:has(.action-card-surface) {
   --action-widget-fill: var(--surface-raised);
-  --action-widget-edge: var(--line);
   background: transparent; border-color: transparent; box-shadow: none;
   -webkit-backdrop-filter: none; backdrop-filter: none; overflow: visible;
 }
 .quick-actions .rate-existing:has(.action-card-surface) {
   --action-widget-fill: var(--accent-solid);
-  --action-widget-edge: var(--accent-solid);
 }
 .quick-actions .action-card:has(.action-card-surface)::before,
 .quick-actions .action-card:has(.action-card-surface)::after { display: none; }
-.action-card-surface { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; filter: drop-shadow(0 0 .65px var(--action-widget-edge)); }
+.action-card-surface { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
 .action-card-fill {
   display: block; position: relative; overflow: hidden; width: 100%; height: 100%; border-radius: inherit; background: var(--action-widget-fill);
-  --action-cutout: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 100'%3E%3Cpath d='M0 0C0 12 8 14 20 14H34C55 14 72 30 72 50S55 86 34 86H20C8 86 0 88 0 100Z'/%3E%3C/svg%3E");
+  --action-cutout: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 88'%3E%3Cpath d='M0 0C0 10 6 12 14 18C25 26 32 33 32 44S25 62 14 70C6 76 0 78 0 88Z'/%3E%3C/svg%3E");
   -webkit-mask-image: linear-gradient(#000 0 0), var(--action-cutout);
   mask-image: linear-gradient(#000 0 0), var(--action-cutout);
-  -webkit-mask-size: 100% 100%, 80px 100px; mask-size: 100% 100%, 80px 100px;
-  -webkit-mask-position: center, left center; mask-position: center, left center;
+  -webkit-mask-size: 100% 100%, 48px 88px; mask-size: 100% 100%, 48px 88px;
+  -webkit-mask-position: center, -1px center; mask-position: center, -1px center;
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-composite: xor; mask-composite: exclude;
 }
 .quick-actions .action-card>div, .quick-actions .action-card>.action-icon { position: relative; z-index: 1; }
 .quick-actions .action-card>div { padding-inline-end: 12px; }
-.quick-actions .action-arrow { position: relative; inset: auto; display: grid; place-items: center; width: 19px; height: 22px; flex-shrink: 0; opacity: 1; }
+.quick-actions .action-arrow { position: absolute; inset: auto; left: -1px; top: 50%; transform: translate(-50%,-50%); margin: 0; display: grid; place-items: center; width: 19px; height: 22px; opacity: 1; }
 .quick-actions .action-arrow::before { content: ''; position: absolute; width: 44px; height: 44px; top: 50%; left: 50%; transform: translate(-50%,-50%); border-radius: 50%; background: var(--surface-raised); border: 1px solid var(--line); box-shadow: 0 3px 10px rgb(18 35 55 / .06); transition: background-color .3s ease, border-color .3s ease; }
 .quick-actions .action-arrow>.icon { position: relative; z-index: 1; color: var(--green); width: 19px; }
 .quick-actions .action-card:hover .action-arrow { translate: none; }
@@ -89,8 +87,11 @@
 @media (hover: hover) and (pointer: fine) {
   .quick-actions .action-card:hover .action-arrow::before { background: var(--accent-soft); border-color: var(--green); }
 }
+.quick-actions .rate-existing .action-arrow::before,
+.quick-actions .rate-existing:hover .action-arrow::before { background: var(--action-widget-fill); border-color: transparent; box-shadow: none; transition: none; }
+.quick-actions .rate-existing .action-arrow>.icon { color: var(--on-accent); }
 @media (max-width: 650px) {
-  .action-card-fill { -webkit-mask-size: 100% 100%, 66px 88px; mask-size: 100% 100%, 66px 88px; }
+  .action-card-fill { -webkit-mask-size: 100% 100%, 42px 78px; mask-size: 100% 100%, 42px 78px; }
   .quick-actions .action-arrow, .quick-actions .action-arrow>.icon { width: 15px; }
   .quick-actions .action-arrow::before { width: 38px; height: 38px; }
 }
