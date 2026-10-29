@@ -2,6 +2,7 @@ import {createUniversitySelector} from './university-selector.js';
 import {homeIcon} from './home-icons.js';
 import {openMajorRemoval} from './major-removal.js';
 import {startupSkeleton} from './startup.js';
+import {statNumber,animateStats} from './stats.js';
 import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
 import {createFileManager} from './files.js';
@@ -27,6 +28,7 @@ import "./theme.css";
 import "./home-actions.css";
 import "./directory.css";
 import "./startup.css";
+import "./stats.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
@@ -57,6 +59,7 @@ let cloudMe = null,
   cloudCatalogue = null,
   cloudQueue = null;
 let cloudAuthPending = null;
+let stopStatCounters = () => {};
 let cloudBooting = configured, cloudLoadPending = null, authGeneration = 0, localSignOut = false;
 let cloudQueueLoading = false;
 const miyarAssistant = createAssistant({
@@ -277,10 +280,12 @@ function previousPage(){
 }
 
 function renderStartup() {
+  stopStatCounters();
   if (!document.querySelector('.platform-startup')) document.querySelector('#app').innerHTML = startupSkeleton(page);
 }
 function render() {
   if (cloudBooting) { renderStartup(); return; }
+  stopStatCounters();
   // Older links used a placeholder page solely behind the review dialog.
   if(page==='review'){
     page='home';
@@ -356,6 +361,7 @@ function render() {
         : developer()
     }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html">شروط الاستخدام</a></span><span>بُني بشغف لرحلتك الجامعية</span></footer>${page !== 'assistant' ? `<button type="button" class="assistant-launcher" data-page="assistant" aria-label="مساعد مِعيار"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2Z"/></svg><span>مساعد مِعيار</span></button>` : ''}</div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
   bind();
+  stopStatCounters = animateStats(document.querySelector('.stats'));
   if (page === 'assistant') miyarAssistant.bind();
   if (page === 'plan') studyPlanner.bind();
   if (page === 'advisor') courseAdvisor.bind();
@@ -389,28 +395,7 @@ function home() {
     ic("arrow")
   }</span></button><button class="action-card new-review add-new-doctor" id="new-review">${homeIcon("add")}<div><span class="tiny-label">تجربتك تستحق المشاركة</span><h2>إضافة دكتور</h2><p>دكتور غير مضاف في الأقسام</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span><span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span></button><button type="button" class="action-card browse study-action" data-page="plan">${homeIcon("plan")}<div><span class="tiny-label">خطوة بخطوة نحو التخرج</span><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button><button type="button" class="action-card browse advisor-action" data-page="advisor">${homeIcon("advisor")}<div><span class="tiny-label">اختيارك يبدأ من المادة</span><h2>اختيار الدكتور المناسب</h2><p>اختر المادة من خطتك وقارن دكاترتها حسب تقييمات الطلاب</p></div><span class="action-arrow">${ic("arrow")}</span></button></section><section class="stats"><div><span class="stat-icon">${
-    ic("cap")
-  }</span><div><b>+${
-    configured
-      ? Number(cloudCatalogue?.stats?.doctors ?? cloudCatalogue?.doctors.length ?? 0).toLocaleString("ar")
-      : doctors.length === 4
-      ? "٤٨"
-      : doctors.length
-  }</b><span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${
-    ic("star")
-  }</span><div><b>+${
-    (configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length)
-      .toLocaleString("ar")
-  }</b><span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${
-    ic("users")
-  }</span><div><b>${
-    configured ? (cloudCatalogue?.colleges.length || 0).toLocaleString("ar") : "+٨٥٠"
-  }</b><span>${
-    configured ? "كلية في مِعيار" : "طالب يصنعون الأثر"
-  }</span></div></div><span class="demo-data">${
-    configured ? "إحصائيات جميع الجامعات · تقييمات منشورة فقط" : "إحصاءات توضيحية"
-  }</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
+  }</span><span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span></button><button type="button" class="action-card browse study-action" data-page="plan">${homeIcon("plan")}<div><span class="tiny-label">خطوة بخطوة نحو التخرج</span><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button><button type="button" class="action-card browse advisor-action" data-page="advisor">${homeIcon("advisor")}<div><span class="tiny-label">اختيارك يبدأ من المادة</span><h2>اختيار الدكتور المناسب</h2><p>اختر المادة من خطتك وقارن دكاترتها حسب تقييمات الطلاب</p></div><span class="action-arrow">${ic("arrow")}</span></button></section><section class="stats"><div><span class="stat-icon">${ic('cap')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.doctors ?? cloudCatalogue?.doctors.length ?? 0) : doctors.length === 4 ? 48 : doctors.length, '+')}<span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${ic('star')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length, '+')}<span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${ic('users')}</span><div>${statNumber(configured ? (cloudCatalogue?.colleges.length || 0) : 850, configured ? '' : '+')}<span>${configured ? 'كلية في مِعيار' : 'طالب يصنعون الأثر'}</span></div></div><span class="demo-data">${configured ? 'إحصائيات جميع الجامعات · تقييمات منشورة فقط' : 'إحصاءات توضيحية'}</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
     ic("shield")
   }</div><div><h3>مساحة آمنة. آراء صادقة. أثر حقيقي.</h3><p>نحترم خصوصيتك، ونؤمن أن النقد البنّاء هو بداية التطوير.</p></div><button id="privacy">تعرّف على معاييرنا ${
     ic("arrow")

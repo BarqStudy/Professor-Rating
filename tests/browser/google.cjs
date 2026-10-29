@@ -664,9 +664,11 @@ const server = http.createServer((req, res) => {
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
     assert.equal(await page.locator(".doctor-card").count(),0);
     assert.match(await page.locator("#doctor-grid").innerText(), /لم تُضف كليات جامعتك/);
-    assert.equal(await page.locator('.stats>div').nth(0).locator('b').innerText(), '+'+catalogue.stats.doctors.toLocaleString('ar'));
-    assert.equal(await page.locator('.stats>div').nth(1).locator('b').innerText(), '+'+catalogue.stats.reviews.toLocaleString('ar'));
-    assert.equal(await page.locator('.stats>div').nth(2).locator('b').innerText(), catalogue.colleges.length.toLocaleString('ar'));
+    await page.locator('.stats').scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>[...document.querySelectorAll('[data-stat-value]')].every(node=>node.textContent===node.dataset.statPrefix+Number(node.dataset.statValue).toLocaleString('ar')));
+    assert.equal(await page.locator('.stats>div').nth(0).locator('b [data-stat-value]').innerText(), '+'+catalogue.stats.doctors.toLocaleString('ar'));
+    assert.equal(await page.locator('.stats>div').nth(1).locator('b [data-stat-value]').innerText(), '+'+catalogue.stats.reviews.toLocaleString('ar'));
+    assert.equal(await page.locator('.stats>div').nth(2).locator('b [data-stat-value]').innerText(), catalogue.colleges.length.toLocaleString('ar'));
     assert.match(await page.locator('.stats .demo-data').innerText(), /جميع الجامعات/);
     await page.locator("#search").fill("أحمد محمد العتيبي");
     assert.equal(await page.locator(".doctor-card").count(),0);
