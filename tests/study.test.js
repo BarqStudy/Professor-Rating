@@ -96,7 +96,9 @@ test('database keeps course reviews published-only and atomically rejects cross-
   assert.deepEqual(await rpc('miyar_course_doctors',[civil]),[],'pending data never establishes a public association');
   await db.exec("update miyar_doctors set status='approved';update miyar_reviews set status='published';");
   const cd=await rpc('miyar_course_doctors',[civil]),md=await rpc('miyar_course_doctors',[mechanical]);
-  assert.equal(cd.length,1);assert.equal(md.length,1);assert.notEqual(cd[0].id,md[0].id);
+  assert.equal(cd.length,2);assert.equal(md.length,2);assert.deepEqual(cd.map(d=>d.id),md.map(d=>d.id),'shared materials include professors from both departments');
+  const civilDoctor=(await db.query('select doctor_id from miyar_reviews where id=$1',[a.id])).rows[0].doctor_id;
+  const mechanicalDoctor=(await db.query('select doctor_id from miyar_reviews where id=$1',[b.id])).rows[0].doctor_id;
   assert.equal(cd[0].count,1);assert.deepEqual(cd[0].scores,[90,80,70]);
   for(const privateField of ['grade','account_id','guest_id',account])assert.ok(!JSON.stringify(cd).includes(privateField));
   const before=(await db.query('select count(*)::int n from miyar_reviews')).rows[0].n;
@@ -108,18 +110,19 @@ test('database keeps course reviews published-only and atomically rejects cross-
   assert.equal((await db.query("select count(*)::int n from miyar_doctors where name='خالد محمد العتيبي'")).rows[0].n,0);
   const legacy=await rpc('miyar_submit_google_review',[account,'كلية الهندسة','الهندسة المدنية','خالد محمد العتيبي','مادة غير مرتبطة',90,90,90,90,'',[],false]);
   await db.exec("update miyar_doctors set status='approved';update miyar_reviews set status='published';");
-  assert.equal((await rpc('miyar_course_doctors',[civil])).length,1,'unrelated legacy material names are not linked');
+  assert.equal((await rpc('miyar_course_doctors',[civil])).length,2,'unrelated legacy material names are not linked');
   await db.query("update miyar_reviews set subject='مادة أخرى' where id=$1",[a.id]);
   assert.equal((await db.query('select course_id from miyar_reviews where id=$1',[a.id])).rows[0].course_id,null);
-  assert.deepEqual(await rpc('miyar_course_doctors',[civil]),[],'an approved material edit removes stale links');
+  assert.deepEqual((await rpc('miyar_course_doctors',[civil])).map(d=>d.id),[mechanicalDoctor],'an approved material edit removes stale links while preserving shared subject evidence');
+  assert.ok(!(await rpc('miyar_course_doctors',[civil])).some(d=>d.id===civilDoctor));
   const guest=await rpc('miyar_open_guest',['a'.repeat(64),null]);await db.query('update miyar_guest_sessions set university_id=3 where id=$1',[guest.id]);
   const g=await rpc('miyar_guest_submit',[guest.id,'كلية الهندسة','الهندسة المدنية','مهندس محمد علي القحطاني','ميكانيكا الموائع',95,80,80,80,'',[],true,civil]);
   await db.exec("update miyar_doctors set status='approved';update miyar_reviews set status='published';");
   assert.equal((await rpc('miyar_course_doctors',[civil]))[0].count,1);
-  await db.query("update miyar_reviews set status='rejected' where id=$1",[g.id]);assert.deepEqual(await rpc('miyar_course_doctors',[civil]),[]);
-  // Same name and code in another plan version stays independent.
+  await db.query("update miyar_reviews set status='rejected' where id=$1",[g.id]);assert.deepEqual((await rpc('miyar_course_doctors',[civil])).map(d=>d.id),[mechanicalDoctor]);
+  // Plan versions retain their own course IDs while surfacing shared subject reviews.
   await db.exec("insert into miyar_study_plans(id,major_id,metadata) select 'najran-ce-2027',major_id,metadata||jsonb_build_object('fileLabel','CE-2027') from miyar_study_plans where id='najran-ce-2025';insert into miyar_study_courses values('najran-ce-2027/ce211','najran-ce-2027','همد 211','ميكانيكا الموائع',true);");
-  assert.deepEqual(await rpc('miyar_course_doctors',['najran-ce-2027/ce211']),[]);
+  assert.deepEqual((await rpc('miyar_course_doctors',['najran-ce-2027/ce211'])).map(d=>d.id),[mechanicalDoctor]);
   for(const role of ['anon','authenticated']){
    await db.exec('set role '+role);
    await assert.rejects(db.query('select * from miyar_study_courses'),/permission denied/);

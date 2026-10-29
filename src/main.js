@@ -6,6 +6,7 @@ import {statNumber,animateStats} from './stats.js';
 import {setupCursor} from './cursor.js';
 import {setupReveals} from './reveal.js';
 import {setupHero,heroUpdate,rememberHero,cancelHero} from './hero.js';
+import {setAppearance,toggleAppearance} from './appearance.js';
 import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
 import {createFileManager} from './files.js';
@@ -35,6 +36,7 @@ import "./stats.css";
 import "./cursor.css";
 import "./reveal.css";
 import "./hero.css";
+import "./appearance.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
@@ -448,7 +450,7 @@ function renderUniversityLanding(){
   const selector=universitySelector();
   document.querySelector('#app').innerHTML=`<div class="university-entry"><div class="university-entry-bar"><a class="brand" href="#" aria-label="معيار">${logo}</a><div class="university-entry-actions">${cloudMe?.isAdmin?'<button type="button" class="secondary" id="entry-admin">لوحة الإدارة</button>':''}${googleSession?`<span>${escapeHtml(displayName().trim().split(/\s+/)[0])}${roleBadge(cloudMe,cloudCatalogue)}</span>`:'<button type="button" class="secondary" id="entry-google">دخول Google</button>'}<button type="button" class="icon-btn" id="entry-theme" aria-label="تبديل المظهر">${ic('moon')}</button></div></div><main class="university-entry-main">${page==='universities'&&(googleSession||selectedUniversity()?.enabled)?`<button type="button" class="page-close" id="university-entry-back">${ic('arrow')} رجوع</button>`:''}${cloudStatus==='ready'?'':connectionBanner()}${selector.content()}</main><div class="university-entry-legal"><span>مِعيار · من الطلاب، لأجل الطلاب</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html">شروط الاستخدام</a></span></div></div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
   selector.bind();document.querySelector('#university-entry-back')?.addEventListener('click',previousPage);document.querySelector('#entry-admin')?.addEventListener('click',()=>{setPage('admin');render();});document.querySelector('#entry-google')?.addEventListener('click',openGoogleMessage);document.querySelector('#retry-cloud')?.addEventListener('click',loadCloud);
-  document.querySelector('#entry-theme').onclick=()=>{const theme=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=theme;storage.setItem('athar-theme',theme);};
+  document.querySelector('#entry-theme').onclick=event=>toggleAppearance(event.currentTarget);
 }
 function changeUniversityPage(){
   document.body.classList.remove('modal-open');
@@ -1056,11 +1058,7 @@ function bind() {
     }
   );
   document.querySelectorAll(".theme-toggle,.mobile-theme").forEach((b) =>
-    b.onclick = () => {
-      let dark = document.documentElement.dataset.theme !== "dark";
-      document.documentElement.dataset.theme = dark ? "dark" : "light";
-      storage.setItem("athar-theme", dark ? "dark" : "light");
-    }
+    b.onclick = () => toggleAppearance(b)
   );
   document.querySelector("#new-review")?.addEventListener(
     "click",
@@ -1361,9 +1359,7 @@ function openSettings() {
   });
   document.querySelectorAll("[data-appearance]").forEach((button) => {
     button.onclick = () => {
-      document.documentElement.dataset.theme = button.dataset.appearance;
-      storage.setItem("athar-theme", button.dataset.appearance);
-      document.querySelectorAll("[data-appearance]").forEach((option) => option.setAttribute("aria-pressed", String(option === button)));
+      setAppearance(button.dataset.appearance, button);
     };
   });
   const updateFont = (delta) => {

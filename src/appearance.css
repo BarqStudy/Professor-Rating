@@ -1,0 +1,15 @@
+/* One radial reveal replaces the browser's default crossfade. */
+html.theme-switching::view-transition-group(root),
+html.theme-switching::view-transition-old(root),
+html.theme-switching::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+html.theme-switching::view-transition-old(root) { z-index: 1; }
+html.theme-switching::view-transition-new(root) { z-index: 2; }
+html.theme-switching::view-transition-image-pair(root) { isolation: isolate; }
+html.theme-switching::view-transition { pointer-events: none; }
+html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after { transition: none !important; }
+/* Keep the live native pointer during the snapshot rather than freezing a
+   captured copy of the decorative cursor. The custom cursor resumes after it. */
+html.theme-switching .custom-cursor { visibility: hidden !important; }
+html.theme-switching.custom-cursor-active, html.theme-switching.custom-cursor-active * { cursor: auto !important; }
+html.theme-switching.custom-cursor-active :is(button,a,[role=button]) { cursor: pointer !important; }
+html.theme-switching.custom-cursor-active :is(input,textarea,[contenteditable=true]) { cursor: text !important; }

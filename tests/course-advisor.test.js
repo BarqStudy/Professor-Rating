@@ -21,7 +21,7 @@ test('course search equates article/diacritic/digit variations while preserving 
  assert.ok(!officeBadge({office_role:'dean',office_college:'<img src=x>'}).includes('<img'));
 });
 
-test('recommendations merge equivalent legacy text conservatively, keep course scope and add explicit cross-college teaching',async()=>{
+test('recommendations include shared subjects across university departments and plans, preserve distinct courses and deduplicate identities',async()=>{
  const db=await database();try{
   const key=value=>rpc(db,'miyar_course_key',[value]);
   for(const name of ['استاتيكا','الاستاتيكا','الإِسْتَاتِيْكَا','دوائر كهربائية ١','الدوائر الكهربائية 1','دوائر كهربائية 2'])assert.equal(await key(name),courseNameKey(name));
@@ -34,11 +34,17 @@ test('recommendations merge equivalent legacy text conservatively, keep course s
   const review=async(account,doctor,subject,score,course=null,status='published')=>(await db.query("insert into miyar_reviews(account_id,doctor_id,subject,grade,explanation,treatment,grading,comment,status,course_id) values($1,$2,$3,99,$4,$4,$4,'شرح واضح',$5,$6) returning id",[account,doctor,subject,score,status,course])).rows[0].id;
   await review(accounts[0],a,'استاتيكا',90);await review(accounts[1],a,'الاستاتيكا',80);
   await review(accounts[0],b,'الإستاتيكا',95);await review(accounts[1],b,'الاستاتيكا',95);
-  await review(accounts[0],other,'الاستاتيكا',100); // another department's legacy text is not enough
+  await review(accounts[0],other,'الاستاتيكا',100); // shared subject from a different department is included
   await review(accounts[2],a,'الاستاتيكا',1,null,'pending');
   let rows=await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101']);
-  assert.deepEqual(rows.map(r=>r.id),[b,a]);assert.equal(rows[0].score,95);assert.equal(rows[1].score,85);assert.equal(rows[1].count,2);
-  assert.ok(rows.every(r=>r.id!==other));
+  assert.deepEqual(rows.map(r=>r.id),[other,b,a]);assert.equal(rows[0].score,100);assert.equal(rows[2].score,85);assert.equal(rows[2].count,2);
+  assert.equal((await rpc(db,'miyar_course_reviews',['najran-ce-2025/ge101',other])).length,1);
+  // A matching name in another university is not evidence for this university.
+  const foreignCollege=(await db.query("insert into miyar_colleges(university_id,name) values(1,'كلية الهندسة') returning id")).rows[0].id;
+  const foreignMajor=(await db.query("insert into miyar_majors(college_id,name) values($1,'الميكانيكا') returning id",[foreignCollege])).rows[0].id;
+  await db.exec('update miyar_universities set enabled=true where id=1');
+  const foreign=await addDoctor(foreignMajor,'أحمد خالد محمد');await review(accounts[0],foreign,'استاتيكا',100);
+  assert.ok((await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101'])).every(r=>r.id!==foreign));
   // The same professor may teach a civil course while belonging to another college.
   const science=(await db.query("insert into miyar_colleges(university_id,name) values(3,'كلية العلوم') returning id")).rows[0].id;
   const physics=(await db.query("insert into miyar_majors(college_id,name) values($1,'الفيزياء') returning id",[science])).rows[0].id;
@@ -46,7 +52,7 @@ test('recommendations merge equivalent legacy text conservatively, keep course s
   const linked=await review(accounts[0],cross,'الاستاتيكا',97,'najran-ce-2025/ge101');
   await db.query("update miyar_reviews set subject='الإستاتيكا' where id=$1",[linked]);
   assert.equal((await db.query('select course_id from miyar_reviews where id=$1',[linked])).rows[0].course_id,'najran-ce-2025/ge101','equivalent spelling edits retain an explicit course link');
-  rows=await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101']);assert.deepEqual(rows.map(r=>r.id),[cross,b,a]);assert.equal(rows[0].college,'كلية العلوم');
+  rows=await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101']);assert.deepEqual(rows.map(r=>r.id),[other,cross,b,a]);assert.equal(rows.find(r=>r.id===cross).college,'كلية العلوم');
   const publicReviews=await rpc(db,'miyar_course_reviews',['najran-ce-2025/ge101',a]);assert.equal(publicReviews.length,2);
   const serialized=JSON.stringify([rows,publicReviews]);for(const value of ['account_id','guest_id','"grade"',...accounts])assert.ok(!serialized.includes(value));
   // Historical rows from before the one-review rule remain readable and deduplicated.
@@ -56,9 +62,16 @@ test('recommendations merge equivalent legacy text conservatively, keep course s
   // Same identity + equivalent spelling counts only the latest published experience.
   await legacyReview(accounts[0],a,' الإِسْتَاتِيكا ',70);
   rows=await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101']);assert.equal(rows.find(r=>r.id===a).count,2);assert.equal(rows.find(r=>r.id===a).score,75);
-  // Existing links to a different plan/version stay there even if the names match.
+  // Explicit links stay on their original plans, but shared subject recommendations span plans.
   await legacyReview(accounts[2],a,'استاتيكا',100,'najran-me-2026/ge101');
-  rows=await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101']);assert.equal(rows.find(r=>r.id===a).count,2);
+  rows=await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101']);assert.equal(rows.find(r=>r.id===a).count,3);assert.equal(rows.find(r=>r.id===a).score,83.3);
+  assert.equal((await rpc(db,'miyar_course_reviews',['najran-ce-2025/ge101',a])).length,3);
+  const mechanicalRows=await rpc(db,'miyar_course_doctors',['najran-me-2026/ge101']);assert.deepEqual(mechanicalRows.map(r=>r.id),[other,cross,b,a]);
+  assert.equal((await db.query("select course_id from miyar_reviews where account_id=$1 and doctor_id=$2",[accounts[2],a])).rows[0].course_id,'najran-me-2026/ge101');
+  // A removed/disabled linked course cannot supply cross-plan evidence.
+  await db.exec("update miyar_study_courses set linkable=false where id='najran-me-2026/ge101'");
+  assert.equal((await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101'])).find(r=>r.id===a).count,2);
+  await db.exec("update miyar_study_courses set linkable=true where id='najran-me-2026/ge101'");
   // Numbered courses cannot merge just because the base name matches.
   await legacyReview(accounts[0],a,'دوائر كهربائية 2',100);
   assert.deepEqual(await rpc(db,'miyar_course_doctors',['najran-me-2026/ee216']),[]);
