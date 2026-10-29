@@ -84,5 +84,26 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('aside [data-page=home]').click();await page.locator('.welcome').waitFor();assert.equal(await page.locator('.hero-flight').count(),0);
  await page.locator('#open-settings').click();await page.locator('.modal').waitFor();assert.equal(await page.locator('.hero-flight').count(),0);await close();
  assert.deepEqual(errors,[]);await test.context.close();
- console.log('PASS: a single one-by-one entrance without legacy restarts, site-wide Hero on sidebar/back/university/settings/doctor details/study/assistant/add-doctor, continuous fetched-dialog replacement, editable drafts, restored focus, rapid navigation, unique SVG IDs, reduced motion, and mobile/desktop. Auth/API mocked.');
+ // A delayed compositor finish must not hold the captured page after the
+ // visible circle has ended. A capture that never becomes ready has a deadline.
+ const appearance=await setup(),themePage=appearance.page;
+ await themePage.locator('.welcome').waitFor();
+ await themePage.evaluate(()=>{
+  window.nativeThemeTransition=document.startViewTransition.bind(document);
+  document.startViewTransition=callback=>{const t=window.nativeThemeTransition(callback);return{ready:t.ready,finished:new Promise(()=>{}),skipTransition:()=>t.skipTransition()};};
+ });
+ await themePage.locator('.mobile-theme').click();
+ await themePage.waitForFunction(()=>document.documentElement.dataset.theme==='dark'&&!document.documentElement.classList.contains('theme-switching'),null,{timeout:1500});
+ assert.equal(await themePage.evaluate(()=>localStorage.getItem('athar-theme')),'dark');
+ await themePage.evaluate(()=>{
+  document.startViewTransition=callback=>{const t=window.nativeThemeTransition(callback);return{ready:new Promise(resolve=>window.releaseThemeCapture=()=>t.ready.then(resolve)),finished:t.finished,skipTransition:()=>t.skipTransition()};};
+ });
+ await themePage.locator('.mobile-theme').click();
+ await themePage.waitForFunction(()=>document.documentElement.dataset.theme==='light'&&!document.documentElement.classList.contains('theme-switching'),null,{timeout:1500});
+ await themePage.evaluate(()=>document.startViewTransition=window.nativeThemeTransition);
+ await themePage.locator('.mobile-theme').click();await themePage.evaluate(()=>window.releaseThemeCapture());
+ await themePage.waitForFunction(()=>document.documentElement.dataset.theme==='dark'&&!document.documentElement.classList.contains('theme-switching'),null,{timeout:1500});
+ assert.equal(await themePage.evaluate(()=>localStorage.getItem('athar-theme')),'dark','a late capture cannot undo the newer appearance');
+ await appearance.context.close();assert.deepEqual(errors,[]);
+ console.log('PASS: a single one-by-one entrance without legacy restarts, site-wide Hero on sidebar/back/university/settings/doctor details/study/assistant/add-doctor, continuous fetched-dialog replacement, editable drafts, restored focus, rapid navigation, unique SVG IDs, reduced motion, mobile/desktop, and bounded appearance transitions despite delayed capture/finish callbacks. Auth/API mocked.');
  }finally{await browser.close();server.close();}})().catch(error=>{console.error(error);process.exitCode=1;server.close();});

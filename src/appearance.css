@@ -3,7 +3,7 @@ html.theme-switching::view-transition-group(root),
 html.theme-switching::view-transition-old(root),
 html.theme-switching::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 html.theme-switching::view-transition-old(root) { z-index: 1; }
-html.theme-switching::view-transition-new(root) { z-index: 2; }
+html.theme-switching::view-transition-new(root) { z-index: 2; will-change: clip-path; }
 html.theme-switching::view-transition-image-pair(root) { isolation: isolate; }
 html.theme-switching::view-transition { pointer-events: none; }
 html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after { transition: none !important; }
