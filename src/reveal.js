@@ -22,6 +22,10 @@ export function setupReveals() {
       if (!node.closest('main') || node.querySelector(targets) || seen.has(node)) continue;
       seen.add(node);
       if (motion.matches) continue;
+      if (document.documentElement.classList.contains('hero-transition-active')) {
+        const box = node.getBoundingClientRect();
+        if (box.bottom > 0 && box.top < innerHeight) continue;
+      }
       node.classList.add('miyar-reveal-pending'); pending.add(node); observer.observe(node);
     }
   };

@@ -5,6 +5,7 @@ import {startupSkeleton} from './startup.js';
 import {statNumber,animateStats} from './stats.js';
 import {setupCursor} from './cursor.js';
 import {setupReveals} from './reveal.js';
+import {heroTransition,cancelHero} from './hero.js';
 import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
 import {createFileManager} from './files.js';
@@ -33,6 +34,7 @@ import "./startup.css";
 import "./stats.css";
 import "./cursor.css";
 import "./reveal.css";
+import "./hero.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
@@ -277,13 +279,15 @@ function nav() {
   }</nav>`;
 }
 const navigation=createNavigation({history,location,scrollY:()=>window.scrollY});
-function setPage(next) {navigation.push(next);page=next;}
+function setPage(next, hero = false) {if (!hero) cancelHero();navigation.push(next);page=next;}
 function previousPage(){
+ cancelHero();
  document.body.classList.remove('modal-open');
  if(!navigation.back()){page='home';render();window.scrollTo({top:0});}
 }
 
 function renderStartup() {
+  cancelHero();
   stopStatCounters();
   if (!document.querySelector('.platform-startup')) document.querySelector('#app').innerHTML = startupSkeleton(page);
 }
@@ -686,6 +690,7 @@ function modal(title, body) {
   document.querySelector(".modal input,.modal button")?.focus();
 }
 function closeModal() {
+  cancelHero();
   if (document.querySelector(".mandatory-university")) return;
   const b = document.querySelector(".modal-backdrop");
   b?.classList.add("closing");
@@ -1036,12 +1041,17 @@ function bind() {
   };
   document.querySelectorAll("[data-page]").forEach((b) =>
     b.onclick = () => {
-      setPage(b.dataset.page);
-      query = "";
-      savedOnly = false;
-      render();
-      if (page === "admin" && configured) loadCloudQueue();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      const hero = b.matches('.quick-actions>.action-card');
+      const navigate = () => {
+        setPage(b.dataset.page, hero);
+        query = "";
+        savedOnly = false;
+        render();
+        if (page === "admin" && configured) loadCloudQueue();
+        window.scrollTo({ top: 0, behavior: hero ? "instant" : "smooth" });
+      };
+      if (hero) heroTransition(b, navigate, () => document.querySelector('.directory-section,.study-page,.course-advisor')).catch(error => toast(error.message));
+      else navigate();
     }
   );
   document.querySelectorAll(".theme-toggle,.mobile-theme").forEach((b) =>
@@ -1053,7 +1063,7 @@ function bind() {
   );
   document.querySelector("#new-review")?.addEventListener(
     "click",
-    () => reviewForm(),
+    event => heroTransition(event.currentTarget, () => reviewForm(), () => document.querySelector('.modal')).catch(error => toast(error.message)),
   );
   document.querySelector("#search")?.addEventListener("input", (e) => {
     query = e.target.value.trim();
@@ -2311,6 +2321,7 @@ document.addEventListener('click',event=>{
  event.preventDefault();document.body.classList.remove('modal-open');setPage(next);render();window.scrollTo({top:0});
 });
 window.addEventListener("popstate", () => {
+  cancelHero();
   document.body.classList.remove("modal-open");
   page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home";
   render();
