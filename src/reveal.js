@@ -14,7 +14,7 @@ export function setupReveals() {
   const observer = new IntersectionObserver(entries => {
     entries.filter(entry => entry.isIntersecting && pending.has(entry.target))
       .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top || b.boundingClientRect.right - a.boundingClientRect.right)
-      .forEach((entry, index) => reveal(entry.target, Math.min(index, 10) * 65));
+      .forEach((entry, index) => reveal(entry.target, Math.min(index, 8) * 30));
   }, {rootMargin: '0px 0px -16px 0px', threshold: 0});
   const register = scope => {
     const nodes = [...(scope.matches(targets) ? [scope] : []), ...scope.querySelectorAll(targets)];

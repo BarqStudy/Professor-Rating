@@ -9,12 +9,8 @@ import {setupHero,heroUpdate,rememberHero,cancelHero} from './hero.js';
 import {setAppearance,toggleAppearance} from './appearance.js';
 import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
-import {createFileManager} from './files.js';
 import {createNavigation} from './navigation.js';
 import {openInstitutionRequest,institutionAdminPanel,bindInstitutionMail} from './institution-request.js';
-import { createStudyImport } from './study-import.js';
-import { createStudyEditor } from './study-editor.js';
-import { createPublishedReviews } from './published-reviews.js';
 import { getStudyPlans, setUploadedStudyPlans } from './study-catalogue.js';
 import { createCourseAdvisor } from './course-advisor.js';
 import { officeBadge } from './doctor-office.js';
@@ -37,6 +33,7 @@ import "./cursor.css";
 import "./reveal.css";
 import "./hero.css";
 import "./appearance.css";
+import "./performance.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
@@ -70,6 +67,7 @@ let cloudAuthPending = null;
 let stopStatCounters = () => {};
 let cloudBooting = configured, cloudLoadPending = null, authGeneration = 0, localSignOut = false;
 let cloudQueueLoading = false;
+let cloudPlansReady = !configured, cloudPlansPending = null, cloudPlansError = '';
 const miyarAssistant = createAssistant({
   api,
   ensureGuestSession: async () => {
@@ -138,10 +136,24 @@ const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>config
   closeModal,toast,
 });
 const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onRequestDoctor:(course,plan)=>requestDoctorForm({course,plan}),onDoctor:(id)=>cloudDoctorDetail(id)});
-const fileManager=createFileManager({api,upload:uploadPlatformFile,ownerKey:()=>googleSession?.user.id||''});
-const studyImport=createStudyImport({catalogue:()=>cloudCatalogue,ownerKey:()=>googleSession?.user.id||'',extract:extractStudyPlan,publish:publishStudyPlan,onPublished:async()=>{await refreshCloudCatalogue();render();toast('حُفظت الخطة وأصبحت متاحة للطلاب.');}});
-const studyEditor=createStudyEditor({api,update:updateStudyPlan,ownerKey:()=>googleSession?.user.id||'',onSaved:async()=>{await refreshCloudCatalogue();render();toast('حُفظت تعديلات الخطة.');},onDeleted:async()=>{await refreshCloudCatalogue();render();toast('حُذفت خطة التخصص.');}});
-const publishedReviews=createPublishedReviews({api,catalogue:()=>cloudCatalogue,ownerKey:()=>googleSession?.user.id||'',onRemoved:async()=>{await Promise.all([refreshCloudCatalogue(),loadCloudQueue(false)]);render();toast('حُذف التقييم المنشور.');}});
+let fileManager, studyImport, studyEditor, publishedReviews, adminToolsPending = null, adminToolsError = '';
+function ensureAdminTools() {
+  if (studyEditor || adminToolsPending) return adminToolsPending;
+  adminToolsError = '';
+  adminToolsPending = import('./admin-tools.js').then(({createAdminTools}) => {
+    ({fileManager,studyImport,studyEditor,publishedReviews} = createAdminTools({
+      api,uploadPlatformFile,extractStudyPlan,publishStudyPlan,updateStudyPlan,
+      catalogue:()=>cloudCatalogue,ownerKey:()=>googleSession?.user.id||'',
+      onPlansChanged:async(message)=>{await refreshCloudCatalogue();render();toast(message);},
+      onReviewRemoved:async()=>{await Promise.all([refreshCloudCatalogue(),loadCloudQueue(false)]);render();toast('حُذف التقييم المنشور.');},
+    }));
+  }).catch(error=>{adminToolsError=error.message;}).finally(()=>{
+    adminToolsPending=null;
+    if(page==='admin'&&cloudMe?.isAdmin&&!document.querySelector('.modal-backdrop'))render();
+  });
+  return adminToolsPending;
+}
+
 const logo =
   `<span class="miyar-mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M32 10v43M14 22h36M22 53h20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="m14 22-9 19h18l-9-19Zm36 0-9 19h18l-9-19Z" fill="currentColor" opacity=".22"/><path d="M5 41c3 8 15 8 18 0M41 41c3 8 15 8 18 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="m32 3 5 6-5 6-5-6Z" fill="#bf9354"/></svg></span><span class="logo-type">مِعيار<span>MIYAR</span></span>`;
 const initial = [{
@@ -366,9 +378,9 @@ function renderPage() {
         : page === "ambassador"
         ? ambassadorPage()
         : page === "advisor"
-        ? courseAdvisor.page()
+        ? studyContent()
         : page === "plan"
-        ? studyPlanner.page()
+        ? studyContent()
         : page === "assistant"
         ? miyarAssistant.page()
         : developer()
@@ -381,6 +393,12 @@ function renderPage() {
   if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();
   if (page === "requests" && googleSession && requestsOwner !== googleSession.user.id && !requestsLoading) loadMyRequests();
 }
+function studyContent() {
+  if (!configured || cloudPlansReady) return page==='advisor'?courseAdvisor.page():studyPlanner.page();
+  if (!cloudPlansPending && !cloudPlansError) void refreshCloudStudyPlans().catch(()=>{});
+  return `<section class="${page==='advisor'?'course-advisor':'study-page'} study-loading"><div class="study-intro"><h1>${page==='advisor'?'اختيار الدكتور المناسب':'خطتي إلى التخرج'}</h1></div>${cloudPlansError?'<section class="panel"><p role="alert">تعذّر تحميل الخطط. أعد المحاولة.</p><button type="button" class="secondary" id="retry-study-plans">إعادة المحاولة</button></section>':'<div role="status" aria-busy="true"><p>جارٍ تحميل خطتك…</p><div class="study-loading-blocks" aria-hidden="true"><span class="startup-block"></span><span class="startup-block"></span><span class="startup-block"></span></div></div>'}</section>`;
+}
+
 const actionDecoration = '<span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span>';
 function actionCardSurface(decoration = '') { return `<span class="action-card-surface" aria-hidden="true"><span class="action-card-fill">${decoration}</span></span>`; }
 function home() {
@@ -444,7 +462,7 @@ function universitySelector(onSelected){return createUniversitySelector({catalog
 async function chooseUniversity(universityId,onSelected){
   if(googleSession){await api('university',{universityId});cloudMe={...cloudMe,university_id:universityId,major_id:null};}
   else{guestProfile=await ensureGuestSession();guestProfile=await api('guest.university',{universityId});}
-  if(studentProfile)studentProfile.major='';query='';activeMajor='الكل';savedOnly=false;collegeSelected=false;scopeCatalogue();setPage('home');document.body.classList.remove('modal-open');render();refreshSavedUpdates();toast('تم اختيار '+selectedUniversity().name);if(onSelected)onSelected();
+  if(studentProfile)studentProfile.major='';query='';activeMajor='الكل';savedOnly=false;collegeSelected=false;scopeCatalogue();setPage('home');document.body.classList.remove('modal-open');render();scheduleStudyPlans();refreshSavedUpdates();toast('تم اختيار '+selectedUniversity().name);if(onSelected)onSelected();
 }
 function renderUniversityLanding(){
   const selector=universitySelector();
@@ -815,12 +833,17 @@ async function reviewForm(id, pledged = false, studySelection = null) {
       ).map((m) => `<option>${escapeHtml(m)}</option>`).join("");
     },
   );
-  studyPlanner.attachReview(document.querySelector('#review-form'),{
+  const formForCourseChoices=document.querySelector('#review-form');
+  const attachCourseChoices=()=>studyPlanner.attachReview(formForCourseChoices,{
     university:selectedUniversity()?.name||(!configured?'جامعة نجران':''),
     college:selectedDoctor?undefined:studySelection?.plan?.college,
     major:!selectedDoctor&&studySelection?.plan ? majors.find(name=>[studySelection.plan.major,...(studySelection.plan.majorAliases||[])].includes(name)) : undefined,
     courseId:studySelection?.course?.id,
   });
+  // Course choices are optional: a slow plan request must not delay the form or
+  // replace a student's draft when the choices arrive.
+  if (!configured || cloudPlansReady) attachCourseChoices();
+  else (cloudPlansPending||refreshCloudStudyPlans()).then(()=>{if(formForCourseChoices.isConnected&&cloudPlansReady)attachCourseChoices();}).catch(()=>{});
   if(selectedDoctor){
     const form=document.querySelector('#review-form');
     form.elements.doctor.readOnly=true;
@@ -1033,6 +1056,7 @@ function bind() {
     () => googleSession ? openSettings() : openGoogleMessage(),
   );
 
+  document.querySelector('#retry-study-plans')?.addEventListener('click',()=>{void refreshCloudStudyPlans().catch(()=>{});render();});
   document.querySelector("#retry-cloud")?.addEventListener(
     "click",
     () => loadCloud(),
@@ -1524,18 +1548,33 @@ function connectionBanner() {
   return notice +
     `<div class="connection-banner live"><span></span>${escapeHtml(selectedUniversity()?.name || "مِعيار")} · <span data-online-count title="جلسات المنصة النشطة في جميع الجامعات خلال آخر ٩٠ ثانية">${onlineCountText()}</span></div>`;
 }
-async function refreshCloudCatalogue() {
-  const [data,plans]=await Promise.all([api('catalogue'),api('study.plans').catch(()=>null)]);
-  setUploadedStudyPlans(plans);
-  if (
-    !Array.isArray(data.colleges) || !Array.isArray(data.majors) ||
-    !Array.isArray(data.doctors)
-  ) throw new Error("تعذّر قراءة دليل المنصة.");
-  cloudCatalogue = data;
-  scopeCatalogue();
-  cloudStatus = "ready";
-  cloudError = "";
+function refreshCloudStudyPlans() {
+  if (cloudPlansPending) return cloudPlansPending;
+  cloudPlansError='';
+  const pending=api('study.plans').then(plans=>{
+    setUploadedStudyPlans(plans);cloudPlansReady=true;
+  }).catch(error=>{cloudPlansError=error.message;throw error;}).finally(()=>{
+    if(cloudPlansPending===pending)cloudPlansPending=null;
+    if(!cloudBooting&&['plan','advisor'].includes(page)&&!document.querySelector('.modal-backdrop'))render();
+  });
+  cloudPlansPending=pending;
+  return pending;
 }
+function scheduleStudyPlans() {
+  if(cloudPlansReady||cloudPlansPending||!selectedUniversity()?.enabled)return;
+  const load=()=>{if(!cloudPlansReady&&!cloudPlansPending)void refreshCloudStudyPlans().catch(()=>{});};
+  if(window.requestIdleCallback)window.requestIdleCallback(load,{timeout:1000});else setTimeout(load,120);
+}
+async function refreshCloudCatalogue({includePlans=true}={}) {
+  const plans=includePlans?refreshCloudStudyPlans().catch(()=>null):null;
+  const data=await api('catalogue');
+  if(plans)await plans;
+  if (!Array.isArray(data.colleges)||!Array.isArray(data.majors)||!Array.isArray(data.doctors))throw new Error('تعذّر قراءة دليل المنصة.');
+  cloudCatalogue=data;
+  scopeCatalogue();
+  cloudStatus='ready';cloudError='';
+}
+
 async function loadCloud() {
   if (cloudLoadPending) return cloudLoadPending;
   cloudLoadPending = (async () => {
@@ -1543,7 +1582,7 @@ async function loadCloud() {
     cloudError = '';
     const guestSession = ensureGuestSession().then(guest => { guestProfile = guest; return guest; }).catch(() => null);
     let catalogueError = null;
-    const catalogue = refreshCloudCatalogue().catch(error => { catalogueError = error; });
+    const catalogue = refreshCloudCatalogue({includePlans:['plan','advisor','admin'].includes(page)}).catch(error => { catalogueError = error; });
     let loadedGeneration = -1;
     const restoreAccount = async () => {
       while (googleSession) {
@@ -1577,6 +1616,7 @@ async function loadCloud() {
     const id = Number(new URLSearchParams(location.search).get('doctor'));
     if (!needsUniversity() && doctors.some(doctor => doctor.id === id)) detail(id);
     void guestSession.then(() => refreshPresence());
+    scheduleStudyPlans();
     refreshSavedUpdates();
   })().finally(() => { cloudLoadPending = null; });
   return cloudLoadPending;
@@ -1717,6 +1757,10 @@ function cloudAdmin() {
   if (!cloudMe?.isAdmin) {
     return '<div class="empty">هذه الصفحة متاحة للأدمن بعد التحقق من حسابه.</div>';
   }
+  if (!studyEditor) {
+    if (!adminToolsError) ensureAdminTools();
+    return `<div class="page-title"><h1>لوحة التحكم</h1></div><section class="panel" role="status">${adminToolsError?'<p>تعذّر تحميل أدوات الإدارة.</p><button type="button" class="secondary" id="retry-admin-tools">إعادة المحاولة</button>':'جارٍ تجهيز أدوات الإدارة…'}</section>`;
+  }
   const records = cloudCatalogue || { colleges: [], majors: [] };
   const majorOptions = records.majors.map((m) =>
     `<option value="${m.id}">${escapeHtml(m.name)} · ${
@@ -1808,6 +1852,8 @@ async function cloudAdminAction(operation, data) {
 }
 function bindCloudAdmin() {
   if (!cloudMe?.isAdmin) return;
+  document.querySelector('#retry-admin-tools')?.addEventListener('click',()=>{ensureAdminTools();render();});
+  if (!studyEditor) return;
   bindInstitutionMail({api,refresh:async()=>{await loadCloudQueue(false);render();}});
   studyImport.bind();
   studyEditor.bind();

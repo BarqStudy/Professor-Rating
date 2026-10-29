@@ -95,3 +95,7 @@
   .quick-actions .action-arrow, .quick-actions .action-arrow>.icon { width: 15px; }
   .quick-actions .action-arrow::before { width: 38px; height: 38px; }
 }
+@media (max-width: 1200px) {
+  /* Leave room for the half-circle outside each card and the device safe area. */
+  .quick-actions { padding-left: calc(12px + env(safe-area-inset-left, 0px)); }
+}

@@ -110,12 +110,10 @@ function attachTarget(request, target) {
 }
 
 function surfaceFrames(request, target, end) {
-  const {start, color} = request.origin, sx = end.width / start.width, sy = end.height / start.height;
-  const endingColor = getComputedStyle(target).backgroundColor;
-  const fill = endingColor === 'rgba(0, 0, 0, 0)' ? getComputedStyle(document.documentElement).getPropertyValue('--bg') : endingColor;
+  const {start} = request.origin, sx = end.width / start.width, sy = end.height / start.height;
   return [
-    {transform: 'translate(0,0) scale(1,1)', borderRadius: '24px', opacity: 1, backgroundColor: color},
-    {transform: `translate(${end.left - start.left}px,${end.top - start.top}px) scale(${sx},${sy})`, borderRadius: `${24 / sx}px / ${24 / sy}px`, opacity: 0, backgroundColor: fill},
+    {transform: 'translate(0,0) scale(1,1)', opacity: 1},
+    {transform: `translate(${end.left - start.left}px,${end.top - start.top}px) scale(${sx},${sy})`, opacity: 0},
   ];
 }
 
@@ -160,14 +158,14 @@ async function animateHero(request, destination) {
       if (!node || !bounds) return;
       Object.assign(node.style, {left: `${bounds.left}px`, top: `${bounds.top}px`, width: `${bounds.width}px`, height: `${bounds.height}px`});
       layer.append(node);
-      request.animations.push(node.animate([{opacity: 1, transform: 'translateY(0)'}, {opacity: 0, transform: `translateY(${(end.top - start.top) * .15}px)`}], {duration: 220, easing: 'ease-out', fill: 'both'}));
+      request.animations.push(node.animate([{opacity: 1, transform: 'translateY(0)'}, {opacity: 0, transform: `translateY(${(end.top - start.top) * .15}px)`}], {duration: 140, easing: 'ease-out', fill: 'both'}));
     };
     request.layer = layer; target.parentElement.append(layer);
     copy(iconCopy, iconRect);
     const title = document.createElement('div'); title.className = 'hero-flight-title'; title.textContent = titleText;
     Object.assign(title.style, {font: titleFont, color: titleColor, letterSpacing: titleSpacing}); copy(title, titleRect);
-    request.surfaceAnimation = surface.animate(surfaceFrames(request, target, end), {duration: 460, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both'});
-    request.contentAnimation = target.animate([{opacity: 0}, {opacity: 1}], {duration: 300, delay: 100, easing: 'ease-out', fill: 'both'});
+    request.surfaceAnimation = surface.animate(surfaceFrames(request, target, end), {duration: 280, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both'});
+    request.contentAnimation = target.animate([{opacity: 0}, {opacity: 1}], {duration: 180, delay: 40, easing: 'ease-out', fill: 'both'});
     request.animations.push(request.surfaceAnimation, request.contentAnimation);
     await Promise.allSettled(request.animations.map(animation => animation.finished));
   } finally { clear(request); }

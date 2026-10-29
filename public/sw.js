@@ -13,7 +13,15 @@ self.addEventListener('fetch',(event)=>{
  event.respondWith(caches.open(CACHE).then(async(cache)=>{
   const cached=await cache.match(request);if(cached)return cached;
   const response=await fetch(request);
-  if(response.ok){await cache.put(request,response.clone()).catch(()=>{});const keys=await cache.keys();if(keys.length>120)await cache.delete(keys[0]);}
+  if(response.ok){
+   const copy=response.clone();
+   // Storage on mobile can be slower than the network; return the response
+   // immediately and keep the worker alive for the independent cache write.
+   event.waitUntil(cache.put(request,copy).then(async()=>{
+    const keys=await cache.keys();
+    if(keys.length>120)await Promise.all(keys.slice(0,keys.length-120).map(key=>cache.delete(key)));
+   }).catch(()=>{}));
+  }
   return response;
  }));
 });
