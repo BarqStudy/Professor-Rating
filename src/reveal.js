@@ -41,6 +41,8 @@ export function setupReveals() {
     if (event.animationName === 'miyar-reveal') event.target.classList.remove('miyar-reveal-pending', 'miyar-reveal-shown');
   });
   app.addEventListener('focusin', event => {
+    // Pointer focus must not jump the pressed button between down and up.
+    if (!event.target.matches(':focus-visible')) return;
     for (let node = event.target; node && node !== app; node = node.parentElement) {
       if (node.classList.contains('miyar-reveal-pending')) reveal(node, 0, true);
     }

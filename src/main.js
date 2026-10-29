@@ -5,7 +5,7 @@ import {startupSkeleton} from './startup.js';
 import {statNumber,animateStats} from './stats.js';
 import {setupCursor} from './cursor.js';
 import {setupReveals} from './reveal.js';
-import {heroTransition,cancelHero} from './hero.js';
+import {setupHero,heroUpdate,rememberHero,cancelHero} from './hero.js';
 import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
 import {createFileManager} from './files.js';
@@ -279,9 +279,9 @@ function nav() {
   }</nav>`;
 }
 const navigation=createNavigation({history,location,scrollY:()=>window.scrollY});
-function setPage(next, hero = false) {if (!hero) cancelHero();navigation.push(next);page=next;}
+function setPage(next) {cancelHero(true);navigation.push(next);page=next;}
 function previousPage(){
- cancelHero();
+ cancelHero(true);
  document.body.classList.remove('modal-open');
  if(!navigation.back()){page='home';render();window.scrollTo({top:0});}
 }
@@ -292,6 +292,9 @@ function renderStartup() {
   if (!document.querySelector('.platform-startup')) document.querySelector('#app').innerHTML = startupSkeleton(page);
 }
 function render() {
+  return heroUpdate(renderPage, () => document.querySelector('main,.signed-out-page'));
+}
+function renderPage() {
   if (cloudBooting) { renderStartup(); return; }
   stopStatCounters();
   // Older links used a placeholder page solely behind the review dialog.
@@ -669,6 +672,9 @@ function toast(s) {
 }
 let modalTrigger = null;
 function modal(title, body) {
+  return heroUpdate(() => renderModal(title, body), () => document.querySelector('.modal'));
+}
+function renderModal(title, body) {
   if (!document.querySelector(".modal-backdrop")) modalTrigger = document.activeElement;
   document.querySelector("#modal-root").innerHTML =
     `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-label="${title}"><div class="modal-heading"><div><span class="eyebrow">تجارب صادقة، بمعيارك</span><h2>${title}</h2></div><button class="icon-btn close-modal" aria-label="إغلاق">${
@@ -1041,17 +1047,12 @@ function bind() {
   };
   document.querySelectorAll("[data-page]").forEach((b) =>
     b.onclick = () => {
-      const hero = b.matches('.quick-actions>.action-card');
-      const navigate = () => {
-        setPage(b.dataset.page, hero);
-        query = "";
-        savedOnly = false;
-        render();
-        if (page === "admin" && configured) loadCloudQueue();
-        window.scrollTo({ top: 0, behavior: hero ? "instant" : "smooth" });
-      };
-      if (hero) heroTransition(b, navigate, () => document.querySelector('.directory-section,.study-page,.course-advisor')).catch(error => toast(error.message));
-      else navigate();
+      setPage(b.dataset.page);
+      query = "";
+      savedOnly = false;
+      render();
+      if (page === "admin" && configured) loadCloudQueue();
+      window.scrollTo({ top: 0, behavior: "instant" });
     }
   );
   document.querySelectorAll(".theme-toggle,.mobile-theme").forEach((b) =>
@@ -1063,7 +1064,7 @@ function bind() {
   );
   document.querySelector("#new-review")?.addEventListener(
     "click",
-    event => heroTransition(event.currentTarget, () => reviewForm(), () => document.querySelector('.modal')).catch(error => toast(error.message)),
+    () => reviewForm(),
   );
   document.querySelector("#search")?.addEventListener("input", (e) => {
     query = e.target.value.trim();
@@ -2321,11 +2322,12 @@ document.addEventListener('click',event=>{
  event.preventDefault();document.body.classList.remove('modal-open');setPage(next);render();window.scrollTo({top:0});
 });
 window.addEventListener("popstate", () => {
-  cancelHero();
+  cancelHero(true);
+  rememberHero(document.querySelector("main"));
   document.body.classList.remove("modal-open");
   page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home";
   render();
-  requestAnimationFrame(()=>window.scrollTo({top:navigation.savedScroll(),behavior:'instant'}));
+  window.scrollTo({top:navigation.savedScroll(),behavior:'instant'});
 });
 window.addEventListener("focus", () => { if (!document.hidden) {refreshSavedUpdates();refreshPresence();} });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshSavedUpdates();refreshPresence(); });
@@ -2339,6 +2341,7 @@ document.addEventListener("keydown", (e) => {
 setupPwa();
 setupInteractions();
 setupCursor();
+setupHero();
 setupReveals();
 render();
 if (configured) loadCloud();
