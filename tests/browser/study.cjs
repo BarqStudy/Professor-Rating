@@ -72,8 +72,8 @@ const server=http.createServer((req,res)=>{const relative=decodeURIComponent(new
   await page.locator('[data-study-doctors="najran-me-2026/me231"]').click();await page.locator('#study-doctor-search').fill('اسم غير مضاف');
   assert.equal(await page.locator('[data-study-pick-doctor]').count(),0);await page.locator('#study-request-doctor').click();await page.locator('[name=includeReview]').click();await page.locator('#accept-review-pledge').click();
   assert.equal(await page.locator('#review-study-course').inputValue(),'najran-me-2026/me231');
-  await page.locator('[name=doctor]').fill('محمد عبدالرحمن القحطاني');await page.locator('[name=grade]').fill('91');await page.locator('.submit-review').click();await page.locator('.study-page').waitFor();
-  const submitted=calls.find(c=>c.action==='guest.submit');assert.equal(submitted.courseId,'najran-me-2026/me231');assert.equal(submitted.existingDoctorId,undefined);assert.equal(submitted.pledged,true);assert.equal(submitted.shareGrade,false);
+  await page.locator('[name=doctor]').fill('محمد عبدالرحمن القحطاني');await page.locator('[name=grade]').fill('91');await page.locator('.submit-review').click();await page.locator('#review-success-another').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});await page.locator('.study-page').waitFor();
+  const submitted=calls.find(c=>c.action==='guest.submit');assert.equal(submitted.courseId,'najran-me-2026/me231');assert.equal(submitted.existingDoctorId,undefined);assert.equal(submitted.pledged,true);assert.equal(submitted.publishGrade,true);
   // Recommendation search accepts the definite article but keeps plan context.
   await page.locator('#study-plan-select').selectOption('najran-ce-2025');await page.locator('[data-study-advisor="najran-ce-2025/ge101"]').click();
   await page.locator('[data-advisor-doctor="21"]').waitFor();

@@ -205,26 +205,13 @@ test("submissions bind the verified account UUID and cannot select published sta
   assert.equal(call.body.p_grade, 92);
   assert.ok(!("status" in call.body));
 });
-test("public reviews exclude private identity and grade fields", async () => {
-  const handle = handler(async (path) =>
-    path.startsWith("miyar_doctors") ? [{ id: 1 }] : [{
-      id: 1,
-      subject: "مادة",
-      comment: "مفيد",
-      explanation: 90,
-      treatment: 80,
-      grading: 70,
-      created_at: "2026-10-24",
-      account_id: member,
-      grade: 92,
-    }]
-  );
-  const response = await handle(request({ action: "reviews", doctor: 1 }));
-  assert.equal(response.status, 200);
-  const data = await response.json();
-  assert.ok(!JSON.stringify(data).includes(member));
-  assert.ok(!("grade" in data[0]));
-  assert.deepEqual(data[0].scores, [90, 80, 70]);
+test("public reviews use the service-only anonymous projection", async () => {
+  const calls=[];
+  const handle=handler(async(path,options)=>{calls.push({path,...options});return [{id:1,subject:'مادة',comment:'مفيد',scores:[90,80,70],date:'2026-10-24',grade:92}];});
+  const response=await handle(request({action:'reviews',doctor:1,subject:'مادة'}));
+  assert.equal(response.status,200);const data=await response.json();
+  assert.deepEqual(calls[0],{path:'rpc/miyar_public_reviews',method:'POST',body:{p_doctor:1,p_subject:'مادة'}});
+  assert.ok(!JSON.stringify(data).includes(member));assert.equal(data[0].grade,92);assert.deepEqual(data[0].scores,[90,80,70]);
 });
 test("admin queue excludes private grades, and pending doctors cannot have their reviews published", async () => {
   const calls = [];

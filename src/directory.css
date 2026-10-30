@@ -38,3 +38,5 @@
 .directory-major-heading h3{margin:0;font-size:21px}
 .directory-major-heading .muted{font-size:13px}
 .major-removal-counts{padding:18px 30px;border:1px solid var(--line);border-radius:16px;background:var(--soft);line-height:2.1;margin-block:20px}.major-removal-actions{display:flex;gap:12px;flex-wrap:wrap}#major-removal-content>p{line-height:1.9}#major-removal-content h3{overflow-wrap:anywhere}
+
+.review-comment .published-grade { padding: 10px 14px; border-radius: 12px; background: var(--soft); color: var(--ink); font-size: calc(14px * var(--font-scale, 1)); }

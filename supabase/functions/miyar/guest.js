@@ -1,7 +1,7 @@
 import {requestInstitution,requestCourseDoctor} from './requests.js';
 import { studyCourse, existingDoctorReview } from "./study.js";
-import { ApiError, integer, uuid, validateReview } from './security.js';
-import { gradeConsent, gradeParticipation } from './grades.js';
+import { ApiError, integer, text, uuid, validateReview } from './security.js';
+import { gradeConsent, publicGradeNotice } from './grades.js';
 const rpc=(db,name,body)=>db('rpc/'+name,{method:'POST',body});
 const hex=(value)=>Array.from(new Uint8Array(value),(byte)=>byte.toString(16).padStart(2,'0')).join('');
 export const guestTokenHash=async(token)=>hex(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)));
@@ -21,15 +21,14 @@ export async function verifiedGuest(request,db,allowBanned=false){
 }
 export async function handleGuest(request,body,db,pepper){
  const action=body.action;
- if(!['guest.start','guest.me','guest.university','guest.presence','guest.submit','guest.grade.participation','guest.grade.consent','guest.institution.request','guest.doctor.request','guest.review.eligibility'].includes(action))return null;
+ if(!['guest.start','guest.me','guest.university','guest.presence','guest.submit','guest.institution.request','guest.doctor.request','guest.review.eligibility','guest.mine','guest.edit'].includes(action))return null;
  if(action==='guest.start'){
   const token=hex(crypto.getRandomValues(new Uint8Array(32)));
   const profile=await rpc(db,'miyar_open_guest',{p_token_hash:await guestTokenHash(token),p_network_hash:await networkHash(request,pepper)});
   return {status:201,data:{...profile,token}};
  }
- const guest=await verifiedGuest(request,db,action.startsWith('guest.grade.'));
- const participation=await gradeParticipation(action,body,db,null,guest.id);
- if(participation)return participation;
+ const guest=await verifiedGuest(request,db);
+ if(action==='guest.mine')return {data:await rpc(db,'miyar_guest_reviews',{p_guest:guest.id})};
  if(action==='guest.me')return {data:guest};
  if(action==='guest.presence'){
   if(typeof body.visible!=='boolean')throw new ApiError(400,'حالة الجلسة غير صالحة.');
@@ -41,12 +40,16 @@ export async function handleGuest(request,body,db,pepper){
   return {data:{...guest,university_id:university}};
  }
  if(guest.status!=='active')throw new ApiError(403,'جلسة الزائر مقيّدة عن إضافة التقييمات.');
- if(action==='guest.review.eligibility')return {data:await rpc(db,'miyar_review_eligibility',{p_account:null,p_guest:guest.id,p_doctor:integer(body.doctor,1,Number.MAX_SAFE_INTEGER,'الدكتور')})};
+ if(action==='guest.review.eligibility')return {data:await rpc(db,'miyar_review_eligibility',{p_account:null,p_guest:guest.id,p_doctor:integer(body.doctor,1,Number.MAX_SAFE_INTEGER,'الدكتور'),p_subject:body.subject?text(body.subject,2,120,'المادة'):null})};
  if(action==='guest.institution.request')return {status:201,data:await requestInstitution(body,null,guest.id,db)};
  if(action==='guest.doctor.request')return {status:201,data:await requestCourseDoctor(body,null,guest.id,db)};
  if(body.pledged!==true)throw new ApiError(400,'وافق على تعهّد التقييم أولًا.');
+ if(action==='guest.edit'){
+  const review=validateReview({...body,college:'كلية',major:'تخصص',name:'اسم دكتور كامل',grade:0});
+  return {status:201,data:await rpc(db,'miyar_request_guest_edit',{p_guest:guest.id,p_review:integer(body.review,1,Number.MAX_SAFE_INTEGER,'التقييم'),p_subject:review.subject,p_comment:review.comment,p_explanation:review.scores[0],p_treatment:review.scores[1],p_grading:review.scores[2],p_tags:review.tags})};
+ }
  const review=validateReview(body);
  const existing=existingDoctorReview(body,review,guest.id,true);
  if(existing)return {status:201,data:await rpc(db,existing.name,existing.body)};
- return {status:201,data:await rpc(db,'miyar_guest_submit',{p_guest:guest.id,p_college:review.college,p_major:review.major,p_name:review.name,p_subject:review.subject,p_grade:review.grade,p_explanation:review.scores[0],p_treatment:review.scores[1],p_grading:review.scores[2],p_comment:review.comment,p_tags:review.tags,p_share_grade:gradeConsent(body.shareGrade),...studyCourse(body.courseId)})};
+ return {status:201,data:await rpc(db,'miyar_guest_submit',{p_guest:guest.id,p_college:review.college,p_major:review.major,p_name:review.name,p_subject:review.subject,p_grade:review.grade,p_explanation:review.scores[0],p_treatment:review.scores[1],p_grading:review.scores[2],p_comment:review.comment,p_tags:review.tags,p_share_grade:gradeConsent(body.shareGrade),p_course:studyCourse(body.courseId).p_course||null,p_public_grade:publicGradeNotice(body.publishGrade)})};
 }

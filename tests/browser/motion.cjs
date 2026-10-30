@@ -72,7 +72,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   await clickHero('#university-entry-back','.welcome');await settled();
   await clickHero('.assistant-launcher','.assistant-page');await settled();
   await clickHero('aside [data-page=home]','.welcome');await settled();
-  await clickHero('#new-review','#review-form');
+  await page.locator('#new-review').click();await page.locator('#review-form').waitFor();assert.equal(await page.locator('.hero-flight').count(),0);
   await page.locator('#review-form [name=doctor]').fill('محمد أحمد');await settled();
   assert.equal(await page.locator('#review-form [name=doctor]').inputValue(),'محمد أحمد');await close();
   assert.equal(await page.locator('#new-review').evaluate(node=>node===document.activeElement),true);

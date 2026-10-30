@@ -18,8 +18,6 @@ import { createStudyPlanner } from "./study.js";
 import "./study.css";
 import { REVIEW_TAGS } from "../supabase/functions/miyar/tags.js";
 import { createAssistant } from './assistant.js';
-import { createGradeMap } from "./grades.js";
-import "./grades.css";
 import { createDoctorCard } from "./doctor-card.js";
 import { setupPwa, installPlatform } from "./pwa.js";
 import "./style.css";
@@ -117,7 +115,6 @@ const ic = (n, c = "") =>
     icons[n] || icons.star
   }</svg>`;
 const verifiedBadge = '<span class="verified" role="img" aria-label="موثق من إدارة مِعيار" title="موثق من إدارة مِعيار"><svg class="verified-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8.603 3.799a4.49 4.49 0 0 1 6.794 0 4.49 4.49 0 0 1 4.804 4.804 4.49 4.49 0 0 1 0 6.794 4.49 4.49 0 0 1-4.804 4.804 4.49 4.49 0 0 1-6.794 0 4.49 4.49 0 0 1-4.804-4.804 4.49 4.49 0 0 1 0-6.794 4.49 4.49 0 0 1 4.804-4.804Z"/><path d="m8.3 12 2.4 2.4 5-5.1" fill="none" stroke="#fff" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
-const gradeMap = createGradeMap({api,modal,ensureGuestSession:async()=>{guestProfile=await ensureGuestSession();},isMember:()=>!!googleSession,identityKey:()=>googleSession?.user.id||guestProfile?.id||null,configured:()=>configured,icon:ic});
 const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>configured,
   universityName:()=>selectedUniversity()?.name,
   ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest',
@@ -576,7 +573,7 @@ function cards(list) {
         d.count ? labelScore(d.score) : "بدون تقييم"
       }</span></div><button class="compare-toggle" data-compare="${d.id}" aria-pressed="${compareIds.includes(d.id)}">${ic("users")} ${compareIds.includes(d.id) ? "مضاف للمقارنة" : "قارن الدكتور"}</button><button class="card-detail" data-doctor="${d.id}">استعرض التقييمات ${
         ic("arrow")
-      }</button>${configured?`<button type="button" class="grade-card-link" data-open-grades="${d.id}">خريطة الدرجات ${ic("chart")}</button>`:""}</article>`
+      }</button></article>`
     ).join("")
     : `<div class="empty">${page === 'saved' ? 'لم تحفظ أي دكتور بعد. اضغط علامة الحفظ على بطاقة الدكتور ليظهر هنا.' : selectedUniversity() && !colleges.length ? 'لم تُضف كليات جامعتك بعد. يمكنك تعبئة طلب الإضافة أو تغيير الجامعة من الزر أعلى الموقع.' : page === 'home' && !query ? 'ستظهر هنا أعلى تقييمات الدكاترة بعد نشر أول تقييمات الطلاب.' : 'لم نجد نتائج مطابقة. جرّب اسمًا آخر.'}${page!=='saved'&&query?'<section class="missing-course-doctor"><h3>ألم تجد دكتور المادة؟</h3><button type="button" class="primary" data-request-doctor>أضف الدكتور الآن</button></section>':''}</div>`;
 }
@@ -711,7 +708,7 @@ function renderModal(title, body) {
   });
   document.querySelector(".close-modal").onclick = closeModal;
   document.querySelector(".modal-backdrop").onclick = (e) => {
-    if (e.target.classList.contains("modal-backdrop")) closeModal();
+    if (e.target.classList.contains("modal-backdrop") && !e.currentTarget.querySelector("#review-form,#edit-review-form,.pledge-copy")) closeModal();
   };
   document.querySelector(".modal input,.modal button")?.focus();
 }
@@ -750,7 +747,21 @@ function labelScore(v) {
     ? "جيد جدًا"
     : "ممتاز";
 }
+let reviewOpening = null;
 async function reviewForm(id, pledged = false, studySelection = null) {
+  const dialog=document.querySelector('.modal-backdrop'),owner=googleSession?.user.id||'guest';
+  if(reviewOpening&&reviewOpening.page===page&&reviewOpening.dialog===dialog&&reviewOpening.id===id&&reviewOpening.owner===owner)return reviewOpening.promise;
+  const request={page,dialog,id,owner,promise:openReviewForm(id,pledged,studySelection)};
+  reviewOpening=request;
+  try{return await request.promise;}finally{if(reviewOpening===request)reviewOpening=null;}
+}
+function reviewDialog(title,body){
+  // A pledge and its form are one flow. Do not replay a copy of the outgoing
+  // dialog through Hero while also mounting its successor.
+  cancelHero();renderModal(title,body);
+  document.querySelector('.modal').classList.add('hero-arrival');
+}
+async function openReviewForm(id, pledged = false, studySelection = null) {
   const addingDoctor=id==null;
   const sourcePage=page,sourceDialog=document.querySelector('.modal-backdrop');
   const stillCurrent=()=>page===sourcePage&&document.querySelector('.modal-backdrop')===sourceDialog&&!sourceDialog?.classList.contains('closing');
@@ -767,13 +778,13 @@ async function reviewForm(id, pledged = false, studySelection = null) {
       if(guestProfile.status!=='active'){toast('جلسة الزائر مقيّدة عن إضافة التقييمات.');return;}
     }
   }
-  if(configured&&id!=null){
+  if(configured&&id!=null&&!pledged){
     const owner=googleSession?.user.id||guestProfile?.id;
     try{
-      const eligibility=await api(googleSession?'review.eligibility':'guest.review.eligibility',{doctor:id});
+      const eligibility=await api(googleSession?'review.eligibility':'guest.review.eligibility',{doctor:id,...(studySelection?.course?{subject:studySelection.course.name}:{})});
       if(!stillCurrent()||owner!==(googleSession?.user.id||guestProfile?.id))return;
       if(eligibility.eligible===false){
-        modal('تقييمك موجود بالفعل',`<p>سبق أن أرسلت تقييمًا لهذا الدكتور${eligibility.status==='pending'?'، وهو الآن قيد المراجعة':''}. تقييمك واحد ومشترك بين خطة التخرج وقسم التقييمات، حتى لو تغيّرت المادة.</p>${eligibility.canEdit?'<button class="primary" id="existing-review-edit">عرض تقييمي وطلب تعديله</button>':''}<button class="secondary" id="existing-review-ratings">الانتقال إلى التقييمات</button>`);
+        modal('تقييمك موجود بالفعل',`<p>سبق أن أرسلت تقييمًا لهذا الدكتور في هذه المادة${eligibility.status==='pending'?'، وهو الآن قيد المراجعة':''}. يمكنك تقييمه في مادة أخرى. تقييم المادة نفسها مشترك بين خطة التخرج وقسم التقييمات، ويحتاج طلب تعديل.</p>${eligibility.canEdit?'<button class="primary" id="existing-review-edit">عرض تقييمي وطلب تعديله</button>':''}<button class="secondary" id="existing-review-ratings">الانتقال إلى التقييمات</button>`);
         document.querySelector('#existing-review-edit')?.addEventListener('click',()=>myReviews(id));
         document.querySelector('#existing-review-ratings').onclick=()=>{closeModal();setPage('ratings');render();};
         return;
@@ -784,7 +795,7 @@ async function reviewForm(id, pledged = false, studySelection = null) {
   if(!addingDoctor&&!pledged){reviewPledge(()=>reviewForm(id,true,studySelection));return;}
   const selectedDoctor = doctors.find((d) => d.id === id);
   const reviewCollege = selectedDoctor?.college || activeCollege || colleges[0];
-  modal(
+  reviewDialog(
     addingDoctor ? "إضافة دكتور" : "شارك تجربتك",
     `<p class="muted">${addingDoctor?"أضف الدكتور إلى دليل جامعتك. التقييم اختياري، وتُراجع الإضافة قبل نشرها.":"تقييمك يساعد طالبًا آخر على اتخاذ القرار المناسب."}</p><form id="review-form"><div class="form-grid"><label>الكلية<select name="college" required>${
       colleges.map((c) =>
@@ -806,11 +817,7 @@ async function reviewForm(id, pledged = false, studySelection = null) {
       doctors.map((d) => `<option>${escapeHtml(d.name)}</option>`).join("")
     }</datalist></label>${addingDoctor?'<label class="doctor-review-choice"><input type="checkbox" name="includeReview" aria-controls="doctor-rating-fields" aria-expanded="false"><span>هل تود إضافة تقييم للدكتور؟<small>اختياري؛ اتركه فارغًا لإضافة الدكتور دون تقييم.</small></span></label>':''}<fieldset class="doctor-rating-fields" id="doctor-rating-fields" ${addingDoctor?'hidden disabled':''}><legend>تفاصيل التقييم</legend><div class="form-grid"><label>المادة<input name="subject" required placeholder="اسم المادة"></label><label>درجتك في المادة<input name="grade" type="number" min="0" max="100" required placeholder="من ١٠٠"></label></div><div class="privacy-note">${
       ic("shield")
-    } لا تُعرض هويتك أو درجتك مع التقييم.<small>${
-      configured
-        ? "تُحفظ درجتك بصورة محمية، ولا تظهر منفردة للطلاب أو في شاشة المراجعة. المشاركة في خريطة الدرجات اختيارية."
-        : "في هذه النسخة التجريبية لا تُخزّن الدرجة."
-    }</small></div>${configured?`<label class="grade-consent"><input type="checkbox" name="shareGrade"><span>أوافق على استخدام درجتي في إحصائيات المادة المجمّعة (اختياري)<small>تظهر النتائج بعد ١٠ مشاركات اختيارية معتمدة للمادة. لا تُعرض درجتك منفردة، ويمكنك سحب الموافقة من الإعدادات.</small></span></label>`:""}<div class="sliders">${
+    } ستُنشر درجتك في المادة مع تقييمك دون اسمك.<small>بإرسال التقييم، تقرّ بأن درجتك ستكون ظاهرة للطلاب بعد اعتماد التقييم. لا يُنشر اسمك أو بريدك أو معرّف حسابك.</small></div><div class="sliders">${
       ["الشرح", "التعامل", "المساعدة بالدرجات"].map((t, i) =>
         `<label class="slider-label"><span>${t}<output id="out-${i}">٨٠ <small>جيد</small></output></span><input type="range" name="score${i}" min="0" max="100" value="80" aria-valuetext="80 من 100، جيد" data-range="${i}" style="--range-color:${
           scoreColor(80)
@@ -820,7 +827,7 @@ async function reviewForm(id, pledged = false, studySelection = null) {
       ic("plus")
     } <span>${addingDoctor?"إرسال طلب إضافة الدكتور":"إرسال التقييم"}</span></button><p class="local-note">${
       addingDoctor ? "تصل بيانات الدكتور للإدارة للمراجعة. إذا أضفت تقييمًا، يخضع للمراجعة أيضًا ويظهر ضمن التقييمات بعد الموافقة." : configured
-        ? (googleSession ? "يُرسل تقييمك للمراجعة قبل النشر. خمسة تقييمات يوميًا كحد أقصى، وتقييم واحد لكل دكتور من جميع أقسام المنصة." : "يمكنك التقييم كزائر دون Google. يرتبط التقييم بجلسة هذا المتصفح ويُرسل للمراجعة قبل النشر. خمسة تقييمات يوميًا كحد أقصى.")
+        ? (googleSession ? "يُرسل تقييمك للمراجعة قبل النشر. تقييم واحد لكل دكتور في المادة نفسها من جميع أقسام المنصة. يمكنك تقييمه في مواد أخرى." : "يمكنك التقييم كزائر دون Google. يرتبط التقييم بجلسة هذا المتصفح ويُرسل للمراجعة قبل النشر. يمكنك تقييم الدكتور في أكثر من مادة، بتقييم واحد لكل مادة.")
         : "نسخة تجريبية: يُحفظ تقييمك على هذا الجهاز فقط. الدكتور الجديد يُرسل للمراجعة المحلية."
     }</p></form>`,
   );
@@ -913,22 +920,30 @@ async function reviewForm(id, pledged = false, studySelection = null) {
       comment,
       scores,
       date: new Date().toISOString(),
+      grade: Number(f.get("grade")),
       tags: chosenRatingTags(e.target),
       pledged: true,
-      shareGrade: f.get("shareGrade") === "on",
+      publishGrade: true,
       ...(f.get("courseId") ? {courseId:f.get("courseId")} : {}),
     };
     if (configured) {
       const button = e.target.querySelector(".submit-review");
       button.disabled = true;
       try {
-        await api(googleSession ? "submit" : "guest.submit", { ...data, grade: Number(f.get("grade")) });
-        document.body.classList.remove("modal-open");
-        setPage(studySelection?.course ? "plan" : "home");
-        render();
-        toast(studySelection?.course ? "وصل تقييمك لقسم التقييمات، وسيظهر بعد موافقة الإدارة." : "وصل تقييمك، وسيظهر بعد موافقة الإدارة.");
+        if(d){
+          const eligibility=await api(googleSession?'review.eligibility':'guest.review.eligibility',{doctor:d.id,subject:data.subject});
+          if(!e.target.isConnected)return;
+          if(eligibility.eligible===false){
+            const box=e.target.querySelector('.form-error');
+            box.innerHTML='سبق أن قيّمت هذا الدكتور في المادة نفسها. اختر مادة أخرى أو اطلب تعديل تقييمك.'+(eligibility.canEdit?'<button type="button" class="secondary" id="duplicate-review-edit">طلب تعديل تقييمي</button>':'');
+            box.querySelector('#duplicate-review-edit')?.addEventListener('click',()=>myReviews(d.id));
+            return;
+          }
+        }
+        await api(googleSession ? "submit" : "guest.submit", data);
+        if(e.target.isConnected)reviewSubmitted();
       } catch (error) {
-        const el = document.querySelector(".form-error");
+        const el = e.target.isConnected?e.target.querySelector(".form-error"):null;
         if (el) el.textContent = error.message;
       } finally {
         button.disabled = false;
@@ -985,7 +1000,7 @@ async function detail(id) {
       rr.map((r) =>
         `<div class="review-comment"><b>${escapeHtml(r.subject)}</b><p>${
           escapeHtml(r.comment)
-        }</p><small>طالب مجهول · ${
+        }</p>${publicReviewGrade(r)}<small>طالب مجهول · ${
           new Date(r.date).toLocaleDateString("ar")
         }</small></div>`
       ).join("")
@@ -1124,9 +1139,9 @@ function bind() {
     () =>
       modal(
         "معايير مجتمع مِعيار",
-        `<div class="policy"><p>١. تحدّث عن تجربتك الفعلية، وناقش الشرح والتعامل والدرجات بموضوعية.</p><p>٢. لا تشارك بياناتك الشخصية أو بيانات الآخرين. لا تُعرض هويتك أو درجتك مع التعليق.</p><p>٣. تُرفض الكلمات المسيئة الظاهرة في الفلتر المحلي. تُراجع التعليقات على الخادم قبل النشر عند تفعيل الاتصال.</p><p>٤. ${
+        `<div class="policy"><p>١. تحدّث عن تجربتك الفعلية، وناقش الشرح والتعامل والدرجات بموضوعية.</p><p>٢. لا تشارك بياناتك الشخصية أو بيانات الآخرين. لا تُعرض هويتك مع التعليق. درجتك الجديدة تُنشر دون اسم بعد اعتماد التقييم.</p><p>٣. تُرفض الكلمات المسيئة الظاهرة في الفلتر المحلي. تُراجع التعليقات على الخادم قبل النشر عند تفعيل الاتصال.</p><p>٤. ${
           configured
-            ? "يمكن للإدارة استخدام معرّف الحساب لتطبيق الحظر والتقييد؛ لا يظهر مع التقييمات العامة. الدرجة غير متاحة في العرض العام أو شاشة مراجعة التعليقات."
+            ? "يمكن للإدارة استخدام معرّف الحساب لتطبيق الحظر والتقييد؛ لا يظهر مع التقييمات العامة. الدرجات الجديدة تُنشر دون هوية، والدرجات القديمة التي جُمعت بوصفها خاصة تبقى مخفية."
             : "هذه نسخة تجريبية ببيانات نموذجية وتخزين محلي."
         }</p></div>`,
       ),
@@ -1164,10 +1179,6 @@ function bindCards() {
     updateComparison();
   });
   updateComparison();
-  document.querySelectorAll('[data-open-grades]').forEach(button=>button.onclick=async()=>{
-    await detail(Number(button.dataset.openGrades));
-    document.querySelector('#doctor-grade-map')?.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
-  });
   document.querySelectorAll("[data-doctor]").forEach((b) =>
     b.onclick = () => detail(+b.dataset.doctor)
   );
@@ -1300,7 +1311,7 @@ function openSettings() {
     };
   modal(
     "إعداداتك في مِعيار",
-    `<form id="settings-form"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="study-settings-link">${ic("cap")} خطتي إلى التخرج</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button>${configured?`<button type="button" class="secondary my-reviews-settings" id="grade-sharing-settings">${ic("chart")} مشاركة الدرجات</button>`:""}${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
+    `<form id="settings-form"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="study-settings-link">${ic("cap")} خطتي إلى التخرج</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button>${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
       ic("users")
     }</span><div><h3>مساحتك، على طريقتك</h3><p>خصّص بياناتك وتجربة القراءة بما يناسبك.</p></div></div><label>اسم الطالب<input name="name" required maxlength="60" autocomplete="name" placeholder="كيف تحب أن نناديك؟" value="${
       escapeHtml(profile.name)
@@ -1372,7 +1383,6 @@ function openSettings() {
   });
   document.querySelector('#study-settings-link')?.addEventListener('click',()=>{document.body.classList.remove('modal-open');setPage('plan');render();window.scrollTo({top:0});});
   document.querySelector("#install-app")?.addEventListener("click", () => installPlatform(modal,toast));
-  document.querySelector("#grade-sharing-settings")?.addEventListener("click",gradeMap.manage);
   document.querySelector("#my-reviews-settings")?.addEventListener("click", () => myReviews());
   document.querySelector("#change-university")?.addEventListener("click", changeUniversityPage);
   document.querySelectorAll("[data-color-option]").forEach((button) => {
@@ -1723,8 +1733,7 @@ async function cloudDoctorDetail(id, subject = "") {
   try {
     const [rows, summary] = await Promise.all([api("reviews", {doctor:id, ...(subject ? {subject} : {})}), api("doctor.summary", {doctor:id, ...(subject ? {subject} : {})}).catch(() => null)]);
     if (!loading.isConnected) return;
-    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?verifiedBadge:""} ${officeBadge(doctor)}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<section id="doctor-grade-map" class="grade-map" aria-label="خريطة درجات الدكتور"></section><label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
-    void gradeMap.mount(document.querySelector('#doctor-grade-map'),id,subject);
+    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?verifiedBadge:""} ${officeBadge(doctor)}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}${publicReviewGrade(row)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
     document.querySelector("#review-subject-filter").onchange = (event) => cloudDoctorDetail(id,event.target.value);
     document.querySelectorAll("[data-report-review]").forEach((button) => button.onclick = () => reportReview(Number(button.dataset.reportReview)));
     document.querySelector("#detail-rate").onclick = () => reviewForm(id);
@@ -1986,8 +1995,7 @@ function showComparison() {
   const selected=compareIds.map((id)=>doctors.find((doctor)=>doctor.id===id)).filter(Boolean);
   if(selected.length<2)return;
   const labels=['الشرح','التعامل','المساعدة بالدرجات','عدد التقييمات'];
-  modal('مقارنة الدكاترة',`<p class="muted">المؤشرات من تقييمات الطلاب المنشورة، وليست ضمانًا لتجربتك الشخصية.</p><div class="comparison-table-wrap"><table class="comparison-table"><caption>مقارنة مؤشرات الدكاترة</caption><thead><tr><th scope="col">المؤشر</th>${selected.map((doctor)=>`<th scope="col">${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></th>`).join('')}</tr></thead><tbody>${labels.map((label,index)=>`<tr><th scope="row">${label}</th>${selected.map((doctor)=>`<td>${index===3?doctor.count:doctor.count?`${Number(doctor.scores?.[index]||0)} / ١٠٠`:'بدون تقييم'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${configured?'<section class="grade-comparison" id="grade-comparison"></section>':''}`);
-  if(configured)void gradeMap.comparison(document.querySelector("#grade-comparison"),selected);
+  modal('مقارنة الدكاترة',`<p class="muted">المؤشرات من تقييمات الطلاب المنشورة، وليست ضمانًا لتجربتك الشخصية.</p><div class="comparison-table-wrap"><table class="comparison-table"><caption>مقارنة مؤشرات الدكاترة</caption><thead><tr><th scope="col">المؤشر</th>${selected.map((doctor)=>`<th scope="col">${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></th>`).join('')}</tr></thead><tbody>${labels.map((label,index)=>`<tr><th scope="row">${label}</th>${selected.map((doctor)=>`<td>${index===3?doctor.count:doctor.count?`${Number(doctor.scores?.[index]||0)} / ١٠٠`:'بدون تقييم'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
 }
 async function submitCommunityForm(form,action,payload,message) {
   const button=form.querySelector('[type=submit]');button.disabled=true;
@@ -2014,11 +2022,13 @@ function requestDoctorForm(context={}) {
 
 const reviewStatus={published:'منشور',pending:'قيد المراجعة',rejected:'لم يُنشر'};
 async function myReviews(doctorId) {
-  if(!configured || !requireCloudAccount(()=>myReviews(doctorId)))return;
+  if(!configured)return;
+  if(googleSession&&!requireCloudAccount(()=>myReviews(doctorId)))return;
+  if(!googleSession&&!guestProfile)return;
   modal('تقييماتي وطلبات التعديل','<p data-mine-loading>جارٍ تحميل تقييماتك…</p>');
   const loading=document.querySelector('[data-mine-loading]');
   try {
-    const rows=await api('mine');if(!loading.isConnected)return;
+    const rows=await api(googleSession?'mine':'guest.mine');if(!loading.isConnected)return;
     const list=doctorId?rows.filter((row)=>row.doctor_id===doctorId):rows;
     modal('تقييماتي وطلبات التعديل',`<p class="muted">التعديل يُرسل للإدارة، ويظل تقييمك المنشور كما هو حتى الموافقة.</p>${list.length?list.map((row)=>`<article class="my-review"><h3>${escapeHtml(row.doctor_name)}</h3><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>${reviewStatus[row.status]||''}${row.edit_status==='pending'?' · طلب تعديل قيد المراجعة':row.edit_status==='rejected'?' · رُفض طلب التعديل السابق':row.edit_status==='approved'?' · تمت الموافقة على التعديل':''}</small>${row.status==='published'?`<button class="secondary" data-edit-review="${row.id}" ${row.edit_status==='pending'?'disabled':''}>${row.edit_status==='pending'?'التعديل بانتظار الإدارة':'طلب تعديل التقييم'}</button>`:''}</article>`).join(''):'<p class="empty">لا توجد تقييمات لك في جامعتك الحالية.</p>'}`);
     document.querySelectorAll('[data-edit-review]').forEach((button)=>button.onclick=()=>editReview(list.find((row)=>row.id===Number(button.dataset.editReview))));
@@ -2027,12 +2037,12 @@ async function myReviews(doctorId) {
 function editReview(row, pledged = false) {
   if(!row)return;
   if(!pledged){reviewPledge(()=>editReview(row,true));return;}
-  modal('طلب تعديل التقييم',`<p>سيبقى التقييم القديم ظاهرًا حتى توافق الإدارة على التعديل الجديد.</p><form id="edit-review-form"><label>المادة<input name="subject" required minlength="2" maxlength="120" value="${escapeHtml(row.subject)}"></label>${['الشرح','التعامل','المساعدة بالدرجات'].map((label,index)=>`<label class="slider-label"><span>${label}<output>${row[['explanation','treatment','grading'][index]]}</output></span><input aria-label="${label}" name="score${index}" type="range" min="0" max="100" value="${row[['explanation','treatment','grading'][index]]}" style="--range-color:${scoreColor(Number(row[['explanation','treatment','grading'][index]]))}"></label>`).join('')}${ratingTagPicker(row.tags)}<label>التعليق الجديد (اختياري)<textarea name="comment" maxlength="600" rows="4">${escapeHtml(row.comment)}</textarea></label><p class="form-error" role="alert"></p><button class="primary" type="submit">إرسال التعديل للمراجعة</button></form>`);
+  reviewDialog('طلب تعديل التقييم',`<p>سيبقى التقييم القديم ظاهرًا حتى توافق الإدارة على التعديل الجديد.</p><form id="edit-review-form"><label>المادة<input name="subject" readonly required minlength="2" maxlength="120" value="${escapeHtml(row.subject)}"></label>${['الشرح','التعامل','المساعدة بالدرجات'].map((label,index)=>`<label class="slider-label"><span>${label}<output>${row[['explanation','treatment','grading'][index]]}</output></span><input aria-label="${label}" name="score${index}" type="range" min="0" max="100" value="${row[['explanation','treatment','grading'][index]]}" style="--range-color:${scoreColor(Number(row[['explanation','treatment','grading'][index]]))}"></label>`).join('')}${ratingTagPicker(row.tags)}<label>التعليق الجديد (اختياري)<textarea name="comment" maxlength="600" rows="4">${escapeHtml(row.comment)}</textarea></label><p class="form-error" role="alert"></p><button class="primary" type="submit">إرسال التعديل للمراجعة</button></form>`);
   bindRatingTags(document.querySelector("#edit-review-form"));
   document.querySelectorAll('#edit-review-form input[type=range]').forEach((input)=>input.oninput=()=>{input.closest('label').querySelector('output').textContent=input.value;input.style.setProperty('--range-color',scoreColor(Number(input.value)));});
   document.querySelector('#edit-review-form').onsubmit=(event)=>{
     event.preventDefault();const form=event.target;const data=new FormData(form);
-    submitCommunityForm(form,'edit',{review:row.id,subject:data.get('subject'),comment:data.get('comment'),tags:chosenRatingTags(form),pledged:true,scores:[0,1,2].map((index)=>Number(data.get('score'+index)))},'وصل طلب التعديل. يبقى تقييمك القديم كما هو إلى أن توافق الإدارة على البديل.');
+    submitCommunityForm(form,googleSession?'edit':'guest.edit',{review:row.id,subject:data.get('subject'),comment:data.get('comment'),tags:chosenRatingTags(form),pledged:true,scores:[0,1,2].map((index)=>Number(data.get('score'+index)))},'وصل طلب التعديل. يبقى تقييمك القديم كما هو إلى أن توافق الإدارة على البديل.');
   };
 }
 function reportReview(id) {
@@ -2292,13 +2302,13 @@ function bindAdminDirectory(){
 }
 
 function reviewPledge(next,cancel){
- modal('تنبيه!',`<div class="pledge-copy"><p>نرجو مخافة الله في التقييم.</p><p>تتم مراجعة التقييم قبل نشره.</p><p>التقييمات غير الملائمة تعرّض صاحبها للحظر أو التقييد.</p><p class="muted">أتعهد بأن تقييمي يعبّر عن تجربتي بصدق واحترام، دون إساءة أو معلومات شخصية.</p><button class="primary" type="button" id="accept-review-pledge">موافق وأتعهّد</button></div>`);
+ reviewDialog('تنبيه!',`<div class="pledge-copy"><p>نرجو مخافة الله في التقييم.</p><p>تتم مراجعة التقييم قبل نشره.</p><p>التقييمات غير الملائمة تعرّض صاحبها للحظر أو التقييد.</p><p class="muted">أتعهد بأن تقييمي يعبّر عن تجربتي بصدق واحترام، دون إساءة أو معلومات شخصية.</p><button class="primary" type="button" id="accept-review-pledge">موافق وأتعهّد</button></div>`);
  document.querySelector('.modal').classList.add('pledge-card');
  const accept=document.querySelector('#accept-review-pledge');
  accept.onclick=async()=>{if(accept.disabled)return;accept.disabled=true;try{await next();}finally{if(accept.isConnected)accept.disabled=false;}};
  if(cancel){
   document.querySelector('.close-modal').onclick=cancel;
-  document.querySelector('.modal-backdrop').onclick=event=>{if(event.target.classList.contains('modal-backdrop'))cancel();};
+  document.querySelector('.modal-backdrop').onclick=()=>{};
   document.querySelector('.modal').addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();cancel();}});
  }
 }
@@ -2314,6 +2324,15 @@ function bindRatingTags(form){
   if(!selected&&['محاضرة ممتعة','محاضرة مملة'].includes(button.dataset.ratingTag))form.querySelectorAll('[data-rating-tag]').forEach((other)=>{if(other!==button&&['محاضرة ممتعة','محاضرة مملة'].includes(other.dataset.ratingTag))other.setAttribute('aria-pressed','false');});
   button.setAttribute('aria-pressed',String(!selected));update();
  });update();
+}
+function reviewSubmitted(){
+ reviewDialog('تم إرسال طلبك',`<p>وصل تقييمك إلى الإدارة، وسيظهر بعد المراجعة والاعتماد.</p><div class="detail-actions"><button type="button" class="primary" id="review-success-home">الصفحة الرئيسية</button><button type="button" class="secondary" id="review-success-another">تقييم دكتور آخر</button></div>`);
+ document.querySelector('#review-success-home').onclick=()=>{document.body.classList.remove('modal-open');setPage('home');render();window.scrollTo({top:0});};
+ // Keep the source page, selected college/course, carousel position and scroll.
+ document.querySelector('#review-success-another').onclick=closeModal;
+}
+function publicReviewGrade(row){
+ return Number.isInteger(row.grade)&&row.grade>=0&&row.grade<=100?`<p class="published-grade">الدرجة في المادة: <b>${row.grade} / ١٠٠</b> · دون اسم</p>`:'';
 }
 function reviewTagLabels(tags){
  return Array.isArray(tags)&&tags.length?`<div class="published-tags">${REVIEW_TAGS.filter((tag)=>tags.includes(tag.label)).map((tag)=>`<span data-tone="${tag.tone}"><i aria-hidden="true"></i>${tag.label}</span>`).join('')}</div>`:'';

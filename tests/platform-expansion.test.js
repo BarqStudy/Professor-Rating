@@ -12,21 +12,26 @@ const rpc=(db,name,args)=>db.query(`select ${name}(${args.map((_,i)=>'$'+(i+1)).
 const doctor=db=>db.query("insert into miyar_doctors(major_id,name,status) values(1,'مهندس أحمد محمد العتيبي','approved') returning id").then(r=>r.rows[0].id);
 const existing=(db,actor,id,subject,guest=false)=>rpc(db,guest?'miyar_submit_existing_guest_review':'miyar_submit_existing_google_review',[actor,id,subject,90,80,80,80,'',[],false,null]);
 
-test('one review per doctor spans courses, moderation states, canonical/free-text routes and linked guest/member identities',async()=>{
+test('one review per professor and normalized subject spans moderation states, routes and linked identities without a daily limit',async()=>{
  const db=await database();try{
   const d=await doctor(db),g=await rpc(db,'miyar_open_guest',['a'.repeat(64),null]);await rpc(db,'miyar_choose_university',[null,g.id,3]);
   const review=await existing(db,g.id,d,'الاستاتيكا',true);assert.equal(review.status,'pending');
-  assert.equal((await rpc(db,'miyar_review_eligibility',[null,g.id,d])).eligible,false);
-  await assert.rejects(existing(db,g.id,d,'مادة مختلفة',true),/REVIEW_ALREADY_EXISTS/);
-  await rpc(db,'miyar_link_review_identity',[student,g.id]);assert.equal((await rpc(db,'miyar_review_eligibility',[student,null,d])).eligible,false);
-  await assert.rejects(existing(db,student,d,'مادة ثالثة'),/REVIEW_ALREADY_EXISTS/);
-  await assert.rejects(rpc(db,'miyar_submit_google_review',[student,'كلية الهندسة','الهندسة المدنية','مهندس أحمد محمد العتيبي','جديدة',90,80,80,80,'',[],false]),/REVIEW_ALREADY_EXISTS/);
+  assert.equal((await rpc(db,'miyar_review_eligibility',[null,g.id,d])).eligible,true,'general form does not block another subject');
+  assert.equal((await rpc(db,'miyar_review_eligibility',[null,g.id,d,'استاتيكا'])).eligible,false);
+  await assert.rejects(existing(db,g.id,d,'الإِسْتَاتِيكا',true),/REVIEW_ALREADY_EXISTS/);
+  for(let i=0;i<8;i++)await existing(db,g.id,d,'مادة مختلفة '+i,true);
+  await rpc(db,'miyar_link_review_identity',[student,g.id]);
+  assert.equal((await rpc(db,'miyar_review_eligibility',[student,null,d,'استاتيكا'])).eligible,false);
+  await assert.rejects(existing(db,student,d,'استاتيكا'),/REVIEW_ALREADY_EXISTS/);
+  await assert.rejects(rpc(db,'miyar_submit_google_review',[student,'كلية الهندسة','الهندسة المدنية','مهندس أحمد محمد العتيبي','استاتيكا',90,80,80,80,'',[],false]),/REVIEW_ALREADY_EXISTS/);
+  for(let i=0;i<8;i++)await existing(db,student,d,'مقرر جديد '+i);
   const own=await existing(db,admin,d,'ميكانيكا');await db.query("update miyar_reviews set status='published' where id=$1",[own.id]);
-  assert.equal((await rpc(db,'miyar_review_eligibility',[admin,null,d])).canEdit,true);
-  await db.query("update miyar_reviews set status='rejected' where id=$1",[own.id]);await assert.rejects(existing(db,admin,d,'مختلفة'),/REVIEW_ALREADY_EXISTS/);
-  await rpc(db,'miyar_link_review_identity',[admin,g.id]);assert.equal((await db.query('select account_id from miyar_review_identities where guest_id=$1',[g.id])).rows[0].account_id,student,'a guest capability cannot be reassigned to another member');
-  assert.equal((await db.query('select count(*)::int n from miyar_reviews')).rows[0].n,2);
-  for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from miyar_review_identities'),/permission denied/);await assert.rejects(rpc(db,'miyar_review_eligibility',[student,null,d]),/permission denied/);await db.exec('reset role');}
+  assert.equal((await rpc(db,'miyar_review_eligibility',[admin,null,d,'ميكانيكا'])).canEdit,true);
+  await db.query("update miyar_reviews set status='rejected' where id=$1",[own.id]);await assert.rejects(existing(db,admin,d,'الميكانيكا'),/REVIEW_ALREADY_EXISTS/);
+  await existing(db,admin,d,'مختلفة');
+  await rpc(db,'miyar_link_review_identity',[admin,g.id]);assert.equal((await db.query('select account_id from miyar_review_identities where guest_id=$1',[g.id])).rows[0].account_id,student);
+  await assert.rejects(db.query("update miyar_reviews set subject='استاتيكا' where account_id=$1 and subject='مقرر جديد 0'",[student]),/REVIEW_ALREADY_EXISTS/);
+  for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from miyar_review_identities'),/permission denied/);await assert.rejects(rpc(db,'miyar_review_eligibility',[student,null,d,'استاتيكا']),/permission denied/);await db.exec('reset role');}
  }finally{await db.close();}
 });
 

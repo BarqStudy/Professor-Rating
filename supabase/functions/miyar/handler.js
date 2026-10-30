@@ -6,7 +6,7 @@ import {publishedReviewAdmin} from './published-reviews.js';
 import {majorAdministration} from './major-removal.js';
 import { studyCourse, courseDoctors, courseReviews, doctorOffice, existingDoctorReview } from "./study.js";
 import { handleGuest, verifiedGuest } from "./guest.js";
-import { gradeConsent, gradeParticipation, publicGrades } from "./grades.js";
+import { gradeConsent, publicGradeNotice } from "./grades.js";
 import { handleAi, checkAiConnection } from "./ai.js";
 import { catalogueProposal, ambassadorAdmin } from "./ambassadors.js";
 import { studentCommunity, adminCommunity, publicSummary } from "./community.js";
@@ -120,28 +120,12 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         );
       }
       if (action === "doctor.summary") return respond(await publicSummary(body, db));
-      if (action === "doctor.grades") return respond(await publicGrades(body, db));
+      if(['doctor.grades','grade.participation','grade.consent','guest.grade.participation','guest.grade.consent'].includes(action))throw new ApiError(404,'خريطة الدرجات غير متاحة حاليًا.');
       if (action === "course.doctors") return respond(await courseDoctors(body, db));
       if (action === "course.reviews") return respond(await courseReviews(body, db));
       if (action === "reviews") {
         const id = integer(body.doctor, 1, Number.MAX_SAFE_INTEGER, "الدكتور");
-        const doctors = await db(
-          `miyar_doctors?id=eq.${id}&status=eq.approved&select=id`,
-        );
-        if (!doctors.length) throw new ApiError(404, "الدكتور غير موجود.");
-        const rows = await db(
-          `miyar_reviews?doctor_id=eq.${id}&status=eq.published${body.subject ? `&subject=eq.${encodeURIComponent(text(body.subject,2,120,"المادة"))}` : ""}&select=id,subject,comment,tags,explanation,treatment,grading,created_at&order=created_at.desc&limit=100`,
-        );
-        return respond(
-          rows.map((r) => ({
-            id: r.id,
-            subject: r.subject,
-            comment: r.comment,
-            tags: r.tags || [],
-            scores: [r.explanation, r.treatment, r.grading],
-            date: r.created_at,
-          })),
-        );
+        return respond(await db('rpc/miyar_public_reviews',{method:'POST',body:{p_doctor:id,p_subject:body.subject?text(body.subject,2,120,'المادة'):null}}));
       }
       // Identity comes only from a Supabase-verified Google session.
       if (!authenticate) throw new ApiError(401, "سجّل الدخول باستخدام Google.");
@@ -165,11 +149,6 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         }
       }
       const user = rows[0];
-      // Owners can withdraw statistical sharing even while their account is restricted.
-      if (user && ['grade.participation','grade.consent'].includes(action)) {
-        const participation = await gradeParticipation(action, body, db, identity.id);
-        return respond(participation.data);
-      }
       if (!user || user.status === "banned") {
         throw new ApiError(403, "هذا الحساب محظور من المنصة.");
       }
@@ -193,7 +172,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
           assistantColleges:Array.isArray(assistance)?assistance.map(row=>row.college_id):[],
         });
       }
-      if(action==='review.eligibility')return respond(await db('rpc/miyar_review_eligibility',{method:'POST',body:{p_account:identity.id,p_guest:null,p_doctor:integer(body.doctor,1,Number.MAX_SAFE_INTEGER,'الدكتور')}}));
+      if(action==='review.eligibility')return respond(await db('rpc/miyar_review_eligibility',{method:'POST',body:{p_account:identity.id,p_guest:null,p_doctor:integer(body.doctor,1,Number.MAX_SAFE_INTEGER,'الدكتور'),p_subject:body.subject?text(body.subject,2,120,'المادة'):null}}));
       if (action === "university") {
         const university = integer(body.universityId, 1, Number.MAX_SAFE_INTEGER, "الجامعة");
         await db('rpc/miyar_choose_university',{method:'POST',body:{p_account:identity.id,p_guest:null,p_university:university}});
@@ -242,7 +221,8 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
             p_comment: r.comment,
             p_tags: r.tags,
             p_share_grade: gradeConsent(body.shareGrade),
-            ...studyCourse(body.courseId),
+            p_course:studyCourse(body.courseId).p_course||null,
+            p_public_grade:publicGradeNotice(body.publishGrade),
           },
         });
         return respond(result, 201);

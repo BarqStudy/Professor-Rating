@@ -1,4 +1,4 @@
-import { gradeConsent } from './grades.js';
+import { gradeConsent, publicGradeNotice } from './grades.js';
 import { ApiError, integer, text } from './security.js';
 export function studyCourse(value) {
  if(value==null || value==='')return {};
@@ -20,7 +20,7 @@ export function existingDoctorReview(body,review,actor,isGuest=false) {
    p_doctor:integer(body.existingDoctorId,1,Number.MAX_SAFE_INTEGER,'الدكتور'),
    p_subject:review.subject,p_grade:review.grade,p_explanation:review.scores[0],
    p_treatment:review.scores[1],p_grading:review.scores[2],p_comment:review.comment,
-   p_tags:review.tags,p_share_grade:gradeConsent(body.shareGrade),p_course:studyCourse(body.courseId).p_course||null,
+   p_public_grade:publicGradeNotice(body.publishGrade),p_tags:review.tags,p_share_grade:gradeConsent(body.shareGrade),p_course:studyCourse(body.courseId).p_course||null,
   },
  };
 }

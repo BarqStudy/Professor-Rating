@@ -57,7 +57,8 @@ test('recommendations include shared subjects across university departments and 
   const serialized=JSON.stringify([rows,publicReviews]);for(const value of ['account_id','guest_id','"grade"',...accounts])assert.ok(!serialized.includes(value));
   // Historical rows from before the one-review rule remain readable and deduplicated.
   // New submissions cannot recreate those duplicates.
-  await assert.rejects(review(accounts[0],a,'مادة أخرى',70),/REVIEW_ALREADY_EXISTS/);
+  await review(accounts[0],a,'مادة أخرى',70);
+  await assert.rejects(review(accounts[0],a,'الإستاتيكا',70),/REVIEW_ALREADY_EXISTS/);
   const legacyReview=async(...args)=>{await db.exec('alter table miyar_reviews disable trigger miyar_single_review');try{return await review(...args);}finally{await db.exec('alter table miyar_reviews enable trigger miyar_single_review');}};
   // Same identity + equivalent spelling counts only the latest published experience.
   await legacyReview(accounts[0],a,' الإِسْتَاتِيكا ',70);

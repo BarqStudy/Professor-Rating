@@ -50,7 +50,7 @@ export function createCourseAdvisor({api,modal,icon,plans,currentPlan,onDoctor,o
    const rows=await api('course.reviews',{courseId:course.id,doctor:doctor.id});
    if(!root.isConnected)return;
    if(!Array.isArray(rows))throw new Error('تعذّر تحميل التقييمات.');
-   root.querySelector('.advisor-review-list').innerHTML=rows.length?rows.map(r=>`<article class="review-comment"><b>${esc(r.subject)}</b>${r.comment?`<p>${esc(r.comment)}</p>`:'<p class="muted">تقييم بالمؤشرات دون تعليق.</p>'}<p class="advisor-review-scores">${['الشرح','التعامل','المساعدة بالدرجات'].map((label,i)=>`${label}: ${number(r.scores[i])}`).join(' · ')}</p><small>طالب مجهول · ${new Date(r.date).toLocaleDateString('ar')}</small></article>`).join(''):'<p class="empty">لا توجد تقييمات منشورة لهذه المادة.</p>';
+   root.querySelector('.advisor-review-list').innerHTML=rows.length?rows.map(r=>`<article class="review-comment"><b>${esc(r.subject)}</b>${r.comment?`<p>${esc(r.comment)}</p>`:'<p class="muted">تقييم بالمؤشرات دون تعليق.</p>'}<p class="advisor-review-scores">${['الشرح','التعامل','المساعدة بالدرجات'].map((label,i)=>`${label}: ${number(r.scores[i])}`).join(' · ')}</p>${Number.isInteger(r.grade)?`<p class="published-grade">الدرجة في المادة: <b>${r.grade} / ١٠٠</b> · دون اسم</p>`:""}<small>طالب مجهول · ${new Date(r.date).toLocaleDateString('ar')}</small></article>`).join(''):'<p class="empty">لا توجد تقييمات منشورة لهذه المادة.</p>';
   }catch(error){if(root.isConnected){root.querySelector('.advisor-review-list').innerHTML=`<p role="alert">${esc(error.message)}</p><button type="button" class="secondary">إعادة المحاولة</button>`;root.querySelector('.advisor-review-list button').onclick=load;}}}
   void load();
  }

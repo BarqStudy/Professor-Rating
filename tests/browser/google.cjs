@@ -385,11 +385,7 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator(".comparison-table thead th").count(),4);
     assert.deepEqual(await page.locator('.comparison-table thead th').evaluateAll((cells)=>cells.slice(1).map((cell)=>cell.firstChild.textContent)), [20,19,18].map((id)=>catalogue.doctors.find((doctor)=>doctor.id===id).name));
     assert.match(await page.locator(".comparison-table").innerText(),/المساعدة بالدرجات/);
-    await page.locator('#grade-comparison .grade-subject').waitFor();
-    await page.locator('#grade-comparison .grade-subject').selectOption('ميكانيكا');
-    await page.locator('.grade-comparison-table').waitFor();
-    assert.match(await page.locator('.grade-comparison-table').innerText(),/بيانات غير كافية/);
-    assert.match(await page.locator('.grade-comparison-table').innerText(),/٦٠٪/);
+    assert.equal(await page.locator('#grade-comparison').count(),0);
 
     await page.locator(".close-modal").click();
     await page.locator(".modal-backdrop").waitFor({state:"detached"});
@@ -458,8 +454,8 @@ const server = http.createServer((req, res) => {
     await page.locator('#accept-review-pledge').click();
     await page.locator('#review-form').waitFor();
     assert.equal(await page.locator('#review-form [name=comment]').getAttribute('required'),null);
-    assert.equal(await page.locator('#review-form [name=shareGrade]').isChecked(),false);
-    await page.locator('#review-form [name=shareGrade]').check();
+    assert.equal(await page.locator('#review-form [name=shareGrade]').count(),0);
+    assert.match(await page.locator('.privacy-note').innerText(),/ستُنشر درجتك/);
     await page.locator('[data-rating-tag="محاضرة ممتعة"]').click();
     await page.locator('[data-rating-tag="محاضرة مملة"]').click();
     assert.equal(await page.locator('[data-rating-tag="محاضرة ممتعة"]').getAttribute('aria-pressed'),'false');
@@ -470,17 +466,13 @@ const server = http.createServer((req, res) => {
     await page.locator('#review-form [name=grade]').fill('90');
     await page.locator('#review-form [type=range]').first().evaluate((input)=>{input.value='75';input.dispatchEvent(new Event('input'));});
     await page.locator('.submit-review').click();
+    await page.locator('#review-success-another').click();
     await page.locator('.modal-backdrop').waitFor({state:'detached'});
     const guestReview=calls.find((call)=>call.action==='guest.submit');
     assert.equal(guestReview.comment,'');assert.deepEqual(guestReview.tags,['يوصل المعلومة']);assert.equal(guestReview.pledged,true);
     assert.equal(guestReview.authorization,undefined);assert.equal(guestReview.guest_token,guestToken);
-    assert.equal(guestReview.shareGrade,true);
-    await page.locator('#open-settings').click();await page.locator('#grade-sharing-settings').click();
-    await page.locator('[data-grade-consent="99"]').waitFor();
-    assert.equal(await page.locator('[data-grade-consent="99"]').isChecked(),true);
-    await page.locator('[data-grade-consent="99"]').uncheck();
-    await page.getByText('سُحبت الموافقة واستُبعدت الدرجة من الإحصائيات.').waitFor();
-    assert.ok(calls.some(call=>call.action==='guest.grade.consent'&&call.shareGrade===false&&call.guest_token===guestToken&&!call.authorization));
+    assert.equal(guestReview.publishGrade,true);
+    await page.locator('#open-settings').click();assert.equal(await page.locator('#grade-sharing-settings').count(),0);
     await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
 
     await page.waitForFunction(()=>document.querySelector('[data-online-count]').textContent.includes((7).toLocaleString('ar')));
@@ -603,12 +595,13 @@ const server = http.createServer((req, res) => {
     await page.locator("[name=grade]").fill("92");
     await page.locator("[name=comment]").fill("شرح واضح وتجربة مفيدة");
     await page.locator(".submit-review").click();
+    await page.locator("#review-success-home").click();
     await page.locator(".modal-backdrop").waitFor({ state: "detached" });
     const submission = calls.find((c) => c.action === "submit");
     assert.equal(submission.authorization, `Bearer ${access}`);
     assert.ok(!("initData" in submission));
     assert.equal(submission.grade, 92);
-    assert.equal(submission.shareGrade,false);
+    assert.equal(submission.publishGrade,true);
     await page.locator("#open-settings").click();
     assert.equal(await page.locator('.short-account-id').innerText(),member.slice(0,8).toUpperCase());
     assert.ok(!(await page.locator('.cloud-identity').innerText()).includes(member));
@@ -702,21 +695,7 @@ const server = http.createServer((req, res) => {
     await page.locator('.card-detail[data-doctor="17"]').click();
     await page.locator('#review-subject-filter').waitFor();
     assert.equal((await page.locator('.detail-person h2').innerText()).trim(),catalogue.doctors.find((doctor)=>doctor.id===17).name);
-    await page.locator('#doctor-grade-map .grade-subject').waitFor();
-    await page.locator('#doctor-grade-map .grade-subject').selectOption('ميكانيكا');
-    await page.locator('.grade-metrics').waitFor();
-    assert.match(await page.locator('.grade-metrics').innerText(),/٦٠٪/);
-    assert.equal(await page.locator('.grade-distribution li').count(),5);
-    for(const width of [1440,390]){
-      await page.setViewportSize({width,height:1000});
-      assert.equal(await page.locator('#doctor-grade-map').evaluate(el=>el.scrollWidth>el.clientWidth),false);
-      await page.locator('#doctor-grade-map').screenshot({path:`/tmp/miyar-grade-map-${width}.png`});
-    }
-    await page.setViewportSize({width:1440,height:1000});
-    await page.locator('#doctor-grade-map .grade-subject').selectOption('رياضيات');
-    await page.locator('.grade-empty').waitFor();
-    assert.equal(await page.locator('.grade-metrics').count(),0);
-    assert.equal(await page.locator('.grade-distribution').count(),0);
+    assert.equal(await page.locator('#doctor-grade-map').count(),0);
 
     assert.match(await page.locator('.doctor-summary').innerText(),/إشادة بالشرح/);
     assert.match(await page.locator('.doctor-summary').innerText(),/3 تقييمات/);
@@ -739,17 +718,6 @@ const server = http.createServer((req, res) => {
     await page.locator('#report-review-form [name=reason]').selectOption('personal');
     await page.locator('#report-review-form [type=submit]').click();
     await page.getByText('وصل بلاغك إلى الإدارة لمراجعة التقييم.').waitFor();
-    await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
-    await page.locator('#open-settings').click();await page.locator('#grade-sharing-settings').click();
-    await page.locator('[data-grade-consent="501"]').waitFor();
-    await page.locator('[data-grade-consent="501"]').check();
-    await page.getByText('حُفظت موافقتك على المشاركة الإحصائية.').waitFor();
-    assert.ok(calls.some(call=>call.action==='grade.consent'&&call.review===501&&call.shareGrade===true&&call.subject==='ميكانيكا'&&call.authorization===`Bearer ${access}`));
-    await page.locator('[data-grade-more]').click();
-    await page.locator('[data-grade-consent="400"]').waitFor();
-    assert.equal(await page.locator('.grade-sharing-item').count(),2);
-    await page.locator('[data-grade-consent="501"]').uncheck();
-    await page.getByText('سُحبت الموافقة واستُبعدت الدرجة من الإحصائيات.').waitFor();
     await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
     await page.locator('#open-settings').click();
     await page.locator('#my-reviews-settings').click();
