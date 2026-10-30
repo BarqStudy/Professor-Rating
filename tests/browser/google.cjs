@@ -627,8 +627,8 @@ const server = http.createServer((req, res) => {
       await page.locator('[data-appearance="light"]').click();
       dayColors.add(await page.locator(".miyar-mark").first().evaluate((el) => getComputedStyle(el).color));
       await page.locator('[data-appearance="dark"]').click();
-      assert.equal(await page.locator("body").evaluate((el) => getComputedStyle(el).backgroundImage), "none");
-      assert.equal(await page.locator(".modal").evaluate((el) => getComputedStyle(el).backdropFilter), "none");
+      assert.match(await page.locator("body").evaluate((el) => getComputedStyle(el).backgroundImage), /radial-gradient/);
+      assert.match(await page.locator(".modal").evaluate((el) => getComputedStyle(el).backdropFilter), /blur/);
       nightColors.add(await page.locator(".miyar-mark").first().evaluate((el) => getComputedStyle(el).color));
     }
     assert.equal(dayColors.size, 4);
@@ -958,8 +958,9 @@ const server = http.createServer((req, res) => {
       }
     }
     await page.locator(".theme-toggle").click();
-    assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
+    await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark'&&!document.documentElement.classList.contains('theme-switching'));
     await page.locator(".theme-toggle").click();
+    await page.waitForFunction(()=>document.documentElement.dataset.theme==='light'&&!document.documentElement.classList.contains('theme-switching'));
     for (const width of [768, 1024, 1180]) {
       await page.setViewportSize({ width, height: 1024 });
       assert.equal(await page.locator(".main-wrap").evaluate((el) => getComputedStyle(el).marginRight), "0px");
