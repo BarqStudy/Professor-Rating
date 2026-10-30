@@ -1,3 +1,4 @@
+import {reviewLikes} from './review-likes.js';
 import {createInstitutionMailer,institutionMailStatus,institutionInbox} from './institution-mail.js';
 import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
@@ -152,7 +153,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if (!user || user.status === "banned") {
         throw new ApiError(403, "هذا الحساب محظور من المنصة.");
       }
-      if(['me','submit','review.eligibility'].includes(action)&&user.status==='active'&&request.headers.has('x-miyar-guest')){
+      if(['me','submit','review.eligibility','review.like','review.likes'].includes(action)&&user.status==='active'&&request.headers.has('x-miyar-guest')){
         let guest;try{guest=await verifiedGuest(request,db,true);}catch(error){if(error.status!==401)throw error;}
         if(guest?.status==='active')await db('rpc/miyar_link_review_identity',{method:'POST',body:{p_account:identity.id,p_guest:guest.id}});
       }
@@ -195,6 +196,8 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       }
       const proposal = await catalogueProposal(action, body, user, identity.id, db);
       if (proposal) return respond(proposal.data, proposal.status);
+      const likes=await reviewLikes(action,body,db,identity.id);
+      if(likes)return respond(likes.data);
       const community = await studentCommunity(action, body, user, identity.id, db);
       if (community) {if(action==='institution.request'){const task=notifyInstitution(community.data?.id);if(!background)await task;}return respond(community.data, community.status || 200);}
       if (action === "submit") {

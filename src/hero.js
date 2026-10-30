@@ -42,7 +42,7 @@ export function setupHero() {
     cancelHero();
     if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || document.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const control = event.target.closest?.('button,a[href^="#"],[role="button"]');
-    if (!control || !control.closest('#app') || control.matches(':disabled,[aria-disabled="true"],.close-modal,.theme-toggle,.mobile-theme,.carousel-control,[data-review-dot],[data-save],#save-detail,#entry-theme') || control.closest('[inert]')) return;
+    if (!control || !control.closest('#app') || control.matches(':disabled,[aria-disabled="true"],.close-modal,.theme-toggle,.mobile-theme,.carousel-control,[data-review-dot],[data-review-like],[data-save],#save-detail,#entry-theme') || control.closest('[inert]')) return;
     if (control.matches('button') && control.type === 'submit' && control.form) return;
     const source = control.closest('.doctor-card,.study-course,.advisor-doctor') || control;
     rememberHero(source);

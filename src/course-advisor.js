@@ -1,9 +1,10 @@
+import {reviewLikeButton} from './review-likes.js';
 import {reviewCarousel,bindReviewCarousel} from './review-carousel.js';
 import {courseNameKey} from './course-names.js';
 import {officeBadge} from './doctor-office.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=n=>Number(n).toLocaleString('en-US');
-export function createCourseAdvisor({api,modal,icon,plans,currentPlan,onDoctor,onRequestDoctor}){
+export function createCourseAdvisor({api,modal,icon,plans,currentPlan,onDoctor,onRequestDoctor,onReviewLikes}){
  let selectedPlan='',selectedCourse='',search='',revision=0;
  function plan(){const list=plans();return list.find(p=>p.id===selectedPlan)||currentPlan()||list[0];}
  function courses(p){return p.courses.filter(c=>c.kind==='course'&&c.linkable);}
@@ -51,8 +52,9 @@ export function createCourseAdvisor({api,modal,icon,plans,currentPlan,onDoctor,o
    const rows=await api('course.reviews',{courseId:course.id,doctor:doctor.id});
    if(!root.isConnected)return;
    if(!Array.isArray(rows))throw new Error('تعذّر تحميل التقييمات.');
-   root.querySelector('.advisor-review-list').innerHTML=rows.length?reviewCarousel(rows.map(r=>`<article class="review-comment"><b>${esc(r.subject)}</b>${r.comment?`<p>${esc(r.comment)}</p>`:'<p class="muted">تقييم بالمؤشرات دون تعليق.</p>'}<p class="advisor-review-scores">${['الشرح','التعامل','المساعدة بالدرجات'].map((label,i)=>`${label}: ${number(r.scores[i])}`).join(' · ')}</p>${Number.isInteger(r.grade)?`<p class="published-grade">الدرجة في المادة: <b>${r.grade} / 100</b> · دون اسم</p>`:""}<small>طالب مجهول · ${new Date(r.date).toLocaleDateString('ar-u-nu-latn')}</small></article>`),'advisor-review-track'):'<p class="empty">لا توجد تقييمات منشورة لهذه المادة.</p>';
+   root.querySelector('.advisor-review-list').innerHTML=rows.length?reviewCarousel(rows.map(r=>`<article class="review-comment"><b>${esc(r.subject)}</b>${r.comment?`<p>${esc(r.comment)}</p>`:'<p class="muted">تقييم بالمؤشرات دون تعليق.</p>'}<p class="advisor-review-scores">${['الشرح','التعامل','المساعدة بالدرجات'].map((label,i)=>`${label}: ${number(r.scores[i])}`).join(' · ')}</p>${Number.isInteger(r.grade)?`<p class="published-grade">الدرجة في المادة: <b>${r.grade} / 100</b> · دون اسم</p>`:""}<small>طالب مجهول · ${new Date(r.date).toLocaleDateString('ar-u-nu-latn')}</small><div class="review-tools">${reviewLikeButton(r)}</div></article>`),'advisor-review-track'):'<p class="empty">لا توجد تقييمات منشورة لهذه المادة.</p>';
    bindReviewCarousel(root.querySelector('.review-carousel'));
+   onReviewLikes?.(root.querySelector('.advisor-review-list'));
   }catch(error){if(root.isConnected){root.querySelector('.advisor-review-list').innerHTML=`<p role="alert">${esc(error.message)}</p><button type="button" class="secondary">إعادة المحاولة</button>`;root.querySelector('.advisor-review-list button').onclick=load;}}}
   void load();
  }

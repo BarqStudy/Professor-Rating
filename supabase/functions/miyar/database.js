@@ -75,6 +75,7 @@ export function createDatabase(url, key, fetcher = fetch) {
         PROPOSAL_STALE: [409, "تغيّرت البيانات منذ إرسال المقترح. راجع البيانات الحالية وارفض الطلب القديم."],
         REASON_REQUIRED: [400, "اكتب سبب رفض الطلب."],
         INVALID_BULK: [400, "حدد الدكاترة والإجراء المطلوب."],
+        INVALID_REVIEW_LIKES:[400,"تحقق من التقييم وحالة الإعجاب."],
         REVIEW_UNAVAILABLE: [409, "التقييم غير متاح لهذه العملية."],
         PENDING_EDIT: [409, "يوجد طلب تعديل لهذا التقييم قيد المراجعة."],
         ALREADY_REPORTED: [409, "سبق أن أرسلت بلاغًا عن هذا التقييم."],

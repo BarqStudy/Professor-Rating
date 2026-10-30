@@ -1,3 +1,4 @@
+import {reviewLikes} from './review-likes.js';
 import {requestInstitution,requestCourseDoctor} from './requests.js';
 import { studyCourse, existingDoctorReview } from "./study.js";
 import { ApiError, integer, text, uuid, validateReview } from './security.js';
@@ -21,13 +22,15 @@ export async function verifiedGuest(request,db,allowBanned=false){
 }
 export async function handleGuest(request,body,db,pepper){
  const action=body.action;
- if(!['guest.start','guest.me','guest.university','guest.presence','guest.submit','guest.institution.request','guest.doctor.request','guest.review.eligibility','guest.mine','guest.edit'].includes(action))return null;
+ if(!['guest.start','guest.me','guest.university','guest.presence','guest.submit','guest.institution.request','guest.doctor.request','guest.review.eligibility','guest.mine','guest.edit','guest.review.likes','guest.review.like'].includes(action))return null;
  if(action==='guest.start'){
   const token=hex(crypto.getRandomValues(new Uint8Array(32)));
   const profile=await rpc(db,'miyar_open_guest',{p_token_hash:await guestTokenHash(token),p_network_hash:await networkHash(request,pepper)});
   return {status:201,data:{...profile,token}};
  }
  const guest=await verifiedGuest(request,db);
+ const likes=await reviewLikes(action,body,db,null,guest.id);
+ if(likes)return likes;
  if(action==='guest.mine')return {data:await rpc(db,'miyar_guest_reviews',{p_guest:guest.id})};
  if(action==='guest.me')return {data:guest};
  if(action==='guest.presence'){

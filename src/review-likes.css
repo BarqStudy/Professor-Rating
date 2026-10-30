@@ -1,0 +1,8 @@
+.doctor-card .doctor-rate { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; padding: 12px; margin: 8px 0 0; min-height: 48px; border-radius: 13px; }
+.doctor-rate .icon { width: 19px; height: 19px; }
+.review-tools .review-like { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); color: var(--muted); }
+.review-like svg { width: 19px; height: 19px; flex-shrink: 0; }
+.review-tools .review-like[aria-pressed=true] { color: var(--success); border-color: var(--success); background: var(--success-soft); }
+.review-like-count { font-variant-numeric: tabular-nums; }
+.review-like[aria-busy=true] { opacity: .65; }
+.review-like-error { display: block; margin-top: 10px; color: var(--error, var(--muted)); line-height: 1.8; }

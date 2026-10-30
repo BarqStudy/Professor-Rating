@@ -1,3 +1,5 @@
+import {reviewLikeButton,createReviewLikes} from './review-likes.js';
+import './review-likes.css';
 import {reviewCarousel,bindReviewCarousel} from './review-carousel.js';
 import './review-carousel.css';
 import {createUniversitySelector} from './university-selector.js';
@@ -117,6 +119,7 @@ const ic = (n, c = "") =>
     icons[n] || icons.star
   }</svg>`;
 const verifiedBadge = '<span class="verified" role="img" aria-label="موثق من إدارة مِعيار" title="موثق من إدارة مِعيار"><svg class="verified-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8.603 3.799a4.49 4.49 0 0 1 6.794 0 4.49 4.49 0 0 1 4.804 4.804 4.49 4.49 0 0 1 0 6.794 4.49 4.49 0 0 1-4.804 4.804 4.49 4.49 0 0 1-6.794 0 4.49 4.49 0 0 1-4.804-4.804 4.49 4.49 0 0 1 0-6.794 4.49 4.49 0 0 1 4.804-4.804Z"/><path d="m8.3 12 2.4 2.4 5-5.1" fill="none" stroke="#fff" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+const reviewLikes=createReviewLikes({api,ensureGuest:async()=>{if(!guestProfile)guestProfile=await ensureGuestSession();},isMember:()=>!!googleSession,ownerKey:()=>googleSession?.user.id||'guest',configured:()=>configured});
 const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>configured,
   universityName:()=>selectedUniversity()?.name,
   ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest',
@@ -134,7 +137,7 @@ const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>config
   onAdvisor:(course,plan)=>{courseAdvisor.select(plan.id,course.id);setPage('advisor');render();window.scrollTo({top:0});},
   closeModal,toast,
 });
-const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onRequestDoctor:(course,plan)=>requestDoctorForm({course,plan}),onDoctor:(id)=>cloudDoctorDetail(id)});
+const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onReviewLikes:root=>reviewLikes.mount(root),onRequestDoctor:(course,plan)=>requestDoctorForm({course,plan}),onDoctor:(id)=>cloudDoctorDetail(id)});
 let fileManager, studyImport, studyEditor, publishedReviews, adminToolsPending = null, adminToolsError = '';
 function ensureAdminTools() {
   if (studyEditor || adminToolsPending) return adminToolsPending;
@@ -573,7 +576,7 @@ function cards(list) {
         d.count ? labelScore(d.score) : "بدون تقييم"
       }">${
         d.count ? labelScore(d.score) : "بدون تقييم"
-      }</span></div><button class="compare-toggle" data-compare="${d.id}" aria-pressed="${compareIds.includes(d.id)}">${ic("users")} ${compareIds.includes(d.id) ? "مضاف للمقارنة" : "قارن الدكتور"}</button><button class="card-detail" data-doctor="${d.id}">استعرض التقييمات ${
+      }</span></div><button type="button" class="primary doctor-rate" data-rate-doctor="${d.id}">${ic("star")} قيّم الدكتور</button><button class="compare-toggle" data-compare="${d.id}" aria-pressed="${compareIds.includes(d.id)}">${ic("users")} ${compareIds.includes(d.id) ? "مضاف للمقارنة" : "قارن الدكتور"}</button><button class="card-detail" data-doctor="${d.id}">استعرض التقييمات ${
         ic("arrow")
       }</button></article>`
     ).join("")
@@ -753,8 +756,9 @@ let reviewOpening = null;
 async function reviewForm(id, pledged = false, studySelection = null, reviewedSubjects = []) {
   const dialog=document.querySelector('.modal-backdrop'),owner=googleSession?.user.id||'guest';
   if(reviewOpening&&reviewOpening.page===page&&reviewOpening.dialog===dialog&&reviewOpening.id===id&&reviewOpening.owner===owner)return reviewOpening.promise;
-  const request={page,dialog,id,owner,promise:openReviewForm(id,pledged,studySelection,reviewedSubjects)};
+  const request={page,dialog,id,owner};
   reviewOpening=request;
+  request.promise=openReviewForm(id,pledged,studySelection,reviewedSubjects,request);
   try{return await request.promise;}finally{if(reviewOpening===request)reviewOpening=null;}
 }
 function reviewDialog(title,body){
@@ -763,10 +767,10 @@ function reviewDialog(title,body){
   cancelHero();renderModal(title,body);
   document.querySelector('.modal').classList.add('hero-arrival');
 }
-async function openReviewForm(id, pledged = false, studySelection = null, reviewedSubjects = []) {
+async function openReviewForm(id, pledged = false, studySelection = null, reviewedSubjects = [], request) {
   const addingDoctor=id==null;
   const sourcePage=page,sourceDialog=document.querySelector('.modal-backdrop');
-  const stillCurrent=()=>page===sourcePage&&document.querySelector('.modal-backdrop')===sourceDialog&&!sourceDialog?.classList.contains('closing');
+  const stillCurrent=()=>reviewOpening===request&&page===sourcePage&&document.querySelector('.modal-backdrop')===sourceDialog&&!sourceDialog?.classList.contains('closing');
   if(configured&&cloudStatus==='loading'){
     toast('انتظر اكتمال تحميل المنصة، أو أعد المحاولة.');
     return;
@@ -1189,6 +1193,7 @@ function bind() {
   bindBulkDoctors();
 }
 function bindCards() {
+  document.querySelectorAll("[data-rate-doctor]").forEach(button=>button.onclick=()=>reviewForm(Number(button.dataset.rateDoctor)));
   document.querySelectorAll("[data-request-doctor]").forEach(button=>button.onclick=()=>requestDoctorForm({name:query}));
   document.querySelectorAll("[data-compare]").forEach((button) => button.onclick = () => {
     const id = Number(button.dataset.compare);
@@ -1757,9 +1762,10 @@ async function cloudDoctorDetail(id, subject = "") {
   try {
     const [rows, summary] = await Promise.all([api("reviews", {doctor:id, ...(subject ? {subject} : {})}), api("doctor.summary", {doctor:id, ...(subject ? {subject} : {})}).catch(() => null)]);
     if (!loading.isConnected) return;
-    const reviewSection=rows.length?reviewCarousel(rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}${publicReviewGrade(row)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar-u-nu-latn")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`),'published-reviews'):'<div id="published-reviews"><p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p></div>';
+    const reviewSection=rows.length?reviewCarousel(rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}${publicReviewGrade(row)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar-u-nu-latn")}</small><div class="review-tools">${reviewLikeButton(row)}<button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`),'published-reviews'):'<div id="published-reviews"><p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p></div>';
     modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?verifiedBadge:""} ${officeBadge(doctor)}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label>${reviewSection}<div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
     bindReviewCarousel(document.querySelector('#published-reviews')?.closest('.review-carousel'));
+    reviewLikes.mount(document.querySelector('#published-reviews'));
     document.querySelector("#review-subject-filter").onchange = (event) => cloudDoctorDetail(id,event.target.value);
     document.querySelectorAll("[data-report-review]").forEach((button) => button.onclick = () => reportReview(Number(button.dataset.reportReview)));
     document.querySelector("#detail-rate").onclick = () => reviewForm(id);
