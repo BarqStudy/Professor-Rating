@@ -1,4 +1,5 @@
 import {reviewDate} from './review-date.js';
+import {groupedCourseOptions} from './course-options.js';
 import {reviewLikeButton} from './review-likes.js';
 import {reviewCarousel,bindReviewCarousel} from './review-carousel.js';
 import {courseNameKey} from './course-names.js';
@@ -20,7 +21,7 @@ export function createCourseAdvisor({api,modal,icon,plans,currentPlan,onDoctor,o
  function courseOptions(p){
   const q=courseNameKey(search);
   const rows=courses(p).filter(c=>!q||courseNameKey(c.name).includes(q)||courseNameKey(c.code).includes(q));
-  return `<option value="">${rows.length?'اختر المادة':'لا توجد مادة تطابق البحث'}</option>`+rows.map(c=>`<option value="${c.id}" ${c.id===selectedCourse?'selected':''}>${esc(c.name)}${c.platformAddition&&c.code==='DRAWING'?'':' · '+esc(c.code)}</option>`).join('');
+  return `<option value="">${rows.length?'اختر المادة':'لا توجد مادة تطابق البحث'}</option>`+groupedCourseOptions(p,rows,c=>`<option value="${c.id}" ${c.id===selectedCourse?'selected':''}>${esc(c.name)}${c.platformAddition&&c.code==='DRAWING'?'':' · '+esc(c.code)}</option>`);
  }
  function bind(){
   const root=document.querySelector('.course-advisor'),control=root?.querySelector('#advisor-plan');if(!control)return;
