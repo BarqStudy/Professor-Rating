@@ -748,10 +748,10 @@ function labelScore(v) {
     : "ممتاز";
 }
 let reviewOpening = null;
-async function reviewForm(id, pledged = false, studySelection = null) {
+async function reviewForm(id, pledged = false, studySelection = null, reviewedSubjects = []) {
   const dialog=document.querySelector('.modal-backdrop'),owner=googleSession?.user.id||'guest';
   if(reviewOpening&&reviewOpening.page===page&&reviewOpening.dialog===dialog&&reviewOpening.id===id&&reviewOpening.owner===owner)return reviewOpening.promise;
-  const request={page,dialog,id,owner,promise:openReviewForm(id,pledged,studySelection)};
+  const request={page,dialog,id,owner,promise:openReviewForm(id,pledged,studySelection,reviewedSubjects)};
   reviewOpening=request;
   try{return await request.promise;}finally{if(reviewOpening===request)reviewOpening=null;}
 }
@@ -761,7 +761,7 @@ function reviewDialog(title,body){
   cancelHero();renderModal(title,body);
   document.querySelector('.modal').classList.add('hero-arrival');
 }
-async function openReviewForm(id, pledged = false, studySelection = null) {
+async function openReviewForm(id, pledged = false, studySelection = null, reviewedSubjects = []) {
   const addingDoctor=id==null;
   const sourcePage=page,sourceDialog=document.querySelector('.modal-backdrop');
   const stillCurrent=()=>page===sourcePage&&document.querySelector('.modal-backdrop')===sourceDialog&&!sourceDialog?.classList.contains('closing');
@@ -783,6 +783,7 @@ async function openReviewForm(id, pledged = false, studySelection = null) {
     try{
       const eligibility=await api(googleSession?'review.eligibility':'guest.review.eligibility',{doctor:id,...(studySelection?.course?{subject:studySelection.course.name}:{})});
       if(!stillCurrent()||owner!==(googleSession?.user.id||guestProfile?.id))return;
+      reviewedSubjects=eligibility.reviewedSubjects||[];
       if(eligibility.eligible===false){
         modal('تقييمك موجود بالفعل',`<p>سبق أن أرسلت تقييمًا لهذا الدكتور في هذه المادة${eligibility.status==='pending'?'، وهو الآن قيد المراجعة':''}. يمكنك تقييمه في مادة أخرى. تقييم المادة نفسها مشترك بين خطة التخرج وقسم التقييمات، ويحتاج طلب تعديل.</p>${eligibility.canEdit?'<button class="primary" id="existing-review-edit">عرض تقييمي وطلب تعديله</button>':''}<button class="secondary" id="existing-review-ratings">الانتقال إلى التقييمات</button>`);
         document.querySelector('#existing-review-edit')?.addEventListener('click',()=>myReviews(id));
@@ -792,7 +793,7 @@ async function openReviewForm(id, pledged = false, studySelection = null) {
     }catch(error){if(!stillCurrent())return;modal('تعذّر التحقق من التقييم',`<p role="alert">${escapeHtml(error.message)}</p><button class="primary" id="retry-review-check">إعادة المحاولة</button>`);document.querySelector('#retry-review-check').onclick=()=>reviewForm(id,false,studySelection);return;}
   }
   if(addingDoctor&&configured&&!studentMajors().length){modal('إضافة دكتور','<p>لم تُضف تخصصات جامعتك بعد.</p><button type="button" class="primary" id="request-missing-institution">طلب إضافة كلية أو تخصص</button>');document.querySelector('#request-missing-institution').onclick=institutionRequestForm;return;}
-  if(!addingDoctor&&!pledged){reviewPledge(()=>reviewForm(id,true,studySelection));return;}
+  if(!addingDoctor&&!pledged){reviewPledge(()=>reviewForm(id,true,studySelection,reviewedSubjects));return;}
   const selectedDoctor = doctors.find((d) => d.id === id);
   const reviewCollege = selectedDoctor?.college || activeCollege || colleges[0];
   reviewDialog(
@@ -841,16 +842,37 @@ async function openReviewForm(id, pledged = false, studySelection = null) {
     },
   );
   const formForCourseChoices=document.querySelector('#review-form');
-  const attachCourseChoices=()=>studyPlanner.attachReview(formForCourseChoices,{
+  let courseChoices=null,reviewSubjectsLoading=false;
+  const attachCourseChoices=()=>courseChoices=studyPlanner.attachReview(formForCourseChoices,{
     university:selectedUniversity()?.name||(!configured?'جامعة نجران':''),
     college:selectedDoctor?undefined:studySelection?.plan?.college,
     major:!selectedDoctor&&studySelection?.plan ? majors.find(name=>[studySelection.plan.major,...(studySelection.plan.majorAliases||[])].includes(name)) : undefined,
     courseId:studySelection?.course?.id,
+    reviewedSubjects,checkingSubjects:reviewSubjectsLoading,onEdit:()=>myReviews(selectedDoctor?.id||matchedDoctor()?.id),
   });
   // Course choices are optional: a slow plan request must not delay the form or
   // replace a student's draft when the choices arrive.
   if (!configured || cloudPlansReady) attachCourseChoices();
   else (cloudPlansPending||refreshCloudStudyPlans()).then(()=>{if(formForCourseChoices.isConnected&&cloudPlansReady)attachCourseChoices();}).catch(()=>{});
+  const matchedDoctor=()=>doctors.find(d=>d.name===formForCourseChoices.elements.doctor.value.trim()&&d.major===formForCourseChoices.elements.major.value&&(d.college||'كلية الهندسة')===formForCourseChoices.elements.college.value);
+  if(!selectedDoctor&&configured){
+    let requestVersion=0,timer;
+    const refreshReviewed=()=>{
+      clearTimeout(timer);const version=++requestVersion,doctor=matchedDoctor(),owner=googleSession?.user.id||guestProfile?.id;
+      reviewedSubjects=[];reviewSubjectsLoading=false;courseChoices?.setLoading(false);courseChoices?.setReviewedSubjects([]);
+      if(!doctor)return;
+      reviewSubjectsLoading=true;courseChoices?.setLoading(true);
+      timer=setTimeout(async()=>{
+        try{
+          const state=await api(googleSession?'review.eligibility':'guest.review.eligibility',{doctor:doctor.id});
+          if(version!==requestVersion||owner!==(googleSession?.user.id||guestProfile?.id))return;
+          reviewedSubjects=state.reviewedSubjects||[];courseChoices?.setReviewedSubjects(reviewedSubjects);
+        }catch{}finally{if(version===requestVersion){reviewSubjectsLoading=false;courseChoices?.setLoading(false);}}
+      },180);
+    };
+    for(const name of ['doctor','college','major'])formForCourseChoices.elements[name].addEventListener(name==='doctor'?'input':'change',refreshReviewed);
+    refreshReviewed();
+  }
   if(selectedDoctor){
     const form=document.querySelector('#review-form');
     form.elements.doctor.readOnly=true;

@@ -42,3 +42,7 @@
 @media(max-width:650px){.published-review-management .form-grid{grid-template-columns:minmax(0,1fr);gap:0}.published-review-list .moderation-review{padding:16px}.published-review-confirm{padding:14px}.published-review-pagination{font-size:.85rem}}
 .published-review-management .published-review-confirm{display:block}.published-review-confirm .review-tools button{white-space:normal;line-height:1.8;flex-shrink:0}
 .study-editor-panel #delete-study-editor-plan{display:block;margin-top:20px;line-height:1.8}
+
+#review-study-course option.reviewed-course { color: var(--muted); color: color-mix(in srgb, var(--muted) 60%, transparent); opacity: .45; }
+.reviewed-subject-note { color: var(--muted); font-size: calc(13px * var(--font-scale, 1)); line-height: 1.8; }
+.reviewed-subject-note[hidden] { display: none; }

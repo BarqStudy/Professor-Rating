@@ -29,6 +29,13 @@ test('one review per professor and normalized subject spans moderation states, r
   assert.equal((await rpc(db,'miyar_review_eligibility',[admin,null,d,'ميكانيكا'])).canEdit,true);
   await db.query("update miyar_reviews set status='rejected' where id=$1",[own.id]);await assert.rejects(existing(db,admin,d,'الميكانيكا'),/REVIEW_ALREADY_EXISTS/);
   await existing(db,admin,d,'مختلفة');
+  const owned=await rpc(db,'miyar_review_eligibility',[student,null,d,null]);
+  assert.ok(owned.reviewedSubjects.includes('الاستاتيكا'));assert.ok(owned.reviewedSubjects.includes('مقرر جديد 7'));assert.ok(!owned.reviewedSubjects.includes('ميكانيكا'));
+  assert.deepEqual((await rpc(db,'miyar_review_eligibility',[null,g.id,d,null])).reviewedSubjects,owned.reviewedSubjects,'linked guest/member choices share their reserved subjects');
+  assert.ok(!JSON.stringify(owned).includes(student));assert.ok(!JSON.stringify(owned).includes('grade'));
+  const second=(await db.query("insert into miyar_doctors(major_id,name,status) values(1,'خالد علي القحطاني','approved') returning id")).rows[0].id;
+  assert.deepEqual((await rpc(db,'miyar_review_eligibility',[student,null,second,null])).reviewedSubjects,[],'another professor is still eligible for the same subject');
+
   await rpc(db,'miyar_link_review_identity',[admin,g.id]);assert.equal((await db.query('select account_id from miyar_review_identities where guest_id=$1',[g.id])).rows[0].account_id,student);
   await assert.rejects(db.query("update miyar_reviews set subject='استاتيكا' where account_id=$1 and subject='مقرر جديد 0'",[student]),/REVIEW_ALREADY_EXISTS/);
   for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from miyar_review_identities'),/permission denied/);await assert.rejects(rpc(db,'miyar_review_eligibility',[student,null,d,'استاتيكا']),/permission denied/);await db.exec('reset role');}
