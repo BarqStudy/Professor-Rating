@@ -591,7 +591,8 @@ const server = http.createServer((req, res) => {
       form.scrollIntoView()
     );
     await page.locator("[name=doctor]").fill("أحمد محمد العتيبي");
-    await page.locator("[name=subject]").fill("ميكانيكا");
+    await page.locator("#review-study-plan").selectOption("najran-ce-2025");
+    await page.locator("#review-study-course").selectOption("najran-ce-2025/ce211");
     await page.locator("[name=grade]").fill("92");
     await page.locator("[name=comment]").fill("شرح واضح وتجربة مفيدة");
     await page.locator(".submit-review").click();
@@ -602,6 +603,8 @@ const server = http.createServer((req, res) => {
     assert.ok(!("initData" in submission));
     assert.equal(submission.grade, 92);
     assert.equal(submission.publishGrade,true);
+    assert.equal(submission.courseId,"najran-ce-2025/ce211");
+    assert.equal(submission.subject,"ميكانيكا الموائع");
     await page.locator("#open-settings").click();
     assert.equal(await page.locator('.short-account-id').innerText(),member.slice(0,8).toUpperCase());
     assert.ok(!(await page.locator('.cloud-identity').innerText()).includes(member));

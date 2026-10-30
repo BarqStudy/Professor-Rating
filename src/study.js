@@ -1,4 +1,4 @@
-import {courseNameKey,courseRequirementLabel} from './course-names.js';
+import {courseNameKey,courseRequirementLabel,knownCourseMatches,reviewedCourseKeys} from './course-names.js';
 import {officeBadge} from './doctor-office.js';
 import {getStudyPlans} from './study-catalogue.js';
 import {storage,readJSON} from './storage.js';
@@ -82,11 +82,33 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
  function attachReview(form,{university,college,major,courseId,reviewedSubjects=[],checkingSubjects=false,onEdit}={}){
   const subject=form.querySelector('[name=subject]');
   if(!subject)return;
-  let blocked=new Set(reviewedSubjects.map(courseNameKey)),loading=checkingSubjects;
+  const allCourses=getStudyPlans().filter(p=>p.university===university).flatMap(p=>p.courses.filter(c=>c.kind==='course'&&c.linkable).map(c=>({...c,planId:p.id,planTitle:p.title})));
+  const catalogue=()=>allCourses;
+  let blocked=reviewedCourseKeys(reviewedSubjects,catalogue()),loading=checkingSubjects;
   const section=document.createElement('div');section.className='study-review-selection';subject.closest('.form-grid').before(section);
   const note=document.createElement('p');note.className='reviewed-subject-note';note.innerHTML='المواد التي سبق تقييمها لهذا الدكتور غير متاحة لتقييم جديد. <button type="button" class="text-button">طلب تعديل تقييم سابق</button>';
   subject.closest('.form-grid').after(note);note.querySelector('button').onclick=()=>onEdit?.();
-  const validate=()=>{subject.setCustomValidity(blocked.has(courseNameKey(subject.value))?'سبق أن قيّمت هذا الدكتور في المادة نفسها. اختر مادة أخرى أو اطلب تعديل تقييمك.':'');};
+  const suggestions=document.createElement('div');suggestions.className='known-course-suggestions';suggestions.setAttribute('aria-live','polite');const subjectLabel=subject.closest('label'),subjectField=document.createElement('div');subjectField.className='review-subject-field';subjectLabel.replaceWith(subjectField);subjectField.append(subjectLabel,suggestions);
+  const validate=()=>{
+   const select=section.querySelector('#review-study-course');
+   const matches=select?.value?[]:knownCourseMatches(subject.value,catalogue());
+   const previous=blocked.has(courseNameKey(subject.value));
+   subject.setCustomValidity(previous?'سبق أن قيّمت هذا الدكتور في المادة نفسها. اختر مادة أخرى أو اطلب تعديل تقييمك.':matches.length?'هذه المادة موجودة في القائمة. اختر اسم المقرر ورمزه من القائمة بدل كتابته يدويًا.':'');
+   suggestions.replaceChildren();suggestions.hidden=!matches.length;
+   if(!matches.length)return;
+   const message=document.createElement('small');message.textContent=matches.length>1?'هذه المادة موجودة في الخطط. اختر المقرر المقصود باسمه ورمزه:':'هذه المادة موجودة في القائمة؛ اخترها لربط تقييمك بالمقرر الصحيح:';suggestions.append(message);
+   const currentPlan=section.querySelector('#review-study-plan')?.value;
+   matches.sort((a,b)=>Number(b.planId===currentPlan)-Number(a.planId===currentPlan));
+   for(const course of matches.slice(0,6)){
+    const button=document.createElement('button');button.type='button';button.className='known-course-choice';button.dataset.pickReviewCourse=course.id;
+    const rated=blocked.has(courseNameKey(course.name));button.disabled=loading||rated;button.textContent=`${course.name} · ${course.code} · ${course.planTitle}${rated?' — سبق تقييمها':''}`;
+    button.onclick=()=>{
+     const planSelect=section.querySelector('#review-study-plan');planSelect.value=course.planId;planSelect.dispatchEvent(new Event('change'));
+     const courseSelect=section.querySelector('#review-study-course');courseSelect.value=course.id;courseSelect.dispatchEvent(new Event('change'));courseSelect.focus({preventScroll:true});
+    };suggestions.append(button);
+   }
+   if(matches.length>6){const more=document.createElement('small');more.textContent='يمكنك عرض بقية المقررات من قائمة خطة المادة.';suggestions.append(more);}
+  };
   subject.addEventListener('input',validate);
   const apply=()=>{
     note.hidden=!blocked.size;
@@ -106,7 +128,7 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
    const choices=getStudyPlans().filter(p=>p.university===university);
    section.hidden=!choices.length;
    section.innerHTML=choices.length?`<label>خطة المادة<select id="review-study-plan">${choices.map(p=>`<option value="${p.id}" ${preselect?.startsWith(p.id+'/')||(!preselect&&p.id===current()?.id)?'selected':''}>${esc(p.title)} · ${esc(p.fileLabel)}</option>`).join('')}</select></label><label>المادة من الخطة<select name="courseId" id="review-study-course"><option value="">مادة أخرى أو غير محددة في الخطة</option></select></label><small class="muted">اختيار مادة من الخطة يربط هذا الدكتور بها بعد اعتماد التقييم.</small>`:'';
-   subject.readOnly=false;
+   subject.readOnly=false;subject.placeholder=choices.length?'اسم مادة غير موجودة في القائمة':'اسم المادة';
    if(!choices.length){apply();return;}
    const fill=()=>{
     const plan=choices.find(p=>p.id===section.querySelector('#review-study-plan').value);
@@ -119,7 +141,7 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
   // The teaching department can differ from the student's course department.
   if(college&&major){const c=form.querySelector('[name=college]'),m=form.querySelector('[name=major]');c.value=college;c.dispatchEvent(new Event('change'));m.value=major;}
   update(courseId);
-  return {setReviewedSubjects(subjects){blocked=new Set(subjects.map(courseNameKey));apply();},setLoading(value){loading=value;apply();}};
+  return {setReviewedSubjects(subjects){blocked=reviewedCourseKeys(subjects,catalogue());apply();},setLoading(value){loading=value;apply();}};
  }
  return {page,bind,attachReview,current,available};
 }

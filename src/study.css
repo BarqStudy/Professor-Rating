@@ -46,3 +46,11 @@
 #review-study-course option.reviewed-course { color: var(--muted); color: color-mix(in srgb, var(--muted) 60%, transparent); opacity: .45; }
 .reviewed-subject-note { color: var(--muted); font-size: calc(13px * var(--font-scale, 1)); line-height: 1.8; }
 .reviewed-subject-note[hidden] { display: none; }
+
+.known-course-suggestions { display: grid; gap: 8px; margin-top: 10px; }
+.known-course-suggestions[hidden] { display: none; }
+.known-course-suggestions small { color: var(--muted); line-height: 1.8; }
+.known-course-choice { min-width: 0; overflow-wrap: anywhere; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); color: var(--green); text-align: start; font-size: calc(13px * var(--font-scale, 1)); line-height: 1.8; }
+.known-course-choice:disabled { opacity: .45; cursor: not-allowed; }
+
+.review-subject-field { min-width: 0; }

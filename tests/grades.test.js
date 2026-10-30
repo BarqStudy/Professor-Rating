@@ -15,7 +15,7 @@ test('individual grades require the new notice, remain anonymous and moderated, 
   for(const name of (await readdir(dir)).filter(n=>n.endsWith('.sql')).sort())await db.exec(await readFile(new URL(name,dir),'utf8'));
   for(const id of [account,other]){await db.query('insert into auth.users(id) values($1)',[id]);await db.query("insert into miyar_accounts(auth_id,name,university_id) values($1,'اسم خاص',3)",[id]);}
   const d=(await db.query("insert into miyar_doctors(major_id,name,status) values(1,'أحمد محمد العتيبي','approved') returning id")).rows[0].id;
-  const submit=(subject,publish=true)=>rpc(db,'miyar_submit_existing_google_review',[account,d,subject,92,80,80,80,'',[],false,null,publish]);
+  const submit=(subject,publish=true,course=null)=>rpc(db,'miyar_submit_existing_google_review',[account,d,subject,92,80,80,80,'',[],false,course,publish]);
   const old=await rpc(db,'miyar_submit_existing_google_review',[other,d,'استاتيكا',100,80,80,80,'',[],true,'najran-ce-2025/ge101']);
   await db.query("update miyar_reviews set status='published' where id=$1",[old.id]);
   let rows=await rpc(db,'miyar_public_reviews',[d,null]);assert.equal(rows.length,1);assert.ok(!('grade' in rows[0]),'old statistical consent cannot expose an individual grade');
@@ -25,9 +25,9 @@ test('individual grades require the new notice, remain anonymous and moderated, 
   rows=await rpc(db,'miyar_public_reviews',[d,'الإستاتيكا']);assert.equal(rows.length,2);assert.equal(rows.find(r=>r.id===fresh.id).grade,92);assert.ok(!('grade' in rows.find(r=>r.id===old.id)));
   const planRows=await rpc(db,'miyar_course_reviews',['najran-ce-2025/ge101',d]);assert.equal(planRows.find(r=>r.id===fresh.id).grade,92);assert.ok(!('grade' in planRows.find(r=>r.id===old.id)));
   const serialized=JSON.stringify([rows,planRows]);for(const secret of [account,other,'account_id','guest_id','public_grade_notice_at','اسم خاص'])assert.ok(!serialized.includes(secret));
-  await assert.rejects(submit('استاتيكا'),/REVIEW_ALREADY_EXISTS/);
+  await assert.rejects(submit('استاتيكا',true,'najran-ce-2025/ge101'),/REVIEW_ALREADY_EXISTS/);
   for(let i=0;i<8;i++)await submit('مقرر '+i);
-  const circuits1=await submit('دوائر كهربائية ١');await submit('دوائر كهربائية 2');await assert.rejects(submit('الدوائر الكهربائية 1'),/REVIEW_ALREADY_EXISTS/);
+  const circuits1=await submit('دوائر كهربائية ١',true,'najran-ee-2025/ee216');await submit('دوائر كهربائية 2',true,'najran-ee-2025/ee217');await assert.rejects(submit('الدوائر الكهربائية 1',true,'najran-ee-2025/ee216'),/REVIEW_ALREADY_EXISTS/);
   await db.query("update miyar_reviews set status='rejected' where id=$1",[fresh.id]);assert.ok((await rpc(db,'miyar_public_reviews',[d,null])).every(r=>r.id!==fresh.id));
   await assert.rejects(rpc(db,'miyar_request_edit',[account,circuits1.id,'مادة ثانية','',80,80,80,[]]),/REVIEW_UNAVAILABLE/);
   const g=await rpc(db,'miyar_open_guest',['a'.repeat(64),null]),foreign=await rpc(db,'miyar_open_guest',['b'.repeat(64),null]);await rpc(db,'miyar_choose_university',[null,g.id,3]);await rpc(db,'miyar_choose_university',[null,foreign.id,3]);
