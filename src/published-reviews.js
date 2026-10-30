@@ -1,6 +1,6 @@
 import {REVIEW_TAGS} from '../supabase/functions/miyar/tags.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const number=value=>Number(value).toLocaleString('ar');
+const number=value=>Number(value).toLocaleString('en-US');
 export function createPublishedReviews({api,catalogue,ownerKey,onRemoved}){
  let owner='',sequence=0,busy=false,loaded=false,rows=[],total=0,hasMore=false,next=null,before=null,history=[],query='',university='',activeQuery='',activeUniversity='',pending=null,reason='',error='',message='';
  function ensureOwner(){if(owner!==ownerKey()){owner=ownerKey();sequence++;busy=loaded=false;rows=[];total=0;hasMore=false;next=before=null;history=[];query=university=activeQuery=activeUniversity=reason=error=message='';pending=null;}}

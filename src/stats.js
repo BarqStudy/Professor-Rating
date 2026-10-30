@@ -1,4 +1,4 @@
-const format = (value, prefix) => prefix + value.toLocaleString('ar');
+const format = (value, prefix) => prefix + value.toLocaleString('en-US');
 
 export function statNumber(value, prefix = '') {
   const count = Number.isSafeInteger(Number(value)) && Number(value) >= 0 ? Number(value) : 0;

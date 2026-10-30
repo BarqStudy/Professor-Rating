@@ -4,7 +4,7 @@ import {getStudyPlans} from './study-catalogue.js';
 import {storage,readJSON} from './storage.js';
 import {cleanProgress,courseStatus,progressSummary,selectedCourse,choiceCandidates} from './study-engine.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const number=n=>Number(n).toLocaleString('ar');
+const number=n=>Number(n).toLocaleString('en-US');
 export function createStudyPlanner({api,modal,icon,universityName,ownerKey,majorName,doctorsForPlan,onReview,onAdvisor,onRequestDoctor,closeModal,toast}) {
  let filter='all',search='';
  const available=()=>getStudyPlans().filter(p=>!universityName()||p.university===universityName());

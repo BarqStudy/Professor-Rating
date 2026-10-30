@@ -1,5 +1,5 @@
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const number=value=>Number(value).toLocaleString('ar');
+const number=value=>Number(value).toLocaleString('en-US');
 export async function openMajorRemoval({id,api,modal,remove,ownerKey}){
  const owner=ownerKey();
  modal('حذف التخصص','<div id="major-removal-content"><p role="status">جارٍ قراءة السجلات المرتبطة بالتخصص…</p></div>');

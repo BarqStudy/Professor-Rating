@@ -1,3 +1,5 @@
+import {reviewCarousel,bindReviewCarousel} from './review-carousel.js';
+import './review-carousel.css';
 import {createUniversitySelector} from './university-selector.js';
 import {homeIcon} from './home-icons.js';
 import {openMajorRemoval} from './major-removal.js';
@@ -168,7 +170,7 @@ const initial = [{
   id: 2,
   name: "خالد عبدالله القحطاني",
   major: "الهندسة الكهربائية",
-  subjects: ["دوائر كهربائية", "إلكترونيات ١"],
+  subjects: ["دوائر كهربائية", "إلكترونيات 1"],
   score: 94,
   count: 96,
   color: "sand",
@@ -349,7 +351,7 @@ function renderPage() {
         : ""
     }<button class="icon-btn settings-trigger" id="open-settings" aria-label="الإعدادات" title="الإعدادات">${
       ic("settings")
-    }</button><span class="semester"><i></i> الفصل الدراسي الأول ١٤٤٨ هـ</span><button class="icon-btn" id="notice" aria-label="الإشعارات">${
+    }</button><span class="semester"><i></i> الفصل الدراسي الأول 1448 هـ</span><button class="icon-btn" id="notice" aria-label="الإشعارات">${
       ic("bell")
     }${notificationBadge()}</button><button class="icon-btn mobile-theme" aria-label="تبديل المظهر">${
       ic("moon")
@@ -381,7 +383,7 @@ function renderPage() {
         : page === "assistant"
         ? miyarAssistant.page()
         : developer()
-    }</main><footer><span>مِعيار © ٢٠٢٦ <i>·</i> كل تجربة تستحق أن تُروى</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html">شروط الاستخدام</a></span><span>بُني بشغف لرحلتك الجامعية</span></footer>${page !== 'assistant' ? `<button type="button" class="assistant-launcher" data-page="assistant" aria-label="مساعد مِعيار"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2Z"/></svg><span>مساعد مِعيار</span></button>` : ''}</div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
+    }</main><footer><span>مِعيار © 2026 <i>·</i> كل تجربة تستحق أن تُروى</span><span><a href="${import.meta.env.BASE_URL}privacy.html">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html">شروط الاستخدام</a></span><span>بُني بشغف لرحلتك الجامعية</span></footer>${page !== 'assistant' ? `<button type="button" class="assistant-launcher" data-page="assistant" aria-label="مساعد مِعيار"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2Z"/></svg><span>مساعد مِعيار</span></button>` : ''}</div><div id="modal-root"></div><div id="comparison-root"></div><div id="toast" role="status"></div>`;
   bind();
   stopStatCounters = animateStats(document.querySelector('.stats'));
   if (page === 'assistant') miyarAssistant.bind();
@@ -496,14 +498,14 @@ function syncHomeSearch() {
   section.querySelector(".section-heading p").textContent = searching ? "اختر الدكتور لاستعراض تقييماته أو إضافة تجربتك." : "الأعلى في متوسط التقييم، وعند التعادل نقدّم الأكثر تقييمات.";
 }
 function listSection() {
-  return `<section class="doctors-section directory-section"><div class="section-heading"><div><span class="eyebrow">تجارب تستحق الاطلاع</span><h2>دليل الدكاترة والتقييمات <span class="small-star">✦</span></h2><p>اختر كليتك، وابحث عن الدكتور أو تصفّح دكاترة كل تخصص</p></div><button class="text-button" id="saved-filter">${savedOnly ? "عرض الجميع" : "المحفوظات"} ${ic("bookmark")}</button></div><div class="college-tabs" role="group" aria-label="الكليات">${colleges.map(college=>`<button class="college-tab ${college===activeCollege?'selected':''}" data-college="${escapeHtml(college)}" aria-pressed="${college===activeCollege}" aria-controls="doctor-grid"><span class="college-tab-icon">${ic('cap')}</span><span>${escapeHtml(college)}</span><small>${doctors.filter(d=>(d.college||'كلية الهندسة')===college).length.toLocaleString('ar')} دكتور</small></button>`).join('')}</div><div class="directory-search"><label for="search">ابحث في ${escapeHtml(activeCollege||'دليل الدكاترة')}</label><div class="directory-search-field">${ic('search')}<input type="search" id="search" value="${escapeHtml(query)}" placeholder="اسم الدكتور أو المادة…" autocomplete="off" aria-controls="doctor-grid"><button type="button" class="icon-btn" id="clear-search" aria-label="مسح البحث" ${query?'':'hidden'}>${ic('close')}</button></div></div><div id="doctor-grid" class="directory-rows" aria-live="polite">${directoryRows()}</div></section>`;
+  return `<section class="doctors-section directory-section"><div class="section-heading"><div><span class="eyebrow">تجارب تستحق الاطلاع</span><h2>دليل الدكاترة والتقييمات <span class="small-star">✦</span></h2><p>اختر كليتك، وابحث عن الدكتور أو تصفّح دكاترة كل تخصص</p></div><button class="text-button" id="saved-filter">${savedOnly ? "عرض الجميع" : "المحفوظات"} ${ic("bookmark")}</button></div><div class="college-tabs" role="group" aria-label="الكليات">${colleges.map(college=>`<button class="college-tab ${college===activeCollege?'selected':''}" data-college="${escapeHtml(college)}" aria-pressed="${college===activeCollege}" aria-controls="doctor-grid"><span class="college-tab-icon">${ic('cap')}</span><span>${escapeHtml(college)}</span><small>${doctors.filter(d=>(d.college||'كلية الهندسة')===college).length.toLocaleString('en-US')} دكتور</small></button>`).join('')}</div><div class="directory-search"><label for="search">ابحث في ${escapeHtml(activeCollege||'دليل الدكاترة')}</label><div class="directory-search-field">${ic('search')}<input type="search" id="search" value="${escapeHtml(query)}" placeholder="اسم الدكتور أو المادة…" autocomplete="off" aria-controls="doctor-grid"><button type="button" class="icon-btn" id="clear-search" aria-label="مسح البحث" ${query?'':'hidden'}>${ic('close')}</button></div></div><div id="doctor-grid" class="directory-rows" aria-live="polite">${directoryRows()}</div></section>`;
 }
 function directoryRows() {
   const matches=filteredDoctors();
   const names=majors.filter(name=>majorBelongs(name,activeCollege));
   const groups=names.map((name,index)=>({name,index,list:matches.filter(doctor=>doctor.major===name)})).filter(group=>!(query||savedOnly)||group.list.length);
   if(!matches.length&&(query||savedOnly||!names.length))return cards([]);
-  return groups.map(({name,index,list})=>`<section class="directory-major" aria-labelledby="directory-major-${index}"><div class="directory-major-heading"><div><h3 id="directory-major-${index}">${escapeHtml(name)}</h3><span class="muted">${list.length.toLocaleString('ar')} دكتور</span></div><div class="carousel-controls"><button type="button" class="carousel-control previous" data-carousel-previous="major-doctors-${index}" aria-label="الدكاترة السابقون في ${escapeHtml(name)}" aria-controls="major-doctors-${index}">${ic('arrow')}</button><button type="button" class="carousel-control" data-carousel-next="major-doctors-${index}" aria-label="الدكاترة التاليون في ${escapeHtml(name)}" aria-controls="major-doctors-${index}">${ic('arrow')}</button></div></div><div class="doctor-carousel" id="major-doctors-${index}" role="region" aria-label="دكاترة ${escapeHtml(name)}" tabindex="0">${list.length?cards(list):'<p class="empty">لا يوجد دكاترة مضافون لهذا التخصص بعد.</p>'}</div></section>`).join('');
+  return groups.map(({name,index,list})=>`<section class="directory-major" aria-labelledby="directory-major-${index}"><div class="directory-major-heading"><div><h3 id="directory-major-${index}">${escapeHtml(name)}</h3><span class="muted">${list.length.toLocaleString('en-US')} دكتور</span></div><div class="carousel-controls"><button type="button" class="carousel-control previous" data-carousel-previous="major-doctors-${index}" aria-label="الدكاترة السابقون في ${escapeHtml(name)}" aria-controls="major-doctors-${index}">${ic('arrow')}</button><button type="button" class="carousel-control" data-carousel-next="major-doctors-${index}" aria-label="الدكاترة التاليون في ${escapeHtml(name)}" aria-controls="major-doctors-${index}">${ic('arrow')}</button></div></div><div class="doctor-carousel" id="major-doctors-${index}" role="region" aria-label="دكاترة ${escapeHtml(name)}" tabindex="0">${list.length?cards(list):'<p class="empty">لا يوجد دكاترة مضافون لهذا التخصص بعد.</p>'}</div></section>`).join('');
 }
 function selectCollege(college) {
   activeCollege = college;
@@ -566,7 +568,7 @@ function cards(list) {
         (configured
           ? d.count
           : d.count + reviews.filter((r) => r.doctor === d.id).length)
-          .toLocaleString("ar")
+          .toLocaleString("en-US")
       } تقييمًا</small></div><span class="excellent" data-tier="${
         d.count ? labelScore(d.score) : "بدون تقييم"
       }">${
@@ -631,7 +633,7 @@ function bulkDoctorForm() {
   const options = configured
     ? (cloudCatalogue?.majors || []).map((m) => `<option value="${m.id}">${escapeHtml(m.name)} · ${escapeHtml(cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.name || "")} · ${escapeHtml(cloudCatalogue.universities?.find((u) => u.id === cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.university_id)?.name || "")}</option>`).join("")
     : majors.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
-  return `<form id="bulk-doctors" class="bulk-doctors"><h3>إضافة دكاترة دفعة واحدة</h3><p class="muted">اختر التخصص واكتب الاسم الثلاثي مع المسمى الذي تريده في سطر مستقل. يُضافون بدون تقييمات.</p><label>الكلية والتخصص<select name="major" required>${options}</select></label><label>أسماء الدكاترة<textarea name="names" rows="6" maxlength="10100" required placeholder="د. أحمد محمد العتيبي&#10;م. خالد عبدالله الحربي"></textarea></label><small>حتى ١٠٠ اسم في الدفعة. تُستبعد الأسماء المكررة في التخصص.</small><p class="bulk-result" role="status" aria-live="polite"></p><button class="primary" type="submit">${ic("plus")} إضافة الدفعة</button></form>`;
+  return `<form id="bulk-doctors" class="bulk-doctors"><h3>إضافة دكاترة دفعة واحدة</h3><p class="muted">اختر التخصص واكتب الاسم الثلاثي مع المسمى الذي تريده في سطر مستقل. يُضافون بدون تقييمات.</p><label>الكلية والتخصص<select name="major" required>${options}</select></label><label>أسماء الدكاترة<textarea name="names" rows="6" maxlength="10100" required placeholder="د. أحمد محمد العتيبي&#10;م. خالد عبدالله الحربي"></textarea></label><small>حتى 100 اسم في الدفعة. تُستبعد الأسماء المكررة في التخصص.</small><p class="bulk-result" role="status" aria-live="polite"></p><button class="primary" type="submit">${ic("plus")} إضافة الدفعة</button></form>`;
 }
 function bindBulkDoctors() {
   const form = document.querySelector("#bulk-doctors");
@@ -643,7 +645,7 @@ function bindBulkDoctors() {
     const names = [...new Set(form.elements.names.value.split(/\r?\n/).map((n) => n.trim().replace(/\s+/g, " ")).filter(Boolean))];
     const status = form.querySelector(".bulk-result");
     if (!names.length || names.length > 100 || names.some((n) => n.length < 8 || n.length > 100 || n.split(/\s+/).length < 3)) {
-      status.textContent = "اكتب من ١ إلى ١٠٠ اسم ثلاثي، كل اسم بين ٨ و١٠٠ حرف في سطر مستقل.";
+      status.textContent = "اكتب من 1 إلى 100 اسم ثلاثي، كل اسم بين 8 و100 حرف في سطر مستقل.";
       return;
     }
     const majorName = configured ? cloudCatalogue.majors.find((m) => m.id === Number(major))?.name : major;
@@ -816,13 +818,13 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
       escapeHtml(doctors.find((d) => d.id === id)?.name || studySelection?.name || "")
     }"><datalist id="doctor-names">${
       doctors.map((d) => `<option>${escapeHtml(d.name)}</option>`).join("")
-    }</datalist></label>${addingDoctor?'<label class="doctor-review-choice"><input type="checkbox" name="includeReview" aria-controls="doctor-rating-fields" aria-expanded="false"><span>هل تود إضافة تقييم للدكتور؟<small>اختياري؛ اتركه فارغًا لإضافة الدكتور دون تقييم.</small></span></label>':''}<fieldset class="doctor-rating-fields" id="doctor-rating-fields" ${addingDoctor?'hidden disabled':''}><legend>تفاصيل التقييم</legend><div class="form-grid"><label>المادة<input name="subject" required placeholder="اسم المادة"></label><label>درجتك في المادة<input name="grade" type="number" min="0" max="100" required placeholder="من ١٠٠"></label></div><div class="privacy-note">${
+    }</datalist></label>${addingDoctor?'<label class="doctor-review-choice"><input type="checkbox" name="includeReview" aria-controls="doctor-rating-fields" aria-expanded="false"><span>هل تود إضافة تقييم للدكتور؟<small>اختياري؛ اتركه فارغًا لإضافة الدكتور دون تقييم.</small></span></label>':''}<fieldset class="doctor-rating-fields" id="doctor-rating-fields" ${addingDoctor?'hidden disabled':''}><legend>تفاصيل التقييم</legend><div class="form-grid"><label>المادة<input name="subject" required placeholder="اسم المادة"></label><label>درجتك في المادة<input name="grade" type="number" min="0" max="100" required placeholder="من 100"></label></div><div class="privacy-note">${
       ic("shield")
     } ستُنشر درجتك في المادة مع تقييمك دون اسمك.<small>بإرسال التقييم، تقرّ بأن درجتك ستكون ظاهرة للطلاب بعد اعتماد التقييم. لا يُنشر اسمك أو بريدك أو معرّف حسابك.</small></div><div class="sliders">${
       ["الشرح", "التعامل", "المساعدة بالدرجات"].map((t, i) =>
-        `<label class="slider-label"><span>${t}<output id="out-${i}">٨٠ <small>جيد</small></output></span><input type="range" name="score${i}" min="0" max="100" value="80" aria-valuetext="80 من 100، جيد" data-range="${i}" style="--range-color:${
+        `<label class="slider-label"><span>${t}<output id="out-${i}">80 <small>جيد</small></output></span><input type="range" name="score${i}" min="0" max="100" value="80" aria-valuetext="80 من 100، جيد" data-range="${i}" style="--range-color:${
           scoreColor(80)
-        }"><span class="range-labels"><small>٠ · سيئ</small><small>١٠٠ · ممتاز</small></span></label>`
+        }"><span class="range-labels"><small>0 · سيئ</small><small>100 · ممتاز</small></span></label>`
       ).join("")
     }</div>${ratingTagPicker()}<label>تعليقك عن الدكتور (اختياري)<textarea name="comment" rows="3" maxlength="600" placeholder="كيف كانت تجربتك؟ شارك رأيك بموضوعية واحترام…"></textarea></label><small class="muted">نرحّب بالنقد البنّاء. تُرفض العبارات المسيئة، ولا تُنشر معلومات شخصية.</small></fieldset><div class="form-error" role="alert"></div><button type="submit" class="primary submit-review">${
       ic("plus")
@@ -888,7 +890,7 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
       el.style.setProperty("--range-color", scoreColor(v));
       el.setAttribute("aria-valuetext", `${v} من 100، ${labelScore(v)}`);
       document.querySelector("#out-" + el.dataset.range).innerHTML = `${
-        v.toLocaleString("ar")
+        v.toLocaleString("en-US")
       } <small>${labelScore(v)}</small>`;
     }
   );
@@ -1023,7 +1025,7 @@ async function detail(id) {
         `<div class="review-comment"><b>${escapeHtml(r.subject)}</b><p>${
           escapeHtml(r.comment)
         }</p>${publicReviewGrade(r)}<small>طالب مجهول · ${
-          new Date(r.date).toLocaleDateString("ar")
+          new Date(r.date).toLocaleDateString("ar-u-nu-latn")
         }</small></div>`
       ).join("")
     }<div class="detail-actions"><button class="primary" id="detail-rate">${
@@ -1161,7 +1163,7 @@ function bind() {
     () =>
       modal(
         "معايير مجتمع مِعيار",
-        `<div class="policy"><p>١. تحدّث عن تجربتك الفعلية، وناقش الشرح والتعامل والدرجات بموضوعية.</p><p>٢. لا تشارك بياناتك الشخصية أو بيانات الآخرين. لا تُعرض هويتك مع التعليق. درجتك الجديدة تُنشر دون اسم بعد اعتماد التقييم.</p><p>٣. تُرفض الكلمات المسيئة الظاهرة في الفلتر المحلي. تُراجع التعليقات على الخادم قبل النشر عند تفعيل الاتصال.</p><p>٤. ${
+        `<div class="policy"><p>1. تحدّث عن تجربتك الفعلية، وناقش الشرح والتعامل والدرجات بموضوعية.</p><p>2. لا تشارك بياناتك الشخصية أو بيانات الآخرين. لا تُعرض هويتك مع التعليق. درجتك الجديدة تُنشر دون اسم بعد اعتماد التقييم.</p><p>3. تُرفض الكلمات المسيئة الظاهرة في الفلتر المحلي. تُراجع التعليقات على الخادم قبل النشر عند تفعيل الاتصال.</p><p>4. ${
           configured
             ? "يمكن للإدارة استخدام معرّف الحساب لتطبيق الحظر والتقييد؛ لا يظهر مع التقييمات العامة. الدرجات الجديدة تُنشر دون هوية، والدرجات القديمة التي جُمعت بوصفها خاصة تبقى مخفية."
             : "هذه نسخة تجريبية ببيانات نموذجية وتخزين محلي."
@@ -1358,10 +1360,10 @@ function openSettings() {
       Array.from({ length: 12 }, (_, i) => i + 1).map((l) =>
         `<option value="${l}" ${
           +profile.level === l ? "selected" : ""
-        }>المستوى ${l.toLocaleString("ar")}</option>`
+        }>المستوى ${l.toLocaleString("en-US")}</option>`
       ).join("")
     }</select></label></div>${appearanceSettings()}<section class="font-settings"><div><h3>حجم الخط</h3><p>اختر الحجم الأريح لك. يُحفظ اختيارك تلقائيًا.</p></div><div class="font-stepper"><button type="button" id="font-smaller" aria-label="تصغير الخط">−</button><output id="font-size-value" aria-live="polite">${
-      Math.round(fontScale * 100).toLocaleString("ar")
+      Math.round(fontScale * 100).toLocaleString("en-US")
     }٪</output><button type="button" id="font-larger" aria-label="تكبير الخط">+</button></div><div class="font-preview">مِعيار… لاختيارٍ أوضح وتجربةٍ أفضل.</div><button type="button" id="font-reset" class="text-button">استعادة الحجم الافتراضي</button></section><div class="form-error" role="alert"></div>${
       configured
         ? `<div class="cloud-identity">${
@@ -1424,7 +1426,7 @@ function openSettings() {
     storage.setItem("miyar-font-scale", fontScale);
     document.documentElement.style.setProperty("--font-scale", fontScale);
     document.querySelector("#font-size-value").textContent =
-      Math.round(fontScale * 100).toLocaleString("ar") + "٪";
+      Math.round(fontScale * 100).toLocaleString("en-US") + "٪";
     document.querySelector("#font-smaller").disabled = fontScale <= .9;
     document.querySelector("#font-larger").disabled = fontScale >= 1.3;
   };
@@ -1578,7 +1580,7 @@ function connectionBanner() {
       }<button id="retry-cloud">إعادة المحاولة</button></div>`;
   }
   return notice +
-    `<div class="connection-banner live"><span></span>${escapeHtml(selectedUniversity()?.name || "مِعيار")} · <span data-online-count title="جلسات المنصة النشطة في جميع الجامعات خلال آخر ٩٠ ثانية">${onlineCountText()}</span></div>`;
+    `<div class="connection-banner live"><span></span>${escapeHtml(selectedUniversity()?.name || "مِعيار")} · <span data-online-count title="جلسات المنصة النشطة في جميع الجامعات خلال آخر 90 ثانية">${onlineCountText()}</span></div>`;
 }
 function refreshCloudStudyPlans() {
   if (cloudPlansPending) return cloudPlansPending;
@@ -1755,7 +1757,9 @@ async function cloudDoctorDetail(id, subject = "") {
   try {
     const [rows, summary] = await Promise.all([api("reviews", {doctor:id, ...(subject ? {subject} : {})}), api("doctor.summary", {doctor:id, ...(subject ? {subject} : {})}).catch(() => null)]);
     if (!loading.isConnected) return;
-    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?verifiedBadge:""} ${officeBadge(doctor)}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><div id="published-reviews">${rows.length ? rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}${publicReviewGrade(row)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`).join("") : '<p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p>'}</div><div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
+    const reviewSection=rows.length?reviewCarousel(rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}${publicReviewGrade(row)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar-u-nu-latn")}</small><div class="review-tools"><button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`),'published-reviews'):'<div id="published-reviews"><p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p></div>';
+    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?verifiedBadge:""} ${officeBadge(doctor)}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label>${reviewSection}<div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
+    bindReviewCarousel(document.querySelector('#published-reviews')?.closest('.review-carousel'));
     document.querySelector("#review-subject-filter").onchange = (event) => cloudDoctorDetail(id,event.target.value);
     document.querySelectorAll("[data-report-review]").forEach((button) => button.onclick = () => reportReview(Number(button.dataset.reportReview)));
     document.querySelector("#detail-rate").onclick = () => reviewForm(id);
@@ -1803,13 +1807,13 @@ function cloudAdmin() {
   const queue = cloudQueue;
   const allDoctors = records.doctors || [];
   initAdminFilters();
-  return `<div class="page-title"><div class="eyebrow">إدارة مِعيار</div><h1>لوحة التحكم</h1><p>المشاركات لا تُنشر تلقائيًا. راجع التعليقات وطلبات الدكاترة من هنا.</p><button class="secondary" id="refresh-cloud-admin">تحديث الطلبات</button></div><div class="admin-grid">${publishedReviews.panel()}${studyEditor.panel()}${studyImport.panel()}${fileManager.panel()}<section class="panel academic-management"><h2>الجامعات والكليات والتخصصات</h2><p class="muted">جهّز كليات الجامعة وتخصصاتها، ثم فعّل الجامعة لإتاحتها للطلاب. اعتماد طلب الإضافة لا يفعّلها تلقائيًا.</p><p class="admin-context-hint">نحتفظ بآخر جامعة وكلية اخترتها لتكمل الإضافة دون إعادة الاختيار.</p><h3 class="admin-step-title"><span>١</span> الجامعات</h3><form id="cloud-add-university"><label>إضافة جامعة<input name="name" required minlength="2" maxlength="100" placeholder="اسم الجامعة"></label><button class="primary">إضافة جامعة</button></form><div class="admin-record-list" role="region" tabindex="0" aria-label="الجامعات المضافة">${(records.universities || []).map((university) => `<div class="admin-row"><span>${escapeHtml(university.name)}<small>${records.colleges.filter((college) => college.university_id === university.id).length.toLocaleString('ar')} كلية مضافة</small></span><div class="university-admin-actions"><button type="button" class="secondary" data-university-enable="${university.id}" data-enabled="${university.enabled===true}">${university.enabled===true?'إيقاف الإتاحة':'تفعيل الجامعة'}</button><button type="button" class="danger" data-cloud-operation="university.delete" data-id="${university.id}" aria-label="حذف ${escapeHtml(university.name)}">حذف الجامعة</button></div></div>`).join('') || '<p class="muted">لا توجد جامعات مضافة.</p>'}</div><h3 class="admin-step-title"><span>٢</span> الكليات</h3><form id="cloud-add-college"><label>إضافة كلية<select name="universityId" required><option value="">اختر الجامعة</option>${(records.universities || []).map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")}</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم الكلية"></label><button class="primary">إضافة الكلية</button></form><div class="admin-record-list" aria-label="الكليات المضافة">${
+  return `<div class="page-title"><div class="eyebrow">إدارة مِعيار</div><h1>لوحة التحكم</h1><p>المشاركات لا تُنشر تلقائيًا. راجع التعليقات وطلبات الدكاترة من هنا.</p><button class="secondary" id="refresh-cloud-admin">تحديث الطلبات</button></div><div class="admin-grid">${publishedReviews.panel()}${studyEditor.panel()}${studyImport.panel()}${fileManager.panel()}<section class="panel academic-management"><h2>الجامعات والكليات والتخصصات</h2><p class="muted">جهّز كليات الجامعة وتخصصاتها، ثم فعّل الجامعة لإتاحتها للطلاب. اعتماد طلب الإضافة لا يفعّلها تلقائيًا.</p><p class="admin-context-hint">نحتفظ بآخر جامعة وكلية اخترتها لتكمل الإضافة دون إعادة الاختيار.</p><h3 class="admin-step-title"><span>1</span> الجامعات</h3><form id="cloud-add-university"><label>إضافة جامعة<input name="name" required minlength="2" maxlength="100" placeholder="اسم الجامعة"></label><button class="primary">إضافة جامعة</button></form><div class="admin-record-list" role="region" tabindex="0" aria-label="الجامعات المضافة">${(records.universities || []).map((university) => `<div class="admin-row"><span>${escapeHtml(university.name)}<small>${records.colleges.filter((college) => college.university_id === university.id).length.toLocaleString('en-US')} كلية مضافة</small></span><div class="university-admin-actions"><button type="button" class="secondary" data-university-enable="${university.id}" data-enabled="${university.enabled===true}">${university.enabled===true?'إيقاف الإتاحة':'تفعيل الجامعة'}</button><button type="button" class="danger" data-cloud-operation="university.delete" data-id="${university.id}" aria-label="حذف ${escapeHtml(university.name)}">حذف الجامعة</button></div></div>`).join('') || '<p class="muted">لا توجد جامعات مضافة.</p>'}</div><h3 class="admin-step-title"><span>2</span> الكليات</h3><form id="cloud-add-college"><label>إضافة كلية<select name="universityId" required><option value="">اختر الجامعة</option>${(records.universities || []).map((u) => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join("")}</select><input name="name" required minlength="2" maxlength="100" placeholder="اسم الكلية"></label><button class="primary">إضافة الكلية</button></form><div class="admin-record-list" aria-label="الكليات المضافة">${
     records.colleges.map((c) =>
       `<div class="admin-row"><span>${
         escapeHtml(c.name)
       }<small>${escapeHtml(records.universities?.find((u) => u.id === c.university_id)?.name || "")}</small></span><button class="danger" data-cloud-operation="college.delete" data-id="${c.id}">حذف</button></div>`
     ).join("")
-  }</div><h3 class="admin-step-title"><span>٣</span> التخصصات</h3><form id="cloud-add-major"><label>إضافة تخصص<select name="collegeId" required>${
+  }</div><h3 class="admin-step-title"><span>3</span> التخصصات</h3><form id="cloud-add-major"><label>إضافة تخصص<select name="collegeId" required>${
     records.colleges.map((c) =>
       `<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(records.universities?.find((u) => u.id === c.university_id)?.name || "")}</option>`
     ).join("")
@@ -2005,7 +2009,7 @@ function updateComparison() {
   const root = document.querySelector('#comparison-root');
   if (!root) return;
   compareIds = compareIds.filter((id) => doctors.some((doctor) => doctor.id===id));
-  root.innerHTML = compareIds.length ? `<section class="comparison-bar" aria-label="مقارنة الدكاترة"><span aria-live="polite">${compareIds.length} / ٣ دكاترة للمقارنة</span><button class="primary" id="compare-now" ${compareIds.length<2?'disabled':''}>عرض المقارنة</button><button class="icon-btn" id="compare-clear" aria-label="مسح المقارنة">${ic('close')}</button></section>` : '';
+  root.innerHTML = compareIds.length ? `<section class="comparison-bar" aria-label="مقارنة الدكاترة"><span aria-live="polite">${compareIds.length} / 3 دكاترة للمقارنة</span><button class="primary" id="compare-now" ${compareIds.length<2?'disabled':''}>عرض المقارنة</button><button class="icon-btn" id="compare-clear" aria-label="مسح المقارنة">${ic('close')}</button></section>` : '';
   root.querySelector('#compare-now')?.addEventListener('click',showComparison);
   root.querySelector('#compare-clear')?.addEventListener('click',()=>{
     compareIds=[];
@@ -2017,7 +2021,7 @@ function showComparison() {
   const selected=compareIds.map((id)=>doctors.find((doctor)=>doctor.id===id)).filter(Boolean);
   if(selected.length<2)return;
   const labels=['الشرح','التعامل','المساعدة بالدرجات','عدد التقييمات'];
-  modal('مقارنة الدكاترة',`<p class="muted">المؤشرات من تقييمات الطلاب المنشورة، وليست ضمانًا لتجربتك الشخصية.</p><div class="comparison-table-wrap"><table class="comparison-table"><caption>مقارنة مؤشرات الدكاترة</caption><thead><tr><th scope="col">المؤشر</th>${selected.map((doctor)=>`<th scope="col">${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></th>`).join('')}</tr></thead><tbody>${labels.map((label,index)=>`<tr><th scope="row">${label}</th>${selected.map((doctor)=>`<td>${index===3?doctor.count:doctor.count?`${Number(doctor.scores?.[index]||0)} / ١٠٠`:'بدون تقييم'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+  modal('مقارنة الدكاترة',`<p class="muted">المؤشرات من تقييمات الطلاب المنشورة، وليست ضمانًا لتجربتك الشخصية.</p><div class="comparison-table-wrap"><table class="comparison-table"><caption>مقارنة مؤشرات الدكاترة</caption><thead><tr><th scope="col">المؤشر</th>${selected.map((doctor)=>`<th scope="col">${escapeHtml(doctor.name)}<small>${escapeHtml(doctor.major)}</small></th>`).join('')}</tr></thead><tbody>${labels.map((label,index)=>`<tr><th scope="row">${label}</th>${selected.map((doctor)=>`<td>${index===3?doctor.count:doctor.count?`${Number(doctor.scores?.[index]||0)} / 100`:'بدون تقييم'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
 }
 async function submitCommunityForm(form,action,payload,message) {
   const button=form.querySelector('[type=submit]');button.disabled=true;
@@ -2118,7 +2122,7 @@ async function openNotifications(){
   if(updatesRequest) await updatesRequest;
   await refreshSavedUpdates();
   const count=savedUpdates.length+requestUpdates.length;
-  modal('الإشعارات',`${notificationError?`<p role="alert">${escapeHtml(notificationError)}</p><button class="secondary" id="retry-notifications">إعادة المحاولة</button>`:''}${count?`${requestUpdates.map((request)=>`<button class="notification-row" data-open-requests><span>طلب ${escapeHtml(requestKindName(request))} ${escapeHtml(request.title)} · ${request.status==='approved'?'تمت الموافقة':'تم الرفض'}${request.reason?`<small>السبب: ${escapeHtml(request.reason)}</small>`:''}</span>${ic('arrow')}</button>`).join('')}${savedUpdates.map((row)=>`<button class="notification-row" data-notice-doctor="${row.doctor_id}"><span>تقييم جديد: ${escapeHtml(row.doctor_name)}</span><small>${new Date(row.published_at).toLocaleDateString('ar')}</small>${ic('arrow')}</button>`).join('')}<button class="secondary" id="read-notifications">تحديد الكل كمقروء</button>`:'<p class="empty">لا توجد تقييمات جديدة لدكاترتك المحفوظين حتى الآن.</p><p class="muted">ستظهر هنا أيضًا قرارات الإدارة بشأن طلباتك.</p>'}`);
+  modal('الإشعارات',`${notificationError?`<p role="alert">${escapeHtml(notificationError)}</p><button class="secondary" id="retry-notifications">إعادة المحاولة</button>`:''}${count?`${requestUpdates.map((request)=>`<button class="notification-row" data-open-requests><span>طلب ${escapeHtml(requestKindName(request))} ${escapeHtml(request.title)} · ${request.status==='approved'?'تمت الموافقة':'تم الرفض'}${request.reason?`<small>السبب: ${escapeHtml(request.reason)}</small>`:''}</span>${ic('arrow')}</button>`).join('')}${savedUpdates.map((row)=>`<button class="notification-row" data-notice-doctor="${row.doctor_id}"><span>تقييم جديد: ${escapeHtml(row.doctor_name)}</span><small>${new Date(row.published_at).toLocaleDateString('ar-u-nu-latn')}</small>${ic('arrow')}</button>`).join('')}<button class="secondary" id="read-notifications">تحديد الكل كمقروء</button>`:'<p class="empty">لا توجد تقييمات جديدة لدكاترتك المحفوظين حتى الآن.</p><p class="muted">ستظهر هنا أيضًا قرارات الإدارة بشأن طلباتك.</p>'}`);
   document.querySelectorAll('[data-notice-doctor]').forEach((button)=>button.onclick=()=>cloudDoctorDetail(Number(button.dataset.noticeDoctor)));
   document.querySelectorAll('[data-open-requests]').forEach((button)=>button.onclick=openRequests);
   document.querySelector('#retry-notifications')?.addEventListener('click',openNotifications);
@@ -2138,7 +2142,7 @@ function requestsPage(){
  if(!googleSession)return '<div class="page-title"><h1>متابعة طلباتي</h1><p>سجّل الدخول لمتابعة طلباتك وقرارات الإدارة.</p><button class="primary" id="requests-login">الدخول باستخدام Google</button></div>';
  const statuses={pending:'قيد المراجعة',approved:'تمت الموافقة',rejected:'تم الرفض',archived:'غير متاح'};
  const own=requestsOwner===googleSession.user.id?myRequestsData:[];
- return `<div class="page-title"><h1>متابعة طلباتي</h1><p>طلبات الإضافة والتعديل وتصحيح البيانات، مع حالة كل طلب وسبب القرار.</p><button class="secondary" id="requests-refresh">تحديث الطلبات</button></div>${requestsLoading?'<p role="status">جارٍ تحميل طلباتك…</p>':requestsError?`<p role="alert">${escapeHtml(requestsError)}</p>`:own.length?`<div class="request-history">${own.map((request)=>`<article class="panel request-history-card"><span class="request-status" data-status="${escapeHtml(request.status)}">${statuses[request.status]||''}</span><h2>طلب ${escapeHtml(requestKindName(request))}</h2><h3>${escapeHtml(request.title)}</h3><p>${escapeHtml(request.university||'')}</p><small>أُرسل ${new Date(request.created_at).toLocaleDateString('ar')}${request.decided_at?` · القرار ${new Date(request.decided_at).toLocaleDateString('ar')}`:''}</small>${request.reason?`<p class="decision-reason">سبب القرار: ${escapeHtml(request.reason)}</p>`:request.status==='rejected'?'<p class="muted">لم يُسجّل سبب لهذا القرار السابق.</p>':''}</article>`).join('')}</div>`:'<p class="empty">لم ترسل طلبات حتى الآن.</p>'}`;
+ return `<div class="page-title"><h1>متابعة طلباتي</h1><p>طلبات الإضافة والتعديل وتصحيح البيانات، مع حالة كل طلب وسبب القرار.</p><button class="secondary" id="requests-refresh">تحديث الطلبات</button></div>${requestsLoading?'<p role="status">جارٍ تحميل طلباتك…</p>':requestsError?`<p role="alert">${escapeHtml(requestsError)}</p>`:own.length?`<div class="request-history">${own.map((request)=>`<article class="panel request-history-card"><span class="request-status" data-status="${escapeHtml(request.status)}">${statuses[request.status]||''}</span><h2>طلب ${escapeHtml(requestKindName(request))}</h2><h3>${escapeHtml(request.title)}</h3><p>${escapeHtml(request.university||'')}</p><small>أُرسل ${new Date(request.created_at).toLocaleDateString('ar-u-nu-latn')}${request.decided_at?` · القرار ${new Date(request.decided_at).toLocaleDateString('ar-u-nu-latn')}`:''}</small>${request.reason?`<p class="decision-reason">سبب القرار: ${escapeHtml(request.reason)}</p>`:request.status==='rejected'?'<p class="muted">لم يُسجّل سبب لهذا القرار السابق.</p>':''}</article>`).join('')}</div>`:'<p class="empty">لم ترسل طلبات حتى الآن.</p>'}`;
 }
 async function loadMyRequests(){
  if(!googleSession||requestsLoading)return;
@@ -2284,7 +2288,7 @@ function adminFilterOptions(field){
  return '<option value="">الكل</option>'+rows.map((item)=>`<option value="${item.id}" ${String(adminFilters[field])===String(item.id)?'selected':''}>${escapeHtml(item.name)}${field==='college'?` · ${escapeHtml(data.universities?.find((u)=>u.id===item.university_id)?.name||'')}`:''}</option>`).join('');
 }
 function adminDirectoryControls(){
- return `<section class="admin-directory-controls"><h3>بحث وإدارة الدكاترة</h3><div class="admin-filter-grid"><label>اسم الدكتور<input id="admin-doctor-search" type="search" maxlength="100" value="${escapeHtml(adminFilters.q)}" placeholder="اكتب اسم الدكتور…"></label>${[['university','الجامعة'],['college','الكلية'],['major','التخصص']].map(([key,label])=>`<label>${label}<select data-admin-filter="${key}">${adminFilterOptions(key)}</select></label>`).join('')}</div><p id="admin-results-count" role="status"></p><div class="admin-bulk-tools"><label class="admin-check-all"><input type="checkbox" id="admin-select-all">تحديد حتى ١٠٠ نتيجة</label><span id="admin-selected-count" aria-live="polite"></span><select id="admin-bulk-operation" aria-label="الإجراء الجماعي">${[['verify','توثيق المحددين'],['unverify','إلغاء توثيق المحددين'],['archive','إخفاء المحددين']].map(([value,label])=>`<option value="${value}" ${adminFilters.operation===value?'selected':''}>${label}</option>`).join('')}</select><button class="secondary" id="admin-apply-bulk" type="button">تنفيذ الإجراء</button></div></section>`;
+ return `<section class="admin-directory-controls"><h3>بحث وإدارة الدكاترة</h3><div class="admin-filter-grid"><label>اسم الدكتور<input id="admin-doctor-search" type="search" maxlength="100" value="${escapeHtml(adminFilters.q)}" placeholder="اكتب اسم الدكتور…"></label>${[['university','الجامعة'],['college','الكلية'],['major','التخصص']].map(([key,label])=>`<label>${label}<select data-admin-filter="${key}">${adminFilterOptions(key)}</select></label>`).join('')}</div><p id="admin-results-count" role="status"></p><div class="admin-bulk-tools"><label class="admin-check-all"><input type="checkbox" id="admin-select-all">تحديد حتى 100 نتيجة</label><span id="admin-selected-count" aria-live="polite"></span><select id="admin-bulk-operation" aria-label="الإجراء الجماعي">${[['verify','توثيق المحددين'],['unverify','إلغاء توثيق المحددين'],['archive','إخفاء المحددين']].map(([value,label])=>`<option value="${value}" ${adminFilters.operation===value?'selected':''}>${label}</option>`).join('')}</select><button class="secondary" id="admin-apply-bulk" type="button">تنفيذ الإجراء</button></div></section>`;
 }
 function updateAdminSelection(){
  const rows=adminDoctorRowsData();const count=document.querySelector('#admin-selected-count');if(!count)return;
@@ -2295,7 +2299,7 @@ function updateAdminSelection(){
  all.checked=!!eligible.length&&eligible.every((doctor)=>adminChosen.has(doctor.id));all.indeterminate=!!adminChosen.size&&!all.checked;
 }
 function bindAdminChecks(){
- document.querySelectorAll('[data-admin-check]').forEach((checkbox)=>checkbox.onchange=()=>{const id=Number(checkbox.dataset.adminCheck);if(checkbox.checked){if(adminChosen.size>=100){checkbox.checked=false;toast('الحد الأقصى ١٠٠ دكتور في الإجراء الواحد.');return;}adminChosen.add(id);}else adminChosen.delete(id);updateAdminSelection();});
+ document.querySelectorAll('[data-admin-check]').forEach((checkbox)=>checkbox.onchange=()=>{const id=Number(checkbox.dataset.adminCheck);if(checkbox.checked){if(adminChosen.size>=100){checkbox.checked=false;toast('الحد الأقصى 100 دكتور في الإجراء الواحد.');return;}adminChosen.add(id);}else adminChosen.delete(id);updateAdminSelection();});
  updateAdminSelection();
 }
 function refreshAdminDirectory(){
@@ -2339,7 +2343,7 @@ function ratingTagPicker(selected=[]){
 }
 function chosenRatingTags(form){return [...form.querySelectorAll('[data-rating-tag][aria-pressed=true]')].map((button)=>button.dataset.ratingTag);}
 function bindRatingTags(form){
- const update=()=>{const count=chosenRatingTags(form).length;form.querySelector('.tag-count').textContent=`${count} / ٦ أوصاف`;};
+ const update=()=>{const count=chosenRatingTags(form).length;form.querySelector('.tag-count').textContent=`${count} / 6 أوصاف`;};
  form.querySelectorAll('[data-rating-tag]').forEach((button)=>button.onclick=()=>{
   const selected=button.getAttribute('aria-pressed')==='true';
   if(!selected&&chosenRatingTags(form).length>=6){toast('اختر ستة أوصاف كحد أقصى.');return;}
@@ -2354,12 +2358,12 @@ function reviewSubmitted(){
  document.querySelector('#review-success-another').onclick=closeModal;
 }
 function publicReviewGrade(row){
- return Number.isInteger(row.grade)&&row.grade>=0&&row.grade<=100?`<p class="published-grade">الدرجة في المادة: <b>${row.grade} / ١٠٠</b> · دون اسم</p>`:'';
+ return Number.isInteger(row.grade)&&row.grade>=0&&row.grade<=100?`<p class="published-grade">الدرجة في المادة: <b>${row.grade} / 100</b> · دون اسم</p>`:'';
 }
 function reviewTagLabels(tags){
  return Array.isArray(tags)&&tags.length?`<div class="published-tags">${REVIEW_TAGS.filter((tag)=>tags.includes(tag.label)).map((tag)=>`<span data-tone="${tag.tone}"><i aria-hidden="true"></i>${tag.label}</span>`).join('')}</div>`:'';
 }
-function onlineCountText(){return presenceCount===null?(presenceBusy?'جارٍ حساب المتصلين…':'عدد المتصلين غير متاح حاليًا'):`عدد المتصلين حاليًا ${presenceCount.toLocaleString('ar')}`;}
+function onlineCountText(){return presenceCount===null?(presenceBusy?'جارٍ حساب المتصلين…':'عدد المتصلين غير متاح حاليًا'):`عدد المتصلين حاليًا ${presenceCount.toLocaleString('en-US')}`;}
 async function refreshPresence(visible=!document.hidden){
  if(!configured||cloudBooting||presenceBusy||(!visible&&!guestProfile))return;
  presenceBusy=true;

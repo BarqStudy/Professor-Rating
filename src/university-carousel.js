@@ -55,10 +55,10 @@ export function mountUniversityCarousel(root, { activeKey, onFocus } = {}) {
       announced = focused;
       const card = cards[focused], name = card.querySelector('strong').textContent;
       stage.dataset.activeUniversity = card.dataset.selectUniversity;
-      root.querySelector('.uni-carousel-counter').textContent = `${(focused + 1).toLocaleString('ar')} / ${count.toLocaleString('ar')}`;
+      root.querySelector('.uni-carousel-counter').textContent = `${(focused + 1).toLocaleString('en-US')} / ${count.toLocaleString('en-US')}`;
       root.querySelector('.uni-carousel-progress span').style.width = `${100 * (focused + 1) / count}%`;
       confirm.querySelector('span').textContent = card.classList.contains('is-open') ? 'الدخول إلى الجامعة' : 'طلب إضافة الجامعة';
-      live.textContent = `${name}، الجامعة ${(focused + 1).toLocaleString('ar')} من ${count.toLocaleString('ar')}`;
+      live.textContent = `${name}، الجامعة ${(focused + 1).toLocaleString('en-US')} من ${count.toLocaleString('en-US')}`;
       onFocus?.(card.dataset.selectUniversity);
     }
   }

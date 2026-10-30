@@ -34,7 +34,7 @@ export async function createDoctorCard(doctor,hue=218,university='') {
   ctx.fillStyle=soft;ctx.fillRect(100,y+28,880,18);
   ctx.fillStyle=ink;const width=doctor.count?880*Math.max(0,Math.min(100,Number(doctor.scores?.[index]||0)))/100:0;ctx.fillRect(980-width,y+28,width,18);
  });
- text(`${Number(doctor.count||0).toLocaleString('ar')} تقييمًا منشورًا`,980,1130,37,true);
+ text(`${Number(doctor.count||0).toLocaleString('en-US')} تقييمًا منشورًا`,980,1130,37,true);
  text('الآراء تعبّر عن تجارب أصحابها',980,1180,27,false);
  const url=`https://miyar.website/?doctor=${encodeURIComponent(doctor.id)}`;
  ctx.textAlign='center';ctx.direction='ltr';ctx.fillStyle=ink;ctx.font='700 27px Arial, sans-serif';ctx.fillText(url,540,1270);

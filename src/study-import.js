@@ -1,6 +1,6 @@
 import {repairPlanDraft} from '../supabase/functions/miyar/plan-repair.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const number=value=>Number(value).toLocaleString('ar');
+const number=value=>Number(value).toLocaleString('en-US');
 export function createStudyImport({catalogue,ownerKey,extract,publish,onPublished}){
  let owner='',draft=null,target=null,busy=false,revision=0,error='',saved=false;
  const selection={university:'',college:'',major:'',version:'',requirementLists:false};

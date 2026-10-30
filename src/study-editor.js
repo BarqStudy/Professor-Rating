@@ -1,7 +1,7 @@
 import {courseNameKey} from './course-names.js';
 import {editorGroups} from '../supabase/functions/miyar/plan-editor.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const number=value=>Number(value).toLocaleString('ar');
+const number=value=>Number(value).toLocaleString('en-US');
 export function createStudyEditor({api,update,ownerKey,onSaved,onDeleted}){
  let owner='',epoch=0,list=[],loaded=false,busy=false,selected='',base=null,draft=null,revision=0,dirty=false,error='',status='',query='',pending=null;
  let openLevels=new Set(),openCourses=new Set();

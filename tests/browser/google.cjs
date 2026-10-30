@@ -475,8 +475,8 @@ const server = http.createServer((req, res) => {
     await page.locator('#open-settings').click();assert.equal(await page.locator('#grade-sharing-settings').count(),0);
     await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
 
-    await page.waitForFunction(()=>document.querySelector('[data-online-count]').textContent.includes((7).toLocaleString('ar')));
-    assert.match(await page.locator('.semester').innerText(),/الأول ١٤٤٨/);
+    await page.waitForFunction(()=>document.querySelector('[data-online-count]').textContent.includes((7).toLocaleString('en-US')));
+    assert.match(await page.locator('.semester').innerText(),/الأول 1448/);
     assert.equal(calls.filter((call)=>call.action==='exchange').length,0);
     await page.locator('[data-page=assistant]').click();
     await page.getByText('مساعد مِعيار قيد التجهيز. سيُتاح بعد اكتمال ربط خدمة الذكاء الاصطناعي.').waitFor();
@@ -658,10 +658,10 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator(".doctor-card").count(),0);
     assert.match(await page.locator("#doctor-grid").innerText(), /لم تُضف كليات جامعتك/);
     await page.locator('.stats').scrollIntoViewIfNeeded();
-    await page.waitForFunction(()=>[...document.querySelectorAll('[data-stat-value]')].every(node=>node.textContent===node.dataset.statPrefix+Number(node.dataset.statValue).toLocaleString('ar')));
-    assert.equal(await page.locator('.stats>div').nth(0).locator('b [data-stat-value]').innerText(), '+'+catalogue.stats.doctors.toLocaleString('ar'));
-    assert.equal(await page.locator('.stats>div').nth(1).locator('b [data-stat-value]').innerText(), '+'+catalogue.stats.reviews.toLocaleString('ar'));
-    assert.equal(await page.locator('.stats>div').nth(2).locator('b [data-stat-value]').innerText(), catalogue.colleges.length.toLocaleString('ar'));
+    await page.waitForFunction(()=>[...document.querySelectorAll('[data-stat-value]')].every(node=>node.textContent===node.dataset.statPrefix+Number(node.dataset.statValue).toLocaleString('en-US')));
+    assert.equal(await page.locator('.stats>div').nth(0).locator('b [data-stat-value]').innerText(), '+'+catalogue.stats.doctors.toLocaleString('en-US'));
+    assert.equal(await page.locator('.stats>div').nth(1).locator('b [data-stat-value]').innerText(), '+'+catalogue.stats.reviews.toLocaleString('en-US'));
+    assert.equal(await page.locator('.stats>div').nth(2).locator('b [data-stat-value]').innerText(), catalogue.colleges.length.toLocaleString('en-US'));
     assert.match(await page.locator('.stats .demo-data').innerText(), /جميع الجامعات/);
     await page.locator("#search").fill("أحمد محمد العتيبي");
     assert.equal(await page.locator(".doctor-card").count(),0);
@@ -1029,7 +1029,7 @@ const server = http.createServer((req, res) => {
     await page.locator('.connection-banner.live').waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: Opt-in grade maps and same-course comparisons, hidden small samples, guest/account consent and withdrawal, pagination, responsive grade charts; AI availability gating, grounded chat UI with citations, escaped model output, guest session binding and quota error recovery, Scoped ambassador assignment/revocation, proposal moderation and persistence, student data corrections and history, responsive ambassador workspace, Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, unified optional doctor additions, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
+      "PASS: Removed grade-map controls, explicit anonymous-grade publication notice and English numeric displays; AI availability gating, grounded chat UI with citations, escaped model output, guest session binding and quota error recovery, Scoped ambassador assignment/revocation, proposal moderation and persistence, student data corrections and history, responsive ambassador workspace, Guest rating without Google, mandatory pledge, optional comments/tags, live server presence and semester, grounded summaries, request decisions/reasons and notifications, admin filters and atomic bulk controls, PNG sharing export, PWA manifest/offline safety, primary action order, comparison limits/table, subject filters, report submission/moderation, edit rejection/approval preserving old content, saved publication alerts, unified optional doctor additions, SVG decoration, admin selection persistence, dedicated page navigation, modal blur and inert background, batch import validation/deduplication/partial retry without reviews, college/major filtering, RTL carousel controls, mobile illustration, simplified account header, slider endpoints/colors, Google PKCE login, protected API, profile persistence, logout and outage/retry. Auth and API network mocked.",
     );
   } finally {
     await browser.close();
