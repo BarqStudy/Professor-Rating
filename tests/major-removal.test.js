@@ -11,7 +11,7 @@ async function database(){const db=new PGlite();await db.exec('create role anon;
 test('specialty removal previews dependent records, fences changes, archives atomically and preserves reviews, accounts and course IDs',async()=>{
  const db=await database();try{
   await db.query('insert into auth.users(id) values($1),($2)',[admin,student]);
-  const major=(await db.query("select major_id from miyar_study_plans where id='najran-ce-2025'")).rows[0].major_id;
+  const seed=(await db.query("select major_id,revision from miyar_study_plans where id='najran-ce-2025'")).rows[0],major=seed.major_id;
   await db.query("insert into miyar_accounts(auth_id,name,university_id,major_id) values($1,'الإدارة',3,$3),($2,'طالب',3,$3)",[admin,student,major]);
   await assert.rejects(db.query('delete from miyar_majors where id=$1',[major]),/foreign key constraint/);
   const review=await rpc(db,'miyar_submit_google_review',[student,'كلية الهندسة','الهندسة المدنية','أحمد محمد العتيبي','استاتيكا',90,80,80,80,'',[],false,'najran-ce-2025/ge101']);
@@ -25,7 +25,7 @@ test('specialty removal previews dependent records, fences changes, archives ato
   assert.equal((await db.query('select count(*)::int n from miyar_accounts where university_id=3 and major_id is null')).rows[0].n,2);
   assert.ok((await db.query('select status from miyar_doctors where major_id=$1',[major])).rows.every(row=>row.status==='archived'));
   const catalogue=await rpc(db,'miyar_catalogue');assert.ok(!catalogue.majors.some(item=>item.id===major));assert.equal(catalogue.doctors.length,0);assert.equal(catalogue.stats.reviews,0);assert.ok(catalogue.universities.some(item=>item.id===3));
-  const plans=await rpc(db,'miyar_uploaded_study_plans');assert.deepEqual(plans.find(plan=>plan.id==='najran-ce-2025'),{id:'najran-ce-2025',deleted:true,revision:1});setUploadedStudyPlans(plans);assert.ok(!getStudyPlans().some(plan=>plan.id==='najran-ce-2025'));
+  const plans=await rpc(db,'miyar_uploaded_study_plans');assert.deepEqual(plans.find(plan=>plan.id==='najran-ce-2025'),{id:'najran-ce-2025',deleted:true,revision:seed.revision+1});setUploadedStudyPlans(plans);assert.ok(!getStudyPlans().some(plan=>plan.id==='najran-ce-2025'));
   assert.equal((await db.query('select count(*)::int n from miyar_major_removals')).rows[0].n,1);
   for(const sql of ["insert into miyar_doctors(name,major_id) values('جديد',$1)","update miyar_doctors set status='approved' where major_id=$1","update miyar_accounts set major_id=$1"]){await assert.rejects(db.query(sql,[major]),/MAJOR_UNAVAILABLE/);}
   await assert.rejects(rpc(db,'miyar_study_import_target',[major]),/INVALID_MAJOR/);

@@ -30,7 +30,7 @@ test('uploaded plans publish atomically under the selected major, remain idempot
   const plan=await normalizePublishedPlan({...draft(),university:'جامعة خاطئة',major:'تخصص خاطئ',fileData:'never-store-file'});
   let result=await rpc(db,'miyar_publish_study_plan',[admin,major,plan]);assert.equal(result.alreadySaved,false);
   result=await rpc(db,'miyar_publish_study_plan',[admin,major,plan]);assert.equal(result.alreadySaved,true);
-  const uploaded=await rpc(db,'miyar_uploaded_study_plans',[]);assert.equal(uploaded.length,1);assert.equal(uploaded[0].university,'جامعة نجران');assert.equal(uploaded[0].major,'الهندسة المدنية');
+  const publicPlans=await rpc(db,'miyar_uploaded_study_plans',[]),uploaded=publicPlans.filter(row=>row.id===plan.id);assert.equal(uploaded.length,1);assert.equal(publicPlans.length,6);assert.equal(uploaded[0].university,'جامعة نجران');assert.equal(uploaded[0].major,'الهندسة المدنية');
   assert.equal(uploaded[0].courses.length,2);assert.deepEqual(await rpc(db,'miyar_course_doctors',[plan.courses[0].id]),[]);assert.equal((await db.query('select count(*)::int n from miyar_study_plans')).rows[0].n,6);
   assert.ok(!JSON.stringify(uploaded).includes(admin));assert.ok(!JSON.stringify(uploaded).includes('never-store-file'));
   await assert.rejects(rpc(db,'miyar_publish_study_plan',[admin,major,{...plan,id:'plan-99999999-9999-4999-8999-999999999999'}]),/STUDY_PLAN_EXISTS/);
@@ -121,7 +121,7 @@ test('optional university and required-course lists stay separate, preserve ordi
  const db=await database();try{
   await db.query('insert into auth.users(id) values($1)',[admin]);await db.query("insert into miyar_accounts(auth_id,name,university_id) values($1,'الإدارة',3)",[admin]);
   const major=(await db.query("select major_id from miyar_study_plans where id='najran-ce-2025'")).rows[0].major_id;
-  await rpc(db,'miyar_publish_study_plan',[admin,major,plan]);const saved=(await rpc(db,'miyar_uploaded_study_plans',[]))[0];assert.equal(saved.requirementLists,true);assert.equal(saved.courses.find(c=>c.code==='REQ 101').name,'English Language');assert.equal(saved.groups.length,2);
+  await rpc(db,'miyar_publish_study_plan',[admin,major,plan]);const saved=(await rpc(db,'miyar_uploaded_study_plans',[])).find(row=>row.id===plan.id);assert.equal(saved.requirementLists,true);assert.equal(saved.courses.find(c=>c.code==='REQ 101').name,'English Language');assert.equal(saved.groups.length,2);
   assert.equal((await db.query('select count(*)::int n from miyar_study_courses where plan_id=$1',[plan.id])).rows[0].n,6,'slots do not become public course identities');
   const crossType=structuredClone(plan);crossType.id='plan-99999999-9999-4999-8999-999999999999';crossType.fileLabel='نسخة أخرى';crossType.versionKey='نسخة أخرى';crossType.courses.forEach(c=>c.id=c.id.replace(plan.id,crossType.id));crossType.requirementLists=false;await assert.rejects(rpc(db,'miyar_publish_study_plan',[admin,major,crossType]),/INVALID_STUDY_PLAN/);
  }finally{await db.close();}

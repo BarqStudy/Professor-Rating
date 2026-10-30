@@ -90,6 +90,22 @@
         "linkable": true
       },
       {
+        "id": "najran-ce-2025/engineering-drawing",
+        "code": "DRAWING",
+        "name": "الرسم الهندسي",
+        "credits": null,
+        "level": 3,
+        "page": null,
+        "prerequisites": [],
+        "corequisites": [],
+        "anyPrerequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "platformAddition": true,
+        "preparatoryEligible": true
+      },
+      {
         "id": "najran-ce-2025/thqf212",
         "code": "ثقف 212",
         "name": "ثقافة المسلم 2",
@@ -985,6 +1001,22 @@
         "linkable": true
       },
       {
+        "id": "najran-me-2026/engineering-drawing",
+        "code": "DRAWING",
+        "name": "الرسم الهندسي",
+        "credits": null,
+        "level": 3,
+        "page": null,
+        "prerequisites": [],
+        "corequisites": [],
+        "anyPrerequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "platformAddition": true,
+        "preparatoryEligible": true
+      },
+      {
         "id": "najran-me-2026/thqf212",
         "code": "ثقف 212",
         "name": "ثقافة المسلم 2",
@@ -1757,7 +1789,8 @@
       "يعرض مِعيار المتطلبات كما وردت في الملف المرفوع؛ تأكد من خطتك الفعلية ومرشدك قبل التسجيل.",
       "مجموع ساعات بعض المستويات لا يطابق بنودها؛ يعرض التطبيق مجموع البنود المدرجة، ولا يستنتج منه استحقاق التخرج."
     ],
-    "fileLabel": "ME-2026"
+    "fileLabel": "ME-2026",
+    "uncertainCredits": true
   },
   {
     "id": "najran-che-2025",
@@ -1848,6 +1881,22 @@
         "pool": null,
         "kind": "course",
         "linkable": true
+      },
+      {
+        "id": "najran-che-2025/engineering-drawing",
+        "code": "DRAWING",
+        "name": "الرسم الهندسي",
+        "credits": null,
+        "level": 3,
+        "page": null,
+        "prerequisites": [],
+        "corequisites": [],
+        "anyPrerequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "platformAddition": true,
+        "preparatoryEligible": true
       },
       {
         "id": "najran-che-2025/math203",
@@ -2616,7 +2665,8 @@
       "الملف يشير إلى هكم 303 بوصفه متطلبًا، لكنه غير مدرج ضمن المواد؛ يحتاج تأكيدًا من القسم.",
       "المستوى التاسع عنوانه 16 ساعة بينما البنود المدرجة تجمع 14 ساعة؛ لا نضيف الساعتين المفقودتين دون تأكيد القسم."
     ],
-    "fileLabel": "CHE-2025"
+    "fileLabel": "CHE-2025",
+    "uncertainCredits": true
   },
   {
     "id": "najran-ee-2025",
@@ -2722,6 +2772,22 @@
         "pool": null,
         "kind": "course",
         "linkable": true
+      },
+      {
+        "id": "najran-ee-2025/engineering-drawing",
+        "code": "DRAWING",
+        "name": "الرسم الهندسي",
+        "credits": null,
+        "level": 3,
+        "page": null,
+        "prerequisites": [],
+        "corequisites": [],
+        "anyPrerequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "platformAddition": true,
+        "preparatoryEligible": true
       },
       {
         "id": "najran-ee-2025/thqf212",
@@ -3777,7 +3843,8 @@
       "يعرض مِعيار المتطلبات كما وردت في الملف المرفوع؛ تأكد من خطتك الفعلية ومرشدك قبل التسجيل.",
       "متطلبات ريض 204 وهعم 204 غير مدرجة بنفس الرموز في هذا الملف؛ لا نعتبر همك 111 أو هعم 205 بدائل تلقائيًا."
     ],
-    "fileLabel": "EE-2025"
+    "fileLabel": "EE-2025",
+    "uncertainCredits": true
   },
   {
     "id": "najran-arc-2026",
@@ -3855,6 +3922,22 @@
         "pool": null,
         "kind": "course",
         "linkable": true
+      },
+      {
+        "id": "najran-arc-2026/engineering-drawing",
+        "code": "DRAWING",
+        "name": "الرسم الهندسي",
+        "credits": null,
+        "level": 3,
+        "page": null,
+        "prerequisites": [],
+        "corequisites": [],
+        "anyPrerequisites": [],
+        "pool": null,
+        "kind": "course",
+        "linkable": true,
+        "platformAddition": true,
+        "preparatoryEligible": true
       },
       {
         "id": "najran-arc-2026/thqf212",
@@ -4633,6 +4716,7 @@
       "العمارة",
       "الهندسة المعمارية"
     ],
-    "fileLabel": "ARC-2026"
+    "fileLabel": "ARC-2026",
+    "uncertainCredits": true
   }
 ]

@@ -1,3 +1,4 @@
+import {reviewDate} from './review-date.js';
 import {reviewLikeButton,createReviewLikes} from './review-likes.js';
 import './review-likes.css';
 import {reviewCarousel,bindReviewCarousel} from './review-carousel.js';
@@ -1068,7 +1069,7 @@ async function detail(id) {
         `<div class="review-comment"><b>${escapeHtml(r.subject)}</b><p>${
           escapeHtml(r.comment)
         }</p>${publicReviewGrade(r)}<small>طالب مجهول · ${
-          new Date(r.date).toLocaleDateString("ar-u-nu-latn")
+          reviewDate(r.date)
         }</small></div>`
       ).join("")
     }<div class="detail-actions"><button class="primary" id="detail-rate">${
@@ -1804,7 +1805,7 @@ async function cloudDoctorDetail(id, subject = "") {
   try {
     const [rows, summary] = await Promise.all([api("reviews", {doctor:id, ...(subject ? {subject} : {})}), api("doctor.summary", {doctor:id, ...(subject ? {subject} : {})}).catch(() => null)]);
     if (!loading.isConnected) return;
-    const reviewSection=rows.length?reviewCarousel(rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}${publicReviewGrade(row)}<small>طالب مجهول · ${new Date(row.date).toLocaleDateString("ar-u-nu-latn")}</small><div class="review-tools">${reviewLikeButton(row)}<button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`),'published-reviews'):'<div id="published-reviews"><p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p></div>';
+    const reviewSection=rows.length?reviewCarousel(rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}${publicReviewGrade(row)}<small>طالب مجهول · تاريخ التقييم: ${reviewDate(row.date)}</small><div class="review-tools">${reviewLikeButton(row)}<button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`),'published-reviews'):'<div id="published-reviews"><p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p></div>';
     modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?verifiedBadge:""} ${officeBadge(doctor)}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label>${reviewSection}<div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
     bindReviewCarousel(document.querySelector('#published-reviews')?.closest('.review-carousel'));
     reviewLikes.mount(document.querySelector('#published-reviews'));
@@ -2104,7 +2105,7 @@ async function myReviews(doctorId) {
   try {
     const rows=await api(googleSession?'mine':'guest.mine');if(!loading.isConnected)return;
     const list=doctorId?rows.filter((row)=>row.doctor_id===doctorId):rows;
-    modal('تقييماتي وطلبات التعديل',`<p class="muted">التعديل يُرسل للإدارة، ويظل تقييمك المنشور كما هو حتى الموافقة.</p>${list.length?list.map((row)=>`<article class="my-review"><h3>${escapeHtml(row.doctor_name)}</h3><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>${reviewStatus[row.status]||''}${row.edit_status==='pending'?' · طلب تعديل قيد المراجعة':row.edit_status==='rejected'?' · رُفض طلب التعديل السابق':row.edit_status==='approved'?' · تمت الموافقة على التعديل':''}</small>${row.status==='published'?`<button class="secondary" data-edit-review="${row.id}" ${row.edit_status==='pending'?'disabled':''}>${row.edit_status==='pending'?'التعديل بانتظار الإدارة':'طلب تعديل التقييم'}</button>`:''}</article>`).join(''):'<p class="empty">لا توجد تقييمات لك في جامعتك الحالية.</p>'}`);
+    modal('تقييماتي وطلبات التعديل',`<p class="muted">التعديل يُرسل للإدارة، ويظل تقييمك المنشور كما هو حتى الموافقة.</p>${list.length?list.map((row)=>`<article class="my-review"><h3>${escapeHtml(row.doctor_name)}</h3><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>تاريخ التقييم: ${reviewDate(row.created_at)}</small><small>${reviewStatus[row.status]||''}${row.edit_status==='pending'?' · طلب تعديل قيد المراجعة':row.edit_status==='rejected'?' · رُفض طلب التعديل السابق':row.edit_status==='approved'?' · تمت الموافقة على التعديل':''}</small>${row.status==='published'?`<button class="secondary" data-edit-review="${row.id}" ${row.edit_status==='pending'?'disabled':''}>${row.edit_status==='pending'?'التعديل بانتظار الإدارة':'طلب تعديل التقييم'}</button>`:''}</article>`).join(''):'<p class="empty">لا توجد تقييمات لك في جامعتك الحالية.</p>'}`);
     document.querySelectorAll('[data-edit-review]').forEach((button)=>button.onclick=()=>editReview(list.find((row)=>row.id===Number(button.dataset.editReview))));
   } catch(error) {if(loading.isConnected)modal('تعذّر تحميل تقييماتك',`<p role="alert">${escapeHtml(error.message)}</p>`);}
 }

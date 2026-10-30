@@ -54,7 +54,7 @@ test('recommendations include shared subjects across university departments and 
   assert.equal((await db.query('select course_id from miyar_reviews where id=$1',[linked])).rows[0].course_id,'najran-ce-2025/ge101','equivalent spelling edits retain an explicit course link');
   rows=await rpc(db,'miyar_course_doctors',['najran-ce-2025/ge101']);assert.deepEqual(rows.map(r=>r.id),[other,cross,b,a]);assert.equal(rows.find(r=>r.id===cross).college,'كلية العلوم');
   const publicReviews=await rpc(db,'miyar_course_reviews',['najran-ce-2025/ge101',a]);assert.equal(publicReviews.length,2);
-  const serialized=JSON.stringify([rows,publicReviews]);for(const value of ['account_id','guest_id','"grade"',...accounts])assert.ok(!serialized.includes(value));
+  assert.ok(publicReviews.every(review=>Number.isInteger(review.grade)));assert.ok(rows.every(doctor=>!('grade' in doctor)));const serialized=JSON.stringify([rows,publicReviews]);for(const value of ['account_id','guest_id',...accounts])assert.ok(!serialized.includes(value));
   // Historical rows from before the one-review rule remain readable and deduplicated.
   // New submissions cannot recreate those duplicates.
   await review(accounts[0],a,'مادة أخرى',70);

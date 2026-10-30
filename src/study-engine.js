@@ -14,6 +14,7 @@ export function cleanProgress(plan,raw={}) {
  const externalCodes=new Set(plan.courses.flatMap(c=>[...c.prerequisites,...c.corequisites,...(c.anyPrerequisites||[])]).filter(code=>!knownCodes.has(code)));
  return {
   completed:[...new Set(Array.isArray(raw.completed)?raw.completed.filter(id=>required.has(id)):[])],
+  preparatoryCompleted:[...new Set(Array.isArray(raw.preparatoryCompleted)?raw.preparatoryCompleted.filter(id=>required.has(id)&&plan.courses.some(c=>c.id===id&&c.preparatoryEligible===true)&&Array.isArray(raw.completed)&&raw.completed.includes(id)):[])],
   electiveChoices,
   doctorChoices:Object.fromEntries(Object.entries(raw.doctorChoices&&typeof raw.doctorChoices==='object'?raw.doctorChoices:{}).filter(([id,doctor])=>plan.courses.some(c=>c.id===id&&c.kind==='course'&&c.linkable)&&Number.isSafeInteger(doctor)&&doctor>0)),
   foundation:raw.foundation===true,
@@ -50,7 +51,7 @@ export function progressSummary(plan,state) {
 }
 export function courseStatus(plan,item,raw) {
  const state=cleanProgress(plan,raw),course=selectedCourse(plan,item,state);
- if(state.completed.includes(item.id)&&course)return {key:'completed',label:'مكتملة',reasons:[]};
+ if(state.completed.includes(item.id)&&course)return {key:'completed',label:state.preparatoryCompleted.includes(item.id)?'مكتملة في السنة التحضيرية':'مكتملة',reasons:[]};
  if(!course)return {key:'choice',label:item.requirementType?'اختر مادة المتطلب':'اختر المقرر الاختياري',reasons:['اختر مادة من القائمة قبل تحديدها كمكتملة.']};
  const notes=[item.review,course!==item?course.review:null].filter(Boolean);
  if(notes.length)return {key:'review',label:'تحتاج تأكيد القسم',reasons:notes};

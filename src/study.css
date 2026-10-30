@@ -54,4 +54,6 @@
 .known-course-choice:disabled { opacity: .45; cursor: not-allowed; }
 
 .review-subject-field { min-width: 0; }
+.study-preparatory-button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;line-height:1.7}
+.study-preparatory-button[aria-pressed=true]{background:var(--soft);border-color:var(--green);color:var(--green)}
 .study-review-selection[hidden],.study-review-selection label[hidden],.review-subject-field label[hidden],#review-form>.form-grid[hidden]{display:none!important}

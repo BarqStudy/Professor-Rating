@@ -8,7 +8,7 @@ import {guestTokenHash} from '../supabase/functions/miyar/guest.js';
 const account='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222';
 const rpc=(db,name,args)=>db.query(`select ${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args).then(r=>r.rows[0].result);
 
-test('individual grades require the new notice, remain anonymous and moderated, and never expose historical private grades',async()=>{
+test('all published reviews include stored grades and original dates while staying anonymous and moderated',async()=>{
  const db=new PGlite();try{
   await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);');
   const dir=new URL('../supabase/migrations/',import.meta.url);
@@ -18,12 +18,12 @@ test('individual grades require the new notice, remain anonymous and moderated, 
   const submit=(subject,publish=true,course=null)=>rpc(db,'miyar_submit_existing_google_review',[account,d,subject,92,80,80,80,'',[],false,course,publish]);
   const old=await rpc(db,'miyar_submit_existing_google_review',[other,d,'استاتيكا',100,80,80,80,'',[],true,'najran-ce-2025/ge101']);
   await db.query("update miyar_reviews set status='published' where id=$1",[old.id]);
-  let rows=await rpc(db,'miyar_public_reviews',[d,null]);assert.equal(rows.length,1);assert.ok(!('grade' in rows[0]),'old statistical consent cannot expose an individual grade');
+  let rows=await rpc(db,'miyar_public_reviews',[d,null]);assert.equal(rows.length,1);assert.equal(rows[0].grade,100,'the requested legacy grade is displayed without inventing a consent event');
   const fresh=await rpc(db,'miyar_submit_existing_google_review',[account,d,'الاستاتيكا',92,80,80,80,'',[],false,'najran-ce-2025/ge101',true]);
   assert.equal((await rpc(db,'miyar_public_reviews',[d,null])).length,1,'pending grades stay hidden');
   await db.query("update miyar_reviews set status='published' where id=$1",[fresh.id]);
-  rows=await rpc(db,'miyar_public_reviews',[d,'الإستاتيكا']);assert.equal(rows.length,2);assert.equal(rows.find(r=>r.id===fresh.id).grade,92);assert.ok(!('grade' in rows.find(r=>r.id===old.id)));
-  const planRows=await rpc(db,'miyar_course_reviews',['najran-ce-2025/ge101',d]);assert.equal(planRows.find(r=>r.id===fresh.id).grade,92);assert.ok(!('grade' in planRows.find(r=>r.id===old.id)));
+  rows=await rpc(db,'miyar_public_reviews',[d,'الإستاتيكا']);assert.equal(rows.length,2);assert.equal(rows.find(r=>r.id===fresh.id).grade,92);assert.equal(rows.find(r=>r.id===old.id).grade,100);
+  const planRows=await rpc(db,'miyar_course_reviews',['najran-ce-2025/ge101',d]);assert.equal(planRows.find(r=>r.id===fresh.id).grade,92);assert.equal(planRows.find(r=>r.id===old.id).grade,100);
   const serialized=JSON.stringify([rows,planRows]);for(const secret of [account,other,'account_id','guest_id','public_grade_notice_at','اسم خاص'])assert.ok(!serialized.includes(secret));
   await assert.rejects(submit('استاتيكا',true,'najran-ce-2025/ge101'),/REVIEW_ALREADY_EXISTS/);
   for(let i=0;i<8;i++)await submit('مقرر '+i);

@@ -20,7 +20,7 @@ test('five curricula preserve original PDFs, scoped identities and unresolved so
   const local=new Set();
   for(const course of plan.courses){
    assert.ok(!ids.has(course.id));ids.add(course.id);local.add(course.id);
-   assert.ok(course.id.startsWith(plan.id+'/'));assert.ok(course.page>1);
+   assert.ok(course.id.startsWith(plan.id+'/'));assert.ok(course.platformAddition===true&&course.page===null||course.page>1);
    assert.ok(!/[\u0000-\u001f\ufffd]/u.test(course.name));
    assert.ok(course.credits===null||Number.isInteger(course.credits)&&course.credits>0);
    if(course.kind==='slot')assert.ok(plan.courses.some(c=>c.level===0&&c.pool===course.pool));

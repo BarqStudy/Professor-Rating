@@ -42,8 +42,9 @@ export async function normalizeEditedPlan(base,draft,revision){
   if(kind==='slot'&&(!pool||!level)||kind==='course'&&level===0&&!pool&&!(old?.level===0&&!old.pool))fail(`${label}: حدد قائمة البدائل ومستوى خانة الاختيار.`);
   if(type&&(!base.requirementLists||kind==='course'&&level!==0))fail(`${label}: مواد قائمة المتطلبات تكون في المستوى صفر.`);
   const course={id,code,name,kind,level,credits,pool,linkable:kind==='course',
+   ...(old?.platformAddition?{platformAddition:true}:{}),...(old?.preparatoryEligible?{preparatoryEligible:true}:{}),
    prerequisites:references(row.prerequisites,`${label} — المتطلبات السابقة`),corequisites:references(row.corequisites,`${label} — المتطلبات المتزامنة`),anyPrerequisites:references(row.anyPrerequisites||[],`${label} — المتطلبات البديلة`),
-   review:row.review?arabicLabel(row.review,2,300,`${label} — الملاحظة`):null,page:old?.page||1,
+   review:row.review?arabicLabel(row.review,2,300,`${label} — الملاحظة`):null,page:old?.platformAddition?old.page:old?.page||1,
    ...(type?{requirementType:type}:{}),...(row.minimumCredits==null?{}:{minimumCredits:integer(row.minimumCredits,1,400,`${label} — شرط الساعات`)}),
    ...(row.completedLevel==null?{}:{completedLevel:integer(row.completedLevel,1,20,`${label} — شرط المستوى`)}),...(row.allPrevious===true?{allPrevious:true}:{})};
   if(row.allPrevious!=null&&typeof row.allPrevious!=='boolean')fail(`${label}: تحقق من شرط المقررات السابقة.`);
