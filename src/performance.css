@@ -1,23 +1,18 @@
-/* Opaque surfaces keep the same palette and curves without compositing a blur
-   layer for every card. Only the modal backdrop needs to blur its surroundings. */
-:is(aside,header,.panel,.doctor-card,.action-card,.search-block,.developer-card,
-.side-note,.review-intro,.modal,.stat-card,.stats-strip,.community-banner,
-.settings-card,.stats,.bottom-banner,.directory-filters,.art-card,.float-note,
-.university-entry-bar,.uni-card,.uni-orbit-stage,.assistant-launcher),
-aside nav {
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-:is(aside,header,.panel,.doctor-card,.search-block,.developer-card,.side-note,.modal,
-.stats,.bottom-banner,.settings-card,.university-entry-bar,.assistant-launcher) {
-  background-color: var(--surface-raised);
-}
+/* Retain the original translucent glass surfaces and their highlights.
+   One backdrop handles dialog frosting; do not blur the whole page a second time. */
 body.modal-open .main-wrap, body.modal-open aside { filter: none; }
-.modal-backdrop { -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+.modal-backdrop { -webkit-backdrop-filter: blur(10px) saturate(120%); backdrop-filter: blur(10px) saturate(120%); }
 @media (max-width: 850px), (pointer: coarse) {
-  /* Static illustrations avoid continuous repainting while reading or scrolling. */
+  /* Frosted surfaces remain visible on mobile with a smaller blur radius. */
+  :root :is(header,aside,.panel,.doctor-card,.search-block,.developer-card,
+  .side-note,.modal,.stats,.bottom-banner,.art-card,.float-note,.assistant-launcher) {
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    backdrop-filter: blur(12px) saturate(150%);
+  }
+  :root :is(header,aside) { -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%); }
+  :root aside nav { -webkit-backdrop-filter: none; backdrop-filter: none; }
   .hero-art * { animation: none !important; }
-  .modal-backdrop { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .modal-backdrop { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
   body { background-attachment: scroll; }
 }
 @media (prefers-reduced-motion: reduce) {

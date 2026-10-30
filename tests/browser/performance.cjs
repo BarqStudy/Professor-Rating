@@ -60,7 +60,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   const edges=await page.locator('.quick-actions .action-arrow').evaluateAll(nodes=>nodes.map(node=>{const box=node.getBoundingClientRect(),circle=getComputedStyle(node,'::before');const diameter=parseFloat(circle.width)+parseFloat(circle.borderLeftWidth)+parseFloat(circle.borderRightWidth);return box.left+box.width/2-diameter/2;}));
   assert.ok(edges.every(left=>left>=10),'protruding arrow circles need a visible mobile gutter');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-  assert.equal(await page.locator('header').evaluate(node=>getComputedStyle(node).backdropFilter),'none');
+  assert.match(await page.locator('header').evaluate(node=>getComputedStyle(node).backdropFilter),/blur\(/,'mobile header retains its frosted glass');
  }
  await page.setViewportSize({width:390,height:900});await page.locator('.quick-actions .action-card').first().scrollIntoViewIfNeeded();await page.waitForTimeout(350);await page.screenshot({path:'/tmp/miyar-performance-mobile.png'});
  assert.equal(await page.locator('.hero-art').evaluate(node=>node.getAnimations({subtree:true}).filter(animation=>animation.playState==='running').length),0,'mobile illustration must not animate continuously');
@@ -72,5 +72,5 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  assert.equal(await waiting.page.locator('#study-plan-select option[value="najran-ce-2025"]').count(),0);
  assert.equal(waiting.calls.filter(call=>call.action==='study.plans').length,1);
  await waiting.context.close();assert.deepEqual(errors,[]);
- console.log('PASS: home/directory/form remain usable while plans are delayed; deferred plan choices preserve drafts; plan screens wait for tombstones without stale bundled-plan flashes; one shared compact font URL; admin tools excluded from student loading; mobile blur/continuous paint removed; protruding arrows retain a safe gutter across 320–820px. API/auth mocked.');
+ console.log('PASS: home/directory/form remain usable while plans are delayed; deferred plan choices preserve drafts; plan screens wait for tombstones without stale bundled-plan flashes; one shared compact font URL; admin tools excluded from student loading; mobile glass retained without continuous illustration painting; protruding arrows retain a safe gutter across 320–820px. API/auth mocked.');
  }finally{await browser.close();server.close();}})().catch(error=>{console.error(error);process.exitCode=1;server.close();});
