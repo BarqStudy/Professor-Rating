@@ -127,7 +127,7 @@ export async function ensureGuestSession(){
   const profile=await api('guest.start');
   if(!/^[a-f0-9]{64}$/.test(profile.token||''))throw new Error('تعذّر إنشاء جلسة الزائر. أعد المحاولة.');
   writeGuestToken(profile.token);
-  return {id:profile.id,university_id:profile.university_id,status:profile.status};
+  return {id:profile.id,university_id:profile.university_id,major_id:profile.major_id??null,status:profile.status};
  };
  guestSessionPromise=(async()=>{if(navigator.locks?.request)return navigator.locks.request('miyar-guest-session',open);return open();})().finally(()=>{guestSessionPromise=null;});
  return guestSessionPromise;

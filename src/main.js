@@ -19,6 +19,7 @@ import { getStudyPlans, setUploadedStudyPlans } from './study-catalogue.js';
 import { createCourseAdvisor } from './course-advisor.js';
 import { officeBadge } from './doctor-office.js';
 import { createStudyPlanner } from "./study.js";
+import {plansForStudent} from './student-major.js';
 import "./study.css";
 import { REVIEW_TAGS } from "../supabase/functions/miyar/tags.js";
 import { createAssistant } from './assistant.js';
@@ -122,8 +123,9 @@ const verifiedBadge = '<span class="verified" role="img" aria-label="موثق م
 const reviewLikes=createReviewLikes({api,ensureGuest:async()=>{if(!guestProfile)guestProfile=await ensureGuestSession();},isMember:()=>!!googleSession,ownerKey:()=>googleSession?.user.id||'guest',configured:()=>configured});
 const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>configured,
   universityName:()=>selectedUniversity()?.name,
+  studentPlans:()=>configured?plansForStudent(getStudyPlans(),studentAcademicScope()):null,
   ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest',
-  majorName:()=>cloudCatalogue?.majors.find(m=>m.id===cloudMe?.major_id)?.name||'',
+  majorName:()=>selectedStudentMajor()?.name||'',
   doctorsForPlan:(plan)=>{
     if(!configured)return doctors;
     const catalogue=cloudCatalogue;if(!catalogue)return [];
@@ -318,9 +320,9 @@ function renderPage() {
     page='home';
     history.replaceState({...history.state,...(history.state?.miyar?{miyar:{...history.state.miyar,page:'home'}}:{})},'',location.pathname+location.search);
   }
-  // Keep the requested page visible while auth/data load. Members only open the
-  // directory explicitly; the first-visit university gate is for guests.
-  if(!signedOut&&configured&&(page==='universities'||!googleSession&&needsUniversity())){renderUniversityLanding();return;}
+  // Restore saved academic choices directly; only incomplete profiles and an
+  // explicit university change open the university directory.
+  if(!signedOut&&configured&&(page==='universities'||needsUniversity())){renderUniversityLanding();return;}
   if (signedOut) {
     renderSignedOut();
     return;
@@ -394,6 +396,7 @@ function renderPage() {
   if (page === 'advisor') courseAdvisor.bind();
   if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();
   if (page === "requests" && googleSession && requestsOwner !== googleSession.user.id && !requestsLoading) loadMyRequests();
+  if(needsStudentMajor())queueMicrotask(()=>{if(needsStudentMajor()&&!document.querySelector('.modal-backdrop'))openStudentMajor();});
 }
 function studyContent() {
   if (!configured || cloudPlansReady) return page==='advisor'?courseAdvisor.page():studyPlanner.page();
@@ -438,6 +441,34 @@ function home() {
 }
 function needsUniversity(){return Boolean(configured&&!(cloudMe?.isAdmin&&page==='admin')&&cloudStatus==='ready'&&(!currentUniversityId()||selectedUniversity()?.enabled!==true));}
 function currentUniversityId() { return googleSession ? cloudMe?.university_id : guestProfile?.university_id; }
+function selectedStudentMajor(){return studentMajors().find(m=>m.id===(googleSession?cloudMe?.major_id:guestProfile?.major_id));}
+function studentAcademicScope(){const major=selectedStudentMajor();return {university:selectedUniversity()?.name,college:cloudCatalogue?.colleges.find(c=>c.id===major?.college_id)?.name,major:major?.name};}
+function needsStudentMajor(){return configured&&!cloudBooting&&!signedOut&&cloudStatus==='ready'&&!needsUniversity()&&!(cloudMe?.isAdmin&&page==='admin')&&!selectedStudentMajor()&&(googleSession?cloudMe?.status:guestProfile?.status)==='active';}
+function openStudentMajor(){
+ const owner=googleSession?.user.id||guestProfile?.id,university=currentUniversityId(),list=studentMajors(),required=needsStudentMajor();
+ modal('اختر تخصصك',`<form id="student-major-form" ${required?'class="mandatory-major"':''}><p class="muted">حدد تخصصك في ${escapeHtml(selectedUniversity()?.name)} لتظهر مواد خطتك مباشرة عند التقييم.</p>${list.length?`<label>الكلية<select name="college" required><option value="">اختر كليتك</option>${cloudCatalogue.colleges.filter(c=>list.some(m=>m.college_id===c.id)).map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select></label><label>التخصص<select name="major" required disabled><option value="">اختر الكلية أولًا</option></select></label><p class="form-error" role="alert"></p><button type="submit" class="primary">حفظ ومتابعة ${ic('arrow')}</button>`:'<p>تخصصات جامعتك لم تُضف بعد. اطلب إضافة كليتك وتخصصك لنجهّز خطتك.</p><button type="button" class="primary" id="major-request-institution">طلب إضافة الكلية والتخصص</button>'}<button type="button" class="text-button" id="major-change-university">تغيير الجامعة</button></form>`);
+ const form=document.querySelector('#student-major-form');
+ document.querySelector('.modal-backdrop').onclick=()=>{};
+ if(required)document.querySelector('.close-modal')?.remove();
+ form.querySelector('#major-change-university').onclick=()=>{document.body.classList.remove('modal-open');changeUniversityPage();};
+ form.querySelector('#major-request-institution')?.addEventListener('click',()=>institutionRequestForm());
+ if(!list.length)return;
+ const college=form.elements.college,major=form.elements.major;
+ college.onchange=()=>{major.disabled=!college.value;major.innerHTML='<option value="">اختر تخصصك</option>'+list.filter(m=>m.college_id===Number(college.value)).map(m=>`<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');};
+ const existing=selectedStudentMajor();if(existing){college.value=existing.college_id;college.onchange();major.value=existing.id;}
+ else if(college.options.length===2){college.value=college.options[1].value;college.onchange();}
+ form.onsubmit=async event=>{
+  event.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;form.querySelector('.form-error').textContent='';
+  try{
+   const majorId=Number(major.value);const data=await api(googleSession?'major':'guest.major',{majorId});
+   if(owner!==(googleSession?.user.id||guestProfile?.id)||university!==currentUniversityId()||!form.isConnected)return;
+   if(googleSession)cloudMe={...cloudMe,major_id:data.major_id};else guestProfile={...guestProfile,...data};
+   if(studentProfile)studentProfile.major=selectedStudentMajor()?.name||'';
+   courseAdvisor.select('','');document.body.classList.remove('modal-open');render();scheduleStudyPlans();toast('تم حفظ تخصصك.');
+  }catch(error){if(form.isConnected)form.querySelector('.form-error').textContent=error.message;}finally{if(form.isConnected)button.disabled=false;}
+ };
+ (college.value?major:college).focus();
+}
 function selectedUniversity() {
   return cloudCatalogue?.universities?.find((university) => university.id === currentUniversityId());
 }
@@ -462,9 +493,9 @@ function scopeCatalogue() {
 }
 function universitySelector(onSelected){return createUniversitySelector({catalogue:()=>cloudCatalogue,currentId:currentUniversityId,select:id=>chooseUniversity(id,onSelected),request:institutionRequestForm,modal,icon:ic,ready:()=>cloudStatus==='ready'});}
 async function chooseUniversity(universityId,onSelected){
-  if(googleSession){await api('university',{universityId});cloudMe={...cloudMe,university_id:universityId,major_id:null};}
+  if(googleSession){await api('university',{universityId});cloudMe={...cloudMe,university_id:universityId,major_id:cloudMe?.university_id===universityId?cloudMe?.major_id:null};}
   else{guestProfile=await ensureGuestSession();guestProfile=await api('guest.university',{universityId});}
-  if(studentProfile)studentProfile.major='';query='';activeMajor='الكل';savedOnly=false;collegeSelected=false;scopeCatalogue();setPage('home');document.body.classList.remove('modal-open');render();scheduleStudyPlans();refreshSavedUpdates();toast('تم اختيار '+selectedUniversity().name);if(onSelected)onSelected();
+  if(studentProfile)studentProfile.major=selectedStudentMajor()?.name||'';query='';activeMajor='الكل';savedOnly=false;collegeSelected=false;scopeCatalogue();setPage('home');document.body.classList.remove('modal-open');render();scheduleStudyPlans();refreshSavedUpdates();toast('تم اختيار '+selectedUniversity().name);if(onSelected)onSelected();
 }
 function renderUniversityLanding(){
   const selector=universitySelector();
@@ -719,15 +750,17 @@ function renderModal(title, body) {
 }
 function closeModal() {
   cancelHero();
-  if (document.querySelector(".mandatory-university")) return;
+  if (document.querySelector(".mandatory-university,.mandatory-major")) return;
   const b = document.querySelector(".modal-backdrop");
   b?.classList.add("closing");
   setTimeout(() => {
+    if(document.querySelector('.modal-backdrop')!==b)return;
     document.querySelector("#modal-root").innerHTML = "";
     document.body.classList.remove("modal-open");
     document.querySelectorAll("#app > aside,#app > .main-wrap").forEach((el) => el.inert = false);
     modalTrigger?.focus();
     if (page === "review") previousPage();
+    if(needsStudentMajor())openStudentMajor();
   }, 180);
 }
 function scoreColor(value) {
@@ -768,6 +801,7 @@ function reviewDialog(title,body){
   document.querySelector('.modal').classList.add('hero-arrival');
 }
 async function openReviewForm(id, pledged = false, studySelection = null, reviewedSubjects = [], request) {
+  if(needsStudentMajor()){openStudentMajor();return;}
   const addingDoctor=id==null;
   const sourcePage=page,sourceDialog=document.querySelector('.modal-backdrop');
   const stillCurrent=()=>reviewOpening===request&&page===sourcePage&&document.querySelector('.modal-backdrop')===sourceDialog&&!sourceDialog?.classList.contains('closing');
@@ -804,7 +838,7 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
   const reviewCollege = selectedDoctor?.college || activeCollege || colleges[0];
   reviewDialog(
     addingDoctor ? "إضافة دكتور" : "شارك تجربتك",
-    `<p class="muted">${addingDoctor?"أضف الدكتور إلى دليل جامعتك. التقييم اختياري، وتُراجع الإضافة قبل نشرها.":"تقييمك يساعد طالبًا آخر على اتخاذ القرار المناسب."}</p><form id="review-form"><div class="form-grid"><label>الكلية<select name="college" required>${
+    `<p class="muted">${addingDoctor?"أضف الدكتور إلى دليل جامعتك. التقييم اختياري، وتُراجع الإضافة قبل نشرها.":"تقييمك يساعد طالبًا آخر على اتخاذ القرار المناسب."}</p><form id="review-form"><div class="form-grid" ${addingDoctor?'':'hidden'}><label>الكلية<select name="college" required>${
       colleges.map((c) =>
         `<option ${c === reviewCollege ? "selected" : ""}>${
           escapeHtml(c)
@@ -854,12 +888,16 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
     college:selectedDoctor?undefined:studySelection?.plan?.college,
     major:!selectedDoctor&&studySelection?.plan ? majors.find(name=>[studySelection.plan.major,...(studySelection.plan.majorAliases||[])].includes(name)) : undefined,
     courseId:studySelection?.course?.id,
+    studentOnly:configured,
     reviewedSubjects,checkingSubjects:reviewSubjectsLoading,onEdit:()=>myReviews(selectedDoctor?.id||matchedDoctor()?.id),
   });
-  // Course choices are optional: a slow plan request must not delay the form or
-  // replace a student's draft when the choices arrive.
+  // Keep the page and doctor draft mounted while loading the student's plan;
+  // rating submission waits for its official course choices.
   if (!configured || cloudPlansReady) attachCourseChoices();
-  else (cloudPlansPending||refreshCloudStudyPlans()).then(()=>{if(formForCourseChoices.isConnected&&cloudPlansReady)attachCourseChoices();}).catch(()=>{});
+  else {
+    const ratingFields=formForCourseChoices.querySelector('#doctor-rating-fields'),pending=document.createElement('p');pending.className='review-plan-loading muted';pending.setAttribute('role','status');pending.textContent='جارٍ تحميل مواد تخصصك…';ratingFields.before(pending);ratingFields.disabled=true;
+    const load=()=>{pending.textContent='جارٍ تحميل مواد تخصصك…';(cloudPlansPending||refreshCloudStudyPlans()).then(()=>{if(formForCourseChoices.isConnected&&cloudPlansReady){attachCourseChoices();ratingFields.disabled=addingDoctor&&!formForCourseChoices.elements.includeReview.checked;pending.remove();}}).catch(()=>{if(!pending.isConnected)return;pending.textContent='تعذّر تحميل مواد تخصصك. ';const retry=document.createElement('button');retry.type='button';retry.className='text-button';retry.textContent='إعادة المحاولة';retry.onclick=load;pending.append(retry);});};load();
+  }
   const matchedDoctor=()=>doctors.find(d=>d.name===formForCourseChoices.elements.doctor.value.trim()&&d.major===formForCourseChoices.elements.major.value&&(d.college||'كلية الهندسة')===formForCourseChoices.elements.college.value);
   if(!selectedDoctor&&configured){
     let requestVersion=0,timer;
@@ -901,7 +939,7 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
   if(addingDoctor){
     const form=document.querySelector('#review-form'),choice=form.elements.includeReview,fields=form.querySelector('#doctor-rating-fields'),submitLabel=form.querySelector('.submit-review span');
     let accepted=false;
-    const sync=()=>{fields.hidden=!choice.checked;fields.disabled=!choice.checked;choice.setAttribute('aria-expanded',String(choice.checked));submitLabel.textContent=choice.checked?'إرسال الدكتور والتقييم':'إرسال طلب إضافة الدكتور';form.querySelector('.form-error').textContent='';};
+    const sync=()=>{fields.hidden=!choice.checked;fields.disabled=!choice.checked||configured&&!cloudPlansReady;choice.setAttribute('aria-expanded',String(choice.checked));submitLabel.textContent=choice.checked?'إرسال الدكتور والتقييم':'إرسال طلب إضافة الدكتور';form.querySelector('.form-error').textContent='';};
     choice.onchange=()=>{
       if(!choice.checked||accepted){sync();return;}
       const draft=document.querySelector('.modal-backdrop');
@@ -914,6 +952,7 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
     e.preventDefault();
     const f = new FormData(e.target),name = f.get("doctor").trim();
     const includeReview=!addingDoctor||f.get('includeReview')==='on';
+    if(includeReview&&configured&&(!cloudPlansReady||!studyPlanner.available().length||!f.get('courseId'))){e.target.querySelector('.form-error').textContent=!cloudPlansReady?'انتظر تحميل مواد تخصصك أو أعد المحاولة.':!studyPlanner.available().length?'خطة تخصصك لم تُضف بعد. اطلب إضافتها أو حدّث تخصصك من الإعدادات.':'اختر المادة من خطة تخصصك أولًا.';return;}
     if(!includeReview){
       if(name.split(/\s+/).length<3){e.target.querySelector('.form-error').textContent='يرجى كتابة اسم الدكتور الثلاثي.';return;}
       if(configured){
@@ -1348,7 +1387,7 @@ function openSettings() {
       configured
         ? (studentMajors().length ? studentMajors().map((m) =>
           `<option value="${m.id}" ${
-            cloudMe?.major_id === m.id ? "selected" : ""
+            selectedStudentMajor()?.id === m.id ? "selected" : ""
           }>${escapeHtml(m.name)} · ${
             escapeHtml(
               cloudCatalogue.colleges.find((c) => c.id === m.college_id)
@@ -1381,7 +1420,7 @@ function openSettings() {
       ic("check")
     } حفظ الإعدادات</button><p class="local-note">${
       configured
-        ? "يُحفظ اسمك وتخصصك ومستواك في حسابك؛ المظهر وحجم الخط محفوظان على جهازك. لا يظهر اسمك مع التقييمات."
+        ? (googleSession?"يُحفظ اسمك وتخصصك ومستواك في حسابك؛ المظهر وحجم الخط محفوظان على جهازك. لا يظهر اسمك مع التقييمات.":"يُحفظ تخصصك في جلسة الزائر؛ الاسم والمستوى والمظهر محفوظة على جهازك. لا يظهر اسمك مع التقييمات.")
         : "تُحفظ إعداداتك على هذا الجهاز. لا يظهر اسمك مع التقييمات."
     }</p>${
       signedOut
@@ -1457,12 +1496,14 @@ function openSettings() {
       const button = e.target.querySelector(".settings-save");
       button.disabled = true;
       try {
-        if (!(await getGoogleSession())) {
-          throw new Error("سجّل الدخول باستخدام Google أولًا.");
-        }
+        const majorId = f.get("major") ? Number(f.get("major")) : null;
+        if(!googleSession){
+          if(!majorId)throw new Error('اختر تخصصك أولًا.');
+          guestProfile={...guestProfile,...await api('guest.major',{majorId})};
+        }else{
+        if (!(await getGoogleSession())) throw new Error("سجّل الدخول باستخدام Google أولًا.");
         if (!cloudMe) await connectCloudAccount(false);
         if (!cloudMe) throw new Error("تعذّر التحقق من حسابك.");
-        const majorId = f.get("major") ? Number(f.get("major")) : null;
         await api("profile", { name, majorId, level: Number(f.get("level")) });
         cloudMe = {
           ...cloudMe,
@@ -1470,6 +1511,7 @@ function openSettings() {
           major_id: majorId,
           level: Number(f.get("level")),
         };
+        }
         studentProfile = {
           name,
           major: cloudCatalogue?.majors.find((m) => m.id === majorId)?.name ||
@@ -1653,7 +1695,7 @@ async function loadCloud() {
     cloudBooting = false;
     if (!document.querySelector('.modal-backdrop')) render();
     const id = Number(new URLSearchParams(location.search).get('doctor'));
-    if (!needsUniversity() && doctors.some(doctor => doctor.id === id)) detail(id);
+    if (!needsUniversity() && !needsStudentMajor() && doctors.some(doctor => doctor.id === id)) detail(id);
     void guestSession.then(() => refreshPresence());
     scheduleStudyPlans();
     refreshSavedUpdates();

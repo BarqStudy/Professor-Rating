@@ -54,3 +54,4 @@
 .known-course-choice:disabled { opacity: .45; cursor: not-allowed; }
 
 .review-subject-field { min-width: 0; }
+.study-review-selection[hidden],.study-review-selection label[hidden],.review-subject-field label[hidden],#review-form>.form-grid[hidden]{display:none!important}

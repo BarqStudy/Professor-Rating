@@ -11,7 +11,7 @@ export function createCourseAdvisor({api,modal,icon,plans,currentPlan,onDoctor,o
  function select(planId,courseId){selectedPlan=planId;selectedCourse=courseId;search='';}
  function page(){
   const p=plan();
-  if(!p)return `<section class="course-advisor"><h1>اختيار الدكتور المناسب</h1><p class="panel empty">لم تُضف خطة لتخصصات جامعتك بعد.</p></section>`;
+  if(!p)return `<section class="course-advisor"><h1>اختيار الدكتور المناسب</h1><p class="panel empty">خطة تخصصك لم تُضف بعد.</p></section>`;
   selectedPlan=p.id;
   if(!courses(p).some(c=>c.id===selectedCourse))selectedCourse='';
   return `<section class="course-advisor"><div class="study-intro"><span class="eyebrow">اختيارك يبدأ من المادة</span><h1>اختيار الدكتور المناسب</h1><p>اختر مادتك من خطة تخصصك، وقارن الدكاترة الذين درّسوها من جميع تخصصات وكليات جامعتك.</p></div><section class="panel advisor-controls"><label>خطة التخصص<select id="advisor-plan">${plans().map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.title)} · ${esc(x.fileLabel)}</option>`).join('')}</select></label><label class="study-search">${icon('search')}<input id="advisor-search" type="search" value="${esc(search)}" placeholder="ابحث باسم المادة أو رمزها…" aria-label="البحث عن مادة لاختيار الدكتور"></label><label>المادة<select id="advisor-course">${courseOptions(p)}</select></label><p class="muted">نُظهر دكاترة المادة من جميع تخصصات الجامعة، ونجمع صيغ الاسم مثل «استاتيكا» و«الاستاتيكا». الترتيب يعتمد على تقييمات المادة المنشورة، ويظهر عدد التجارب بجانب كل دكتور.</p></section><div id="advisor-results" aria-live="polite"></div></section>`;

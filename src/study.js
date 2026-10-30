@@ -5,9 +5,9 @@ import {storage,readJSON} from './storage.js';
 import {cleanProgress,courseStatus,progressSummary,selectedCourse,choiceCandidates} from './study-engine.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=n=>Number(n).toLocaleString('en-US');
-export function createStudyPlanner({api,modal,icon,universityName,ownerKey,majorName,doctorsForPlan,onReview,onAdvisor,onRequestDoctor,closeModal,toast}) {
+export function createStudyPlanner({api,modal,icon,universityName,ownerKey,majorName,studentPlans,doctorsForPlan,onReview,onAdvisor,onRequestDoctor,closeModal,toast}) {
  let filter='all',search='';
- const available=()=>getStudyPlans().filter(p=>!universityName()||p.university===universityName());
+ const available=()=>studentPlans?.()??getStudyPlans().filter(p=>!universityName()||p.university===universityName());
  const selectionKey=()=>`miyar-study-selected:${ownerKey()}:${universityName()||'all'}`;
  function current(){const list=available();return list.find(p=>p.id===storage.getItem(selectionKey()))||list.find(p=>[p.major,...(p.majorAliases||[])].includes(majorName()))||list[0];}
  const progressKey=plan=>`miyar-study-v1:${ownerKey()}:${plan.id}`;
@@ -15,7 +15,7 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
  const save=(plan,state)=>storage.setItem(progressKey(plan),JSON.stringify(cleanProgress(plan,state)));
  function page(){
   const plan=current();
-  return `<section class="study-page"><div class="study-intro"><span class="eyebrow">خطوة أقرب للتخرج</span><h1>خطتي إلى التخرج</h1><p>حدد ما اجتزته، واعرف ما تبقّى لك، واكتشف دكاترة كل مادة.</p></div>${!plan?`<section class="panel"><h2>خطط جامعتك لم تُضف بعد</h2><p>ابدأ بطلب إضافة خطة تخصصك عبر <a href="mailto:info@miyar.website">info@miyar.website</a>.</p></section>`:`<section class="panel study-setup"><label>اختر خطة تخصصك<select id="study-plan-select">${available().map(p=>`<option value="${p.id}" ${p.id===plan.id?'selected':''}>${esc(p.title)} · ${esc(p.fileLabel)}</option>`).join('')}</select></label><p class="study-local-note">${esc(plan.university)} · تقدمك محفوظ على هذا الجهاز${ownerKey().startsWith('member:')?' لهذا الحساب':''}. لا يُرسل إلى خدمة الذكاء الاصطناعي.</p></section><div id="study-progress-content">${content(plan)}</div>`}</section>`;
+  return `<section class="study-page"><div class="study-intro"><span class="eyebrow">خطوة أقرب للتخرج</span><h1>خطتي إلى التخرج</h1><p>حدد ما اجتزته، واعرف ما تبقّى لك، واكتشف دكاترة كل مادة.</p></div>${!plan?`<section class="panel"><h2>خطة تخصصك لم تُضف بعد</h2><p>ابدأ بطلب إضافة خطة تخصصك عبر <a href="mailto:info@miyar.website">info@miyar.website</a>.</p></section>`:`<section class="panel study-setup"><label>خطة تخصصك<select id="study-plan-select">${available().map(p=>`<option value="${p.id}" ${p.id===plan.id?'selected':''}>${esc(p.title)} · ${esc(p.fileLabel)}</option>`).join('')}</select></label><p class="study-local-note">${esc(plan.university)} · تقدمك محفوظ على هذا الجهاز${ownerKey().startsWith('member:')?' لهذا الحساب':''}. لا يُرسل إلى خدمة الذكاء الاصطناعي.</p></section><div id="study-progress-content">${content(plan)}</div>`}</section>`;
  }
  function courseCard(plan,item,state){
   const course=selectedCourse(plan,item,state),status=courseStatus(plan,item,state),done=status.key==='completed';
@@ -79,9 +79,13 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
   root.querySelector('#study-request-doctor').onclick=()=>onRequestDoctor?.(course,plan,root.querySelector('#study-doctor-search').value);
   paint();root.querySelector('#study-doctor-search').focus();
  }
- function attachReview(form,{university,college,major,courseId,reviewedSubjects=[],checkingSubjects=false,onEdit}={}){
+ function attachReview(form,{university,college,major,courseId,studentOnly=false,reviewedSubjects=[],checkingSubjects=false,onEdit}={}){
   const subject=form.querySelector('[name=subject]');
   if(!subject)return;
+  const reviewPlans=studentOnly?available():getStudyPlans().filter(p=>p.university===university);
+  if(studentOnly&&!reviewPlans.some(p=>p.courses.some(c=>c.id===courseId)))courseId=undefined;
+  // Historical shorthand must remain ambiguous across the entire university;
+  // limiting this lookup to one specialty could reserve the wrong old subject.
   const allCourses=getStudyPlans().filter(p=>p.university===university).flatMap(p=>p.courses.filter(c=>c.kind==='course'&&c.linkable).map(c=>({...c,planId:p.id,planTitle:p.title})));
   const catalogue=()=>allCourses;
   let blocked=reviewedCourseKeys(reviewedSubjects,catalogue()),loading=checkingSubjects;
@@ -91,7 +95,7 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
   const suggestions=document.createElement('div');suggestions.className='known-course-suggestions';suggestions.setAttribute('aria-live','polite');const subjectLabel=subject.closest('label'),subjectField=document.createElement('div');subjectField.className='review-subject-field';subjectLabel.replaceWith(subjectField);subjectField.append(subjectLabel,suggestions);
   const validate=()=>{
    const select=section.querySelector('#review-study-course');
-   const matches=select?.value?[]:knownCourseMatches(subject.value,catalogue());
+   const matches=studentOnly||select?.value?[]:knownCourseMatches(subject.value,catalogue());
    const previous=blocked.has(courseNameKey(subject.value));
    subject.setCustomValidity(previous?'سبق أن قيّمت هذا الدكتور في المادة نفسها. اختر مادة أخرى أو اطلب تعديل تقييمك.':matches.length?'هذه المادة موجودة في القائمة. اختر اسم المقرر ورمزه من القائمة بدل كتابته يدويًا.':'');
    suggestions.replaceChildren();suggestions.hidden=!matches.length;
@@ -120,21 +124,22 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
         option.disabled=disabled;option.classList.toggle('reviewed-course',disabled);
         option.textContent=option.dataset.label+(disabled?' — سبق تقييمها':'');
       }
-      if(select.selectedOptions[0]?.disabled){select.value='';subject.value='';subject.readOnly=false;}
+      if(select.selectedOptions[0]?.disabled){select.value='';subject.value='';subject.readOnly=studentOnly;}
     }
     validate();
   };
   function update(preselect){
-   const choices=getStudyPlans().filter(p=>p.university===university);
-   section.hidden=!choices.length;
-   section.innerHTML=choices.length?`<label>خطة المادة<select id="review-study-plan">${choices.map(p=>`<option value="${p.id}" ${preselect?.startsWith(p.id+'/')||(!preselect&&p.id===current()?.id)?'selected':''}>${esc(p.title)} · ${esc(p.fileLabel)}</option>`).join('')}</select></label><label>المادة من الخطة<select name="courseId" id="review-study-course"><option value="">مادة أخرى أو غير محددة في الخطة</option></select></label><small class="muted">اختيار مادة من الخطة يربط هذا الدكتور بها بعد اعتماد التقييم.</small>`:'';
-   subject.readOnly=false;subject.placeholder=choices.length?'اسم مادة غير موجودة في القائمة':'اسم المادة';
-   if(!choices.length){apply();return;}
+   const choices=reviewPlans;
+   section.hidden=!choices.length&&!studentOnly;
+   section.innerHTML=choices.length?`<label ${studentOnly?'hidden':''}>خطة المادة<select id="review-study-plan">${choices.map(p=>`<option value="${p.id}" ${preselect?.startsWith(p.id+'/')||(!preselect&&p.id===current()?.id)?'selected':''}>${esc(p.title)} · ${esc(p.fileLabel)}</option>`).join('')}</select></label><label>المادة من خطتك<select name="courseId" id="review-study-course" ${studentOnly?'required':''}><option value="">${studentOnly?'اختر المادة من خطتك':'مادة أخرى أو غير محددة في الخطة'}</option></select></label><small class="muted">${studentOnly?esc(current()?.title||'')+' · تظهر مواد تخصصك المحفوظ.':'اختيار مادة من الخطة يربط هذا الدكتور بها بعد اعتماد التقييم.'}</small>`:studentOnly?'<p role="status">خطة تخصصك لم تُضف بعد. يمكنك طلب إضافتها عبر <a href="mailto:info@miyar.website">info@miyar.website</a>، أو تغيير تخصصك من الإعدادات.</p>':'';
+   subjectLabel.hidden=studentOnly;
+   subject.readOnly=studentOnly;subject.placeholder=choices.length?'اسم مادة غير موجودة في القائمة':'اسم المادة';
+   if(!choices.length){apply();if(studentOnly)subject.setCustomValidity('خطة تخصصك لم تُضف بعد.');return;}
    const fill=()=>{
     const plan=choices.find(p=>p.id===section.querySelector('#review-study-plan').value);
-    section.querySelector('#review-study-course').innerHTML='<option value="" data-label="مادة أخرى أو غير محددة في الخطة">مادة أخرى أو غير محددة في الخطة</option>'+plan.courses.filter(c=>c.kind==='course'&&c.linkable).map(c=>`<option value="${c.id}" data-subject="${esc(c.name)}" data-label="${esc(c.code+' · '+c.name)}" ${preselect===c.id?'selected':''}>${esc(c.code+' · '+c.name)}</option>`).join('');
+    section.querySelector('#review-study-course').innerHTML=`<option value="" data-label="${studentOnly?'اختر المادة من خطتك':'مادة أخرى أو غير محددة في الخطة'}">${studentOnly?'اختر المادة من خطتك':'مادة أخرى أو غير محددة في الخطة'}</option>`+plan.courses.filter(c=>c.kind==='course'&&c.linkable).map(c=>`<option value="${c.id}" data-subject="${esc(c.name)}" data-label="${esc(c.code+' · '+c.name)}" ${preselect===c.id?'selected':''}>${esc(c.code+' · '+c.name)}</option>`).join('');
     const select=section.querySelector('#review-study-course');
-    const sync=()=>{const c=plan.courses.find(c=>c.id===select.value);if(c&&blocked.has(courseNameKey(c.name))){select.value='';subject.value='';subject.readOnly=false;}else{subject.readOnly=!!c;if(c)subject.value=c.name;}validate();};select.onchange=sync;apply();sync();
+    const sync=()=>{const c=plan.courses.find(c=>c.id===select.value);if(c&&blocked.has(courseNameKey(c.name))){select.value='';subject.value='';subject.readOnly=studentOnly;}else{subject.readOnly=studentOnly||!!c;if(c)subject.value=c.name;else if(studentOnly)subject.value='';}validate();};select.onchange=sync;apply();sync();
    };
    section.querySelector('#review-study-plan').onchange=()=>{preselect=null;subject.value='';fill();};fill();
   }

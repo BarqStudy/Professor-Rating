@@ -15,14 +15,14 @@ async function networkHash(request,pepper){
 export async function verifiedGuest(request,db,allowBanned=false){
  const token=request.headers.get('x-miyar-guest')||'';
  if(!/^[a-f0-9]{64}$/.test(token))throw new ApiError(401,'تعذّر التحقق من جلسة الزائر. أعد المحاولة.');
- const rows=await db(`miyar_guest_sessions?token_hash=eq.${await guestTokenHash(token)}&select=id,university_id,status`);
+ const rows=await db(`miyar_guest_sessions?token_hash=eq.${await guestTokenHash(token)}&select=id,university_id,major_id,status`);
  const guest=rows[0];if(!guest)throw new ApiError(401,'انتهت جلسة الزائر. أعد المحاولة.');
  if(guest.status==='banned'&&!allowBanned)throw new ApiError(403,'جلسة الزائر محظورة من المنصة.');
  return guest;
 }
 export async function handleGuest(request,body,db,pepper){
  const action=body.action;
- if(!['guest.start','guest.me','guest.university','guest.presence','guest.submit','guest.institution.request','guest.doctor.request','guest.review.eligibility','guest.mine','guest.edit','guest.review.likes','guest.review.like'].includes(action))return null;
+ if(!['guest.start','guest.me','guest.university','guest.major','guest.presence','guest.submit','guest.institution.request','guest.doctor.request','guest.review.eligibility','guest.mine','guest.edit','guest.review.likes','guest.review.like'].includes(action))return null;
  if(action==='guest.start'){
   const token=hex(crypto.getRandomValues(new Uint8Array(32)));
   const profile=await rpc(db,'miyar_open_guest',{p_token_hash:await guestTokenHash(token),p_network_hash:await networkHash(request,pepper)});
@@ -40,8 +40,9 @@ export async function handleGuest(request,body,db,pepper){
  if(action==='guest.university'){
   const university=integer(body.universityId,1,Number.MAX_SAFE_INTEGER,'الجامعة');
   await rpc(db,'miyar_choose_university',{p_account:null,p_guest:guest.id,p_university:university});
-  return {data:{...guest,university_id:university}};
+  return {data:{...guest,university_id:university,major_id:guest.university_id===university?guest.major_id:null}};
  }
+ if(action==='guest.major')return {data:{...guest,...await rpc(db,'miyar_choose_major',{p_account:null,p_guest:guest.id,p_major:integer(body.majorId,1,Number.MAX_SAFE_INTEGER,'التخصص')})}};
  if(guest.status!=='active')throw new ApiError(403,'جلسة الزائر مقيّدة عن إضافة التقييمات.');
  if(action==='guest.review.eligibility')return {data:await rpc(db,'miyar_review_eligibility',{p_account:null,p_guest:guest.id,p_doctor:integer(body.doctor,1,Number.MAX_SAFE_INTEGER,'الدكتور'),p_subject:body.subject?text(body.subject,2,120,'المادة'):null})};
  if(action==='guest.institution.request')return {status:201,data:await requestInstitution(body,null,guest.id,db)};

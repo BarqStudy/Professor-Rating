@@ -24,7 +24,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(request.url().includes('/auth/v1/logout'))return route.fulfill({json:{}});
    if(body.action==='catalogue'){reached.catalogue.resolve();await gates.catalogue.promise;result={universities:[{id:3,name:'جامعة نجران',enabled:true}],colleges:[{id:1,name:'كلية الهندسة',university_id:3}],majors:[{id:1,name:'الهندسة المدنية',college_id:1}],doctors:[{id:17,name:'أحمد محمد العتيبي',major_id:1,major:'الهندسة المدنية',college:'كلية الهندسة',university_id:3,count:1,score:90,scores:[90,90,90],subjects:['استاتيكا']}],stats:{doctors:1,reviews:1}};}
    if(body.action==='me'){reached.me.resolve();await gates.me.promise;if(ownerGates.has(owner))await ownerGates.get(owner).promise;result={id:owner,name:owner===member?'أحمد طالب':owner===second?'خالد طالب':'زياد طالب',status:'active',university_id:3,major_id:1,level:2,isAdmin:false};}
-   if(['guest.start','guest.me'].includes(body.action)){reached.guest.resolve();await gates.guest.promise;result={id:'55555555-5555-4555-8555-555555555555',status:'active',university_id:3,...(body.action==='guest.start'?{token:'ab'.repeat(32)}:{})};}
+   if(['guest.start','guest.me'].includes(body.action)){reached.guest.resolve();await gates.guest.promise;result={id:'55555555-5555-4555-8555-555555555555',status:'active',university_id:3,major_id:1,...(body.action==='guest.start'?{token:'ab'.repeat(32)}:{})};}
    if(['reviews','course.doctors','course.reviews'].includes(body.action)){if(body.action==='reviews'&&detailGate){const gate=detailGate;detailGate=null;await gate.promise;}result=[];}if(body.action==='doctor.summary')result={insufficient:true,totalPublished:0,themes:[]};if(body.action==='doctor.grades')result={available:false,minimum:10,subjects:[]};if(body.action==='review.eligibility')result={eligible:true};
    if(body.action==='guest.presence')result={online:1};if(body.action==='study.plans'){await plansGate.promise;result=planRows;}if(body.action==='ai.status')result={enabled:false};if(['request.updates','notifications','requests'].includes(body.action))result=[];
    await route.fulfill({json:result});
@@ -49,10 +49,10 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  const beforeDraft=await page.evaluate(()=>window.applicationPaints.length);
  await page.locator('#new-review').click();await page.locator('#review-form').waitFor();
  await page.locator('#review-form [name=doctor]').fill('محمد خالد أحمد');await page.locator('[name=includeReview]').click();await page.locator('#accept-review-pledge').click();
- await page.locator('#review-form [name=subject]').fill('مادة كتبتها بنفسي');
- test.releasePlans();await page.locator('#review-study-plan').waitFor();
+ assert.equal(await page.locator('#doctor-rating-fields').evaluate(node=>node.disabled),true);
+ test.releasePlans();await page.locator('#review-study-course').waitFor();
  assert.equal(await page.locator('#review-form [name=doctor]').inputValue(),'محمد خالد أحمد');
- assert.equal(await page.locator('#review-form [name=subject]').inputValue(),'مادة كتبتها بنفسي');
+ assert.equal(await page.locator('#review-study-plan').isVisible(),false);assert.equal(await page.locator('#review-form [name=subject]').isVisible(),false);
  assert.equal(await page.evaluate(()=>window.applicationPaints.length),beforeDraft,'plan arrival cannot rerender home or discard a draft');
  await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});
  for(const width of [320,360,390,430,820]){
@@ -68,7 +68,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  // Navigating to a plan joins the pending request and never flashes stale bundled data.
  const waiting=await setup();await waiting.page.locator('.welcome').waitFor();await waiting.page.locator('aside [data-page=plan]').click();
  await waiting.page.locator('.study-loading').waitFor();assert.equal(await waiting.page.locator('#study-plan-select').count(),0);
- waiting.releasePlans([{id:'najran-ce-2025',deleted:true,revision:2}]);await waiting.page.locator('#study-plan-select').waitFor();
+ waiting.releasePlans([{id:'najran-ce-2025',deleted:true,revision:2}]);await waiting.page.locator('.study-page h2').filter({hasText:'خطة تخصصك لم تُضف بعد'}).waitFor();
  assert.equal(await waiting.page.locator('#study-plan-select option[value="najran-ce-2025"]').count(),0);
  assert.equal(waiting.calls.filter(call=>call.action==='study.plans').length,1);
  await waiting.context.close();assert.deepEqual(errors,[]);

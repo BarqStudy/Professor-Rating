@@ -194,6 +194,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         });
         return respond({ ok: true });
       }
+      if(action==='major')return respond(await db('rpc/miyar_choose_major',{method:'POST',body:{p_account:identity.id,p_guest:null,p_major:integer(body.majorId,1,Number.MAX_SAFE_INTEGER,'التخصص')}}));
       const proposal = await catalogueProposal(action, body, user, identity.id, db);
       if (proposal) return respond(proposal.data, proposal.status);
       const likes=await reviewLikes(action,body,db,identity.id);
