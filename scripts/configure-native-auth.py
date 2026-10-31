@@ -33,5 +33,11 @@ if __name__ == '__main__':
             message=str(details.get('message') or details.get('error') or '')[:300].replace('\n',' ').replace('\r',' ')
         except Exception:
             message=''
+        if error.code==403 and 'auth_config_' in message:
+            print('::warning title=Native OAuth redirect::The deployment token cannot configure Auth redirects. Add website.miyar.app://auth/callback in Supabase Auth URL Configuration before testing native sign-in.')
+            if os.environ.get('GITHUB_STEP_SUMMARY'):
+                with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as summary:
+                    summary.write('\nNative sign-in requires a manual Redirect URL: `website.miyar.app://auth/callback`. Existing deployment credentials lack Auth configuration permissions. Backend deployment completed; native OAuth configuration is not verified.\n')
+            raise SystemExit(0)
         print(f'::error title=Native OAuth redirect::Auth configuration request failed: HTTP {error.code}. {message}')
         raise SystemExit(1)

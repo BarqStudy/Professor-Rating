@@ -34,7 +34,7 @@ npm run android:bundle
 
 ## الدخول — قبل تجربة حسابات حقيقية
 
-نشر الخادم يضيف `website.miyar.app://auth/callback` إلى Supabase Auth Redirect URLs **مع الاحتفاظ بالروابط الحالية**. يبقى callback مزود Google/Apple إلى Supabase هو عنوان `/auth/v1/callback` الذي تعرضه لوحة Supabase؛ لا تستبدله بعنوان التطبيق في إعداد مزوّد الويب. CORS يسمح فقط بنطاقات الموقع و`https://localhost` و`capacitor://localhost` للنسخة الأصلية.
+يحاول نشر الخادم إضافة `website.miyar.app://auth/callback` إلى Supabase Auth Redirect URLs **مع الاحتفاظ بالروابط الحالية**. مفتاح النشر المتاح حاليًا لا يملك `auth_config_read`، لذلك يلزم المالك إضافة هذا العنوان يدويًا من [Supabase Auth → URL Configuration](https://supabase.com/dashboard/project/bbnsorjxgehvoddluvyo/auth/url-configuration) ضمن Redirect URLs وحفظه. ظهور نجاح نشر الخادم لا يعني اكتمال هذا الإعداد؛ يظهر التنبيه في ملخص التشغيل إلى أن تتوفر صلاحية فحصه. يبقى callback مزود Google/Apple إلى Supabase هو عنوان `/auth/v1/callback` الذي تعرضه لوحة Supabase؛ لا تستبدله بعنوان التطبيق في إعداد مزوّد الويب. CORS يسمح فقط بنطاقات الموقع و`https://localhost` و`capacitor://localhost` للنسخة الأصلية.
 
 Google يفتح في متصفح النظام وليس داخل WebView. عند العودة يتبادل التطبيق code مرة واحدة بواسطة PKCE؛ لا يتقبل access tokens في رابط الرجوع. عند إلغاء الدخول يمكن إعادة المحاولة من الزر نفسه.
 
