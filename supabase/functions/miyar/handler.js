@@ -1,3 +1,4 @@
+import {doctorScopeRemoval} from './doctor-administration.js';
 import {reviewLikes} from './review-likes.js';
 import {createInstitutionMailer,institutionMailStatus,institutionInbox} from './institution-mail.js';
 import {uploadPlatformFile,adminFiles} from './files.js';
@@ -117,7 +118,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if(action==='study.plans')return respond(await db('rpc/miyar_uploaded_study_plans',{method:'POST',body:{}}));
       if (action === "catalogue") {
         return respond(
-          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{reviewFlexibility:true}},
+          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{reviewFlexibility:true,doctorScopeRemoval:true}},
         );
       }
       if (action === "doctor.summary") return respond(await publicSummary(body, db));
@@ -238,6 +239,10 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if (action !== "admin") throw new ApiError(400, "العملية غير معروفة.");
       if (!isAdmin) throw new ApiError(403, "هذه العملية متاحة للأدمن فقط.");
       const operation = body.operation;
+      if(['doctor.scope.preview','doctor.scope.remove'].includes(operation)){
+        if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
+        return respond(await doctorScopeRemoval(operation,body,identity.id,db));
+      }
       if(['major.preview-delete','major.delete','major.add'].includes(operation)){
         if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
         return respond(await majorAdministration(operation,body,identity.id,db));
@@ -348,10 +353,8 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         if (name.split(/\s+/).length < 3) {
           throw new ApiError(400, "اكتب الاسم الثلاثي.");
         }
-        await db("miyar_doctors", {
-          method: "POST",
-          body: { name, major_id: validId(body.majorId), status: "approved" },
-        });
+        if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
+        return respond(await db('rpc/miyar_admin_add_doctor',{method:'POST',body:{p_major:validId(body.majorId),p_name:name}}));
       } else if (operation === "doctor.delete") {
         await db(`miyar_doctors?id=eq.${validId(body.id)}`, {
           method: "PATCH",

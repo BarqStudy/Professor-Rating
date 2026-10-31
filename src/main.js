@@ -149,15 +149,16 @@ const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>config
   closeModal,toast,
 });
 const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onReviewLikes:root=>reviewLikes.mount(root),onRequestDoctor:(course,plan)=>requestDoctorForm({course,plan}),onDoctor:(id)=>cloudDoctorDetail(id),scopeKey:()=>[googleSession?.user.id||guestProfile?.id||'',currentUniversityId(),selectedStudentMajor()?.id].join(':'),onCompare:(plan,course)=>{courseAdvisor.select(plan.id,course.id);setPage('advisor');render();window.scrollTo({top:0});}});
-let fileManager, studyImport, studyEditor, publishedReviews, reviewLinker, adminWorkspace, adminToolsPending = null, adminToolsError = '';
+let fileManager, studyImport, studyEditor, publishedReviews, reviewLinker, doctorScopeRemoval, adminWorkspace, adminToolsPending = null, adminToolsError = '';
 function ensureAdminTools() {
   if (studyEditor || adminToolsPending) return adminToolsPending;
   adminToolsError = '';
   adminToolsPending = import('./admin-tools.js').then(({createAdminTools}) => {
-    ({fileManager,studyImport,studyEditor,publishedReviews,reviewLinker,adminWorkspace} = createAdminTools({
-      api,uploadPlatformFile,extractStudyPlan,publishStudyPlan,updateStudyPlan,icon:ic,modal,reviewFlexibility:reviewUpdatesReady,
+    ({fileManager,studyImport,studyEditor,publishedReviews,reviewLinker,doctorScopeRemoval,adminWorkspace} = createAdminTools({
+      api,uploadPlatformFile,extractStudyPlan,publishStudyPlan,updateStudyPlan,icon:ic,modal,reviewFlexibility:reviewUpdatesReady,doctorScopeEnabled:()=>cloudCatalogue?.features?.doctorScopeRemoval===true,
       catalogue:()=>cloudCatalogue,ownerKey:()=>googleSession?.user.id||'',
       onPlansChanged:async(message)=>{await refreshCloudCatalogue();render();toast(message);},
+      onDoctorScopeRemoved:async(count)=>{adminChosen.clear();await Promise.all([refreshCloudCatalogue(),loadCloudQueue(false)]);document.body.classList.remove('modal-open');render();toast(`حُذف ${Number(count).toLocaleString('en-US')} دكتور من الدليل.`);},
       onReviewLinked:async()=>{await Promise.all([refreshCloudCatalogue(),loadCloudQueue(false),publishedReviews.reload()]);document.body.classList.remove('modal-open');render();toast('رُبط التقييم بالمادة المحددة.');},
       onReviewRemoved:async()=>{await Promise.all([refreshCloudCatalogue(),loadCloudQueue(false)]);render();toast('حُذف التقييم المنشور.');},
     }));
@@ -1896,7 +1897,7 @@ function cloudAdmin() {
         )
       }</small></span><button class="danger" data-cloud-operation="major.delete" data-id="${m.id}">حذف</button></div>`
     ).join("")
-  }</div></section><section class="panel" id="admin-doctors"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}<form id="cloud-add-doctor"><label>الاسم الثلاثي والمسمى<input name="name" required minlength="8" maxlength="100" placeholder="مثال: د. أحمد محمد العتيبي أو م. خالد عبدالله الحربي"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${adminDirectoryControls()}<div class="admin-record-list admin-doctor-list" role="region" aria-label="قائمة الدكاترة" tabindex="0">${adminDoctorRows()}</div></section><section class="panel" id="admin-users"><h2>إدارة المستخدمين</h2><form id="cloud-user-status"><label>معرّف حساب الطالب<input name="userId" required placeholder="UUID الظاهر مع الطلب"><select name="identityType" aria-label="نوع الحساب"><option value="google">حساب Google</option><option value="guest">جلسة زائر</option></select><select name="status"><option value="banned">حظر</option><option value="restricted">تقييد الإرسال</option><option value="active">فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق</button></form></section><section class="panel moderation-panel" id="admin-pending-doctors"><h2>طلبات إضافة دكتور</h2>${
+  }</div></section><section class="panel" id="admin-doctors"><h2>إدارة الدكاترة</h2>${bulkDoctorForm()}${doctorScopeRemoval.panel()}<form id="cloud-add-doctor"><label>الاسم الثلاثي والمسمى<input name="name" required minlength="8" maxlength="100" placeholder="مثال: د. أحمد محمد العتيبي أو م. خالد عبدالله الحربي"><select name="majorId" required>${majorOptions}</select></label><button class="primary">إضافة</button></form>${adminDirectoryControls()}<div class="admin-record-list admin-doctor-list" role="region" aria-label="قائمة الدكاترة" tabindex="0">${adminDoctorRows()}</div></section><section class="panel" id="admin-users"><h2>إدارة المستخدمين</h2><form id="cloud-user-status"><label>معرّف حساب الطالب<input name="userId" required placeholder="UUID الظاهر مع الطلب"><select name="identityType" aria-label="نوع الحساب"><option value="google">حساب Google</option><option value="guest">جلسة زائر</option></select><select name="status"><option value="banned">حظر</option><option value="restricted">تقييد الإرسال</option><option value="active">فك الحظر أو التقييد</option></select></label><button class="primary">تطبيق</button></form></section><section class="panel moderation-panel" id="admin-pending-doctors"><h2>طلبات إضافة دكتور</h2>${
     !queue
       ? '<p class="muted">جارٍ التحميل…</p>'
       : queue.error
@@ -2007,6 +2008,7 @@ function bindCloudAdmin() {
     });
   }
   bindAdminDirectory();
+  doctorScopeRemoval.bind();
   bindAmbassadorAdmin();
   document.querySelector('#check-ai-connection')?.addEventListener('click', async (event) => {
     const button = event.currentTarget, result = document.querySelector('#ai-diagnostics-result');

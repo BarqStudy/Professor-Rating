@@ -83,3 +83,7 @@
  .admin-workspace .admin-row>span{min-width:0;overflow-wrap:anywhere}
  .admin-overview-summary{gap:8px 18px;font-size:calc(11px * var(--font-scale,1))}
 }
+
+.doctor-scope-removal{margin-block:22px}.doctor-scope-removal [hidden]{display:none!important}.doctor-scope-consent{display:flex!important;align-items:flex-start;gap:12px;line-height:1.9}.doctor-scope-consent input{width:20px;height:20px;flex:none;accent-color:var(--green)}
+
+.modal .doctor-scope-submit{background:#b42336;color:#fff;width:100%;white-space:normal}
