@@ -1,5 +1,6 @@
 import {isNative,nativePlatform,setupNative,shareNativeLink,shareNativeCard,publicDoctorUrl} from './native.js';
 import {reviewDate} from './review-date.js';
+import {reviewMetrics} from './review-metrics.js';
 import {reviewLikeButton,createReviewLikes} from './review-likes.js';
 import './review-likes.css';
 import {reviewCarousel,bindReviewCarousel} from './review-carousel.js';
@@ -41,6 +42,7 @@ import "./appearance.css";
 import "./performance.css";
 import "./interface-polish.css";
 import "./course-finder.css";
+import "./review-presentation.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
@@ -108,6 +110,7 @@ const icons = {
   code: '<path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18"/>',
   shield:
     '<path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z"/><path d="m8 12 3 3 5-6"/>',
+  compare: '<path d="M3 7h15m-4-4 4 4-4 4M21 17H6m4-4-4 4 4 4"/>',
   bookmark: '<path d="M6 3h12v18l-6-4-6 4Z"/>',
   share:
     '<circle cx="18" cy="5" r="3"/><circle cx="5" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8 11 7-4M8 13l7 4"/>',
@@ -590,11 +593,7 @@ function cards(list) {
     ? filtered.map((d) =>
       `<article class="doctor-card"><div class="card-top"><span class="avatar ${d.color}" aria-hidden="true">${
         ic("profile")
-      }</span><button class="save-button ${
-        saved.includes(d.id) ? "is-saved" : ""
-      }" data-save="${d.id}" aria-label="حفظ الدكتور">${
-        ic("bookmark")
-      }</button></div><div class="doctor-name"><button data-doctor="${d.id}">${
+      }</span><div class="doctor-card-tools"><button type="button" class="icon-btn doctor-compare-icon ${compareIds.includes(d.id)?'is-compared':''}" data-compare="${d.id}" data-compare-icon="true" aria-pressed="${compareIds.includes(d.id)}" aria-label="${compareIds.includes(d.id)?'إزالة من المقارنة':'قارن الدكتور'}: ${escapeHtml(d.name)}" title="قارن الدكتور">${ic('compare')}</button><button type="button" class="save-button ${saved.includes(d.id)?'is-saved':''}" data-save="${d.id}" aria-pressed="${saved.includes(d.id)}" aria-label="${saved.includes(d.id)?'إلغاء حفظ':'حفظ الدكتور'}: ${escapeHtml(d.name)}">${ic('bookmark')}</button></div></div><div class="doctor-name"><button data-doctor="${d.id}">${
         escapeHtml(d.name)
       }</button>${
         d.verified
@@ -618,9 +617,7 @@ function cards(list) {
         d.count ? labelScore(d.score) : "بدون تقييم"
       }">${
         d.count ? labelScore(d.score) : "بدون تقييم"
-      }</span></div><button type="button" class="primary doctor-rate" data-rate-doctor="${d.id}">${ic("star")} قيّم الدكتور</button><button class="compare-toggle" data-compare="${d.id}" aria-pressed="${compareIds.includes(d.id)}">${ic("users")} ${compareIds.includes(d.id) ? "مضاف للمقارنة" : "قارن الدكتور"}</button><button class="card-detail" data-doctor="${d.id}">استعرض التقييمات ${
-        ic("arrow")
-      }</button></article>`
+      }</span></div><div class="doctor-card-actions"><button type="button" class="primary doctor-reviews-button" data-doctor="${d.id}">${ic('book')} تقييمات الدكتور</button><button type="button" class="secondary doctor-rate" data-rate-doctor="${d.id}">${ic('plus')} أضف تقييم</button></div></article>`
     ).join("")
     : `<div class="empty">${page === 'saved' ? 'لم تحفظ أي دكتور بعد. اضغط علامة الحفظ على بطاقة الدكتور ليظهر هنا.' : selectedUniversity() && !colleges.length ? 'لم تُضف كليات جامعتك بعد. يمكنك تعبئة طلب الإضافة أو تغيير الجامعة من الزر أعلى الموقع.' : page === 'home' && !query ? 'ستظهر هنا أعلى تقييمات الدكاترة بعد نشر أول تقييمات الطلاب.' : 'لم نجد نتائج مطابقة. جرّب اسمًا آخر.'}${page!=='saved'&&query?'<section class="missing-course-doctor"><h3>ألم تجد دكتور المادة؟</h3><button type="button" class="primary" data-request-doctor>أضف الدكتور الآن</button></section>':''}</div>`;
 }
@@ -1108,9 +1105,7 @@ function toggleSave(id) {
   saved = saved.includes(id) ? saved.filter((x) => x !== id) : [...saved, id];
   persist();
   refreshSavedUpdates();
-  document.querySelectorAll(`[data-save="${id}"]`).forEach((b) =>
-    b.classList.toggle("is-saved", saved.includes(id))
-  );
+  document.querySelectorAll(`[data-save="${id}"]`).forEach(b=>{b.classList.toggle('is-saved',saved.includes(id));b.setAttribute('aria-pressed',String(saved.includes(id)));b.setAttribute('aria-label',`${saved.includes(id)?'إلغاء حفظ':'حفظ الدكتور'}: ${doctors.find(d=>d.id===id)?.name||''}`);});
   if (page === "saved") {
     document.querySelector("#doctor-grid").innerHTML = cards();
     bindCards();
@@ -1246,18 +1241,7 @@ function bind() {
 function bindCards() {
   document.querySelectorAll("[data-rate-doctor]").forEach(button=>button.onclick=()=>reviewForm(Number(button.dataset.rateDoctor)));
   document.querySelectorAll("[data-request-doctor]").forEach(button=>button.onclick=()=>requestDoctorForm({name:query}));
-  document.querySelectorAll("[data-compare]").forEach((button) => button.onclick = () => {
-    const id = Number(button.dataset.compare);
-    if (compareIds.includes(id)) compareIds = compareIds.filter((value) => value !== id);
-    else if (compareIds.length < 3) compareIds.push(id);
-    else return toast("يمكنك مقارنة ثلاثة دكاترة كحد أقصى.");
-    document.querySelectorAll("[data-compare]").forEach((item) => {
-      const selected = compareIds.includes(Number(item.dataset.compare));
-      item.setAttribute("aria-pressed", String(selected));
-      item.innerHTML = ic("users") + (selected ? " مضاف للمقارنة" : " قارن الدكتور");
-    });
-    updateComparison();
-  });
+  document.querySelectorAll('[data-compare]').forEach(button=>button.onclick=()=>toggleComparison(Number(button.dataset.compare)));
   updateComparison();
   document.querySelectorAll("[data-doctor]").forEach((b) =>
     b.onclick = () => detail(+b.dataset.doctor)
@@ -1836,8 +1820,9 @@ async function cloudDoctorDetail(id, subject = "") {
   try {
     const [rows, summary] = await Promise.all([api("reviews", {doctor:id, ...(subject ? {subject} : {})}), api("doctor.summary", {doctor:id, ...(subject ? {subject} : {})}).catch(() => null)]);
     if (!loading.isConnected) return;
-    const reviewSection=rows.length?reviewCarousel(rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}${publicReviewGrade(row)}<small>طالب مجهول · تاريخ التقييم: ${reviewDate(row.date)}</small><div class="review-tools">${reviewLikeButton(row)}<button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`),'published-reviews'):'<div id="published-reviews"><p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p></div>';
-    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?verifiedBadge:""} ${officeBadge(doctor)}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><div class="detail-scores">${["الشرح","التعامل","المساعدة بالدرجات"].map((label,index) => `<div><span>${label}</span><div><i style="width:${Number(doctor.scores?.[index] || 0)}%"></i></div><b>${doctor.count ? Number(doctor.scores?.[index] || 0) : "—"}</b></div>`).join("")}</div>${summaryPanel(summary)}<label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label>${reviewSection}<div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تجربتك</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
+    const reviewSection=rows.length?reviewCarousel(rows.map((row) => `<article class="review-comment"><b>${escapeHtml(row.subject)}</b>${reviewTagLabels(row.tags)}${row.comment?`<p>${escapeHtml(row.comment)}</p>`:'<p class="muted">تقييم بالمؤشرات دون تعليق.</p>'}${reviewMetrics(row.scores)}${publicReviewGrade(row)}<small>طالب مجهول · تاريخ التقييم: ${reviewDate(row.date)}</small><div class="review-tools">${reviewLikeButton(row)}<button class="text-button" data-report-review="${row.id}">الإبلاغ عن التقييم</button></div></article>`),'published-reviews'):'<div id="published-reviews"><p class="empty">لا توجد تقييمات منشورة لهذه المادة بعد.</p></div>';
+    modal("تقييمات الدكتور", `<div class="detail-person"><span class="avatar ${doctor.color}" aria-hidden="true">${ic("profile")}</span><div><h2>${escapeHtml(doctor.name)} ${doctor.verified?verifiedBadge:""} ${officeBadge(doctor)}</h2><p>${escapeHtml(doctor.major)}</p></div><strong>${doctor.count ? doctor.score : "—"}<small>/100</small></strong></div><p class="muted">المتوسط العام لجميع المواد · ${doctor.count} تقييمًا</p><section class="doctor-overall-metrics" aria-label="متوسط معايير الدكتور لجميع التقييمات المنشورة">${reviewMetrics(doctor.scores,{empty:!doctor.count})}</section><button type="button" class="secondary detail-compare-button" id="detail-compare" data-compare="${id}">${ic('compare')} قارن الدكتور</button><label class="subject-filter">فلترة التقييمات حسب المادة<select id="review-subject-filter"><option value="">جميع المواد</option>${[...new Set([...(doctor.subjects||[]), ...rows.map((row) => row.subject)])].map((name) => `<option value="${escapeHtml(name)}" ${subject===name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label>${reviewSection}${summaryPanel(summary)}<div class="detail-actions"><button class="primary" id="detail-rate">${ic("plus")} أضف تقييم</button><button class="secondary" id="share-doctor">${ic("share")} مشاركة الرابط</button><button class="secondary" id="share-doctor-card">${ic("share")} مشاركة بطاقة الدكتور</button><button class="secondary" id="save-detail">${ic("bookmark")} ${saved.includes(id) ? "محفوظ" : "حفظ"}</button><button class="secondary" id="detail-mine">تعديل تقييمي</button></div>`);
+    document.querySelector('#detail-compare').onclick=()=>toggleComparison(id);syncComparisonButtons();
     bindReviewCarousel(document.querySelector('#published-reviews')?.closest('.review-carousel'));
     reviewLikes.mount(document.querySelector('#published-reviews'));
     document.querySelector("#review-subject-filter").onchange = (event) => cloudDoctorDetail(id,event.target.value);
@@ -2083,6 +2068,20 @@ function bindCloudOperations(root = document) {
   );
 }
 
+function syncComparisonButtons(){
+ document.querySelectorAll('[data-compare]').forEach(button=>{
+  const id=Number(button.dataset.compare),selected=compareIds.includes(id),name=doctors.find(d=>d.id===id)?.name||'';
+  button.setAttribute('aria-pressed',String(selected));button.classList.toggle('is-compared',selected);
+  button.innerHTML=ic('compare')+(button.hasAttribute('data-compare-icon')?'':selected?' مضاف للمقارنة':' قارن الدكتور');
+  button.setAttribute('aria-label',`${selected?'إزالة من المقارنة':'قارن الدكتور'}: ${name}`);button.title=selected?'إزالة من المقارنة':'قارن الدكتور';
+ });
+}
+function toggleComparison(id){
+ if(compareIds.includes(id))compareIds=compareIds.filter(value=>value!==id);
+ else if(compareIds.length<3)compareIds.push(id);
+ else return toast('يمكنك مقارنة ثلاثة دكاترة كحد أقصى.');
+ syncComparisonButtons();updateComparison();
+}
 function updateComparison() {
   const root = document.querySelector('#comparison-root');
   if (!root) return;
@@ -2091,7 +2090,7 @@ function updateComparison() {
   root.querySelector('#compare-now')?.addEventListener('click',showComparison);
   root.querySelector('#compare-clear')?.addEventListener('click',()=>{
     compareIds=[];
-    document.querySelectorAll('[data-compare]').forEach((button)=>{button.setAttribute('aria-pressed','false');button.innerHTML=ic('users')+' قارن الدكتور';});
+    syncComparisonButtons();
     updateComparison();
   });
 }

@@ -1,4 +1,5 @@
 import {reviewDate} from './review-date.js';
+import {reviewMetrics} from './review-metrics.js';
 import {groupedCourseOptions} from './course-options.js';
 import {reviewLikeButton} from './review-likes.js';
 import {reviewCarousel,bindReviewCarousel} from './review-carousel.js';
@@ -99,7 +100,7 @@ export function createCourseAdvisor({api,modal,icon,plans,currentPlan,onDoctor,o
    const rows=await api('course.reviews',{courseId:course.id,doctor:doctor.id});
    if(!root.isConnected)return;
    if(!Array.isArray(rows))throw new Error('تعذّر تحميل التقييمات.');
-   root.querySelector('.advisor-review-list').innerHTML=rows.length?reviewCarousel(rows.map(r=>`<article class="review-comment"><b>${esc(r.subject)}</b>${r.comment?`<p>${esc(r.comment)}</p>`:'<p class="muted">تقييم بالمؤشرات دون تعليق.</p>'}<p class="advisor-review-scores">${['الشرح','التعامل','المساعدة بالدرجات'].map((label,i)=>`${label}: ${number(r.scores[i])}`).join(' · ')}</p>${Number.isInteger(r.grade)?`<p class="published-grade">الدرجة في المادة: <b>${r.grade} / 100</b> · دون اسم</p>`:""}<small>طالب مجهول · تاريخ التقييم: ${reviewDate(r.date)}</small><div class="review-tools">${reviewLikeButton(r)}</div></article>`),'advisor-review-track'):'<p class="empty">لا توجد تقييمات منشورة لهذه المادة.</p>';
+   root.querySelector('.advisor-review-list').innerHTML=rows.length?reviewCarousel(rows.map(r=>`<article class="review-comment"><b>${esc(r.subject)}</b>${r.comment?`<p>${esc(r.comment)}</p>`:'<p class="muted">تقييم بالمؤشرات دون تعليق.</p>'}${reviewMetrics(r.scores)}${Number.isInteger(r.grade)?`<p class="published-grade">الدرجة في المادة: <b>${r.grade} / 100</b> · دون اسم</p>`:""}<small>طالب مجهول · تاريخ التقييم: ${reviewDate(r.date)}</small><div class="review-tools">${reviewLikeButton(r)}</div></article>`),'advisor-review-track'):'<p class="empty">لا توجد تقييمات منشورة لهذه المادة.</p>';
    bindReviewCarousel(root.querySelector('.review-carousel'));
    onReviewLikes?.(root.querySelector('.advisor-review-list'));
   }catch(error){if(root.isConnected){root.querySelector('.advisor-review-list').innerHTML=`<p role="alert">${esc(error.message)}</p><button type="button" class="secondary">إعادة المحاولة</button>`;root.querySelector('.advisor-review-list button').onclick=load;}}}
