@@ -559,7 +559,7 @@ function selectCollege(college) {
   render();
 }
 function updateCarouselControls() {
-  document.querySelectorAll('.doctor-carousel').forEach(track=>track.onscroll?.());
+  document.querySelectorAll('.doctor-carousel,.course-finder-track').forEach(track=>track.onscroll?.());
 }
 function bindCarousel() {
   document.querySelectorAll('.doctor-carousel').forEach(track=>{
