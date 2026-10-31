@@ -39,6 +39,7 @@ import "./reveal.css";
 import "./hero.css";
 import "./appearance.css";
 import "./performance.css";
+import "./interface-polish.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
@@ -412,9 +413,9 @@ function studyContent() {
 const actionDecoration = '<span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span>';
 function actionCardSurface(decoration = '') { return `<span class="action-card-surface" aria-hidden="true"><span class="action-card-fill">${decoration}</span></span>`; }
 function home() {
-  return `${connectionBanner()}<section class="welcome"><div><div class="eyebrow"><span></span> معك في كل خطوة جامعية</div><h1>أهلًا ${
+  return `${connectionBanner()}<section class="welcome"><div><h1>أهلًا ${
     escapeHtml(displayName().trim().split(/\s+/)[0])
-  } ${roleBadge(cloudMe,cloudCatalogue)}<span class="wave">✦</span><br>اختيارك اليوم، <em>يبدأ بمِعيار.</em></h1><div class="welcome-tags"><span>${
+  } ${roleBadge(cloudMe,cloudCatalogue)}<br>اختيارك اليوم، <em>يبدأ بمِعيار.</em></h1><div class="welcome-tags"><span>${
     ic("shield")
   } هويتك لا تظهر في التقييم</span><span>${
     ic("users")
@@ -434,11 +435,11 @@ function home() {
     ic("filter")
   }<span>${
     escapeHtml(collegeSelected ? activeCollege : "كل الكليات")
-  }</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></section><section class="quick-actions"><button class="action-card browse rate-existing" data-page="ratings">${actionCardSurface()}${homeIcon("ratings")}<div><span class="tiny-label">قرار أفضل يبدأ من هنا</span><h2>الدكاترة وتقييماتهم</h2><p>استعرض الدكاترة وتقييمات الطلاب، وشارك تجربتك</p></div><span class="action-arrow">${
+  }</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></section><section class="quick-actions"><button class="action-card browse rate-existing" data-page="ratings">${actionCardSurface()}${homeIcon("ratings")}<div><h2>الدكاترة وتقييماتهم</h2><p>استعرض الدكاترة وتقييمات الطلاب، وشارك تجربتك</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span></button><button class="action-card new-review add-new-doctor" id="new-review">${actionCardSurface(actionDecoration)}${homeIcon("add")}<div><span class="tiny-label">تجربتك تستحق المشاركة</span><h2>إضافة دكتور</h2><p>دكتور غير مضاف في الأقسام</p></div><span class="action-arrow">${
+  }</span></button><button class="action-card new-review add-new-doctor" id="new-review">${actionCardSurface(actionDecoration)}${homeIcon("add")}<div><h2>إضافة دكتور</h2><p>دكتور غير مضاف في الأقسام</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span></button><button type="button" class="action-card browse study-action" data-page="plan">${actionCardSurface()}${homeIcon("plan")}<div><span class="tiny-label">خطوة بخطوة نحو التخرج</span><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button><button type="button" class="action-card browse advisor-action" data-page="advisor">${actionCardSurface()}${homeIcon("advisor")}<div><span class="tiny-label">اختيارك يبدأ من المادة</span><h2>اختيار الدكتور المناسب</h2><p>اختر المادة من خطتك وقارن دكاترتها حسب تقييمات الطلاب</p></div><span class="action-arrow">${ic("arrow")}</span></button></section><section class="stats"><div><span class="stat-icon">${ic('cap')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.doctors ?? cloudCatalogue?.doctors.length ?? 0) : doctors.length === 4 ? 48 : doctors.length, '+')}<span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${ic('star')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length, '+')}<span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${ic('users')}</span><div>${statNumber(configured ? (cloudCatalogue?.colleges.length || 0) : 850, configured ? '' : '+')}<span>${configured ? 'كلية في مِعيار' : 'طالب يصنعون الأثر'}</span></div></div><span class="demo-data">${configured ? 'إحصائيات جميع الجامعات · تقييمات منشورة فقط' : 'إحصاءات توضيحية'}</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
+  }</span></button><button type="button" class="action-card browse study-action" data-page="plan">${actionCardSurface()}${homeIcon("plan")}<div><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button><button type="button" class="action-card browse advisor-action" data-page="advisor">${actionCardSurface()}${homeIcon("advisor")}<div><h2>اختيار الدكتور المناسب</h2><p>اختر المادة من خطتك وقارن دكاترتها حسب تقييمات الطلاب</p></div><span class="action-arrow">${ic("arrow")}</span></button></section><section class="stats"><div><span class="stat-icon">${ic('cap')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.doctors ?? cloudCatalogue?.doctors.length ?? 0) : doctors.length === 4 ? 48 : doctors.length, '+')}<span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${ic('star')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length, '+')}<span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${ic('users')}</span><div>${statNumber(configured ? (cloudCatalogue?.colleges.length || 0) : 850, configured ? '' : '+')}<span>${configured ? 'كلية في مِعيار' : 'طالب يصنعون الأثر'}</span></div></div><span class="demo-data">${configured ? 'إحصائيات جميع الجامعات · تقييمات منشورة فقط' : 'إحصاءات توضيحية'}</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
     ic("shield")
   }</div><div><h3>مساحة آمنة. آراء صادقة. أثر حقيقي.</h3><p>نحترم خصوصيتك، ونؤمن أن النقد البنّاء هو بداية التطوير.</p></div><button id="privacy">تعرّف على معاييرنا ${
     ic("arrow")
@@ -532,12 +533,12 @@ function syncHomeSearch() {
   if (searching) search.after(section);
   else slot.append(section);
   section.classList.toggle("search-results", searching);
-  section.querySelector("h2").textContent = searching ? "نتائج البحث" : "أعلى الدكاترة تقييمًا ✦";
+  section.querySelector("h2").textContent = searching ? "نتائج البحث" : "أعلى الدكاترة تقييمًا";
   section.querySelector(".eyebrow").textContent = searching ? "الدكاترة والمواد المطابقة لبحثك" : "بناءً على تقييمات الطلاب المنشورة";
   section.querySelector(".section-heading p").textContent = searching ? "اختر الدكتور لاستعراض تقييماته أو إضافة تجربتك." : "الأعلى في متوسط التقييم، وعند التعادل نقدّم الأكثر تقييمات.";
 }
 function listSection() {
-  return `<section class="doctors-section directory-section"><div class="section-heading"><div><span class="eyebrow">تجارب تستحق الاطلاع</span><h2>دليل الدكاترة والتقييمات <span class="small-star">✦</span></h2><p>اختر كليتك، وابحث عن الدكتور أو تصفّح دكاترة كل تخصص</p></div><button class="text-button" id="saved-filter">${savedOnly ? "عرض الجميع" : "المحفوظات"} ${ic("bookmark")}</button></div><div class="college-tabs" role="group" aria-label="الكليات">${colleges.map(college=>`<button class="college-tab ${college===activeCollege?'selected':''}" data-college="${escapeHtml(college)}" aria-pressed="${college===activeCollege}" aria-controls="doctor-grid"><span class="college-tab-icon">${ic('cap')}</span><span>${escapeHtml(college)}</span><small>${doctors.filter(d=>(d.college||'كلية الهندسة')===college).length.toLocaleString('en-US')} دكتور</small></button>`).join('')}</div><div class="directory-search"><label for="search">ابحث في ${escapeHtml(activeCollege||'دليل الدكاترة')}</label><div class="directory-search-field">${ic('search')}<input type="search" id="search" value="${escapeHtml(query)}" placeholder="اسم الدكتور أو المادة…" autocomplete="off" aria-controls="doctor-grid"><button type="button" class="icon-btn" id="clear-search" aria-label="مسح البحث" ${query?'':'hidden'}>${ic('close')}</button></div></div><div id="doctor-grid" class="directory-rows" aria-live="polite">${directoryRows()}</div></section>`;
+  return `<section class="doctors-section directory-section"><div class="section-heading"><div><h2>دليل الدكاترة والتقييمات</h2><p>اختر كليتك، وابحث عن الدكتور أو تصفّح دكاترة كل تخصص</p></div><button class="text-button" id="saved-filter">${savedOnly ? "عرض الجميع" : "المحفوظات"} ${ic("bookmark")}</button></div><div class="college-tabs" role="group" aria-label="الكليات">${colleges.map(college=>`<button class="college-tab ${college===activeCollege?'selected':''}" data-college="${escapeHtml(college)}" aria-pressed="${college===activeCollege}" aria-controls="doctor-grid"><span class="college-tab-icon">${ic('cap')}</span><span>${escapeHtml(college)}</span><small>${doctors.filter(d=>(d.college||'كلية الهندسة')===college).length.toLocaleString('en-US')} دكتور</small></button>`).join('')}</div><div class="directory-search"><label for="search">ابحث في ${escapeHtml(activeCollege||'دليل الدكاترة')}</label><div class="directory-search-field">${ic('search')}<input type="search" id="search" value="${escapeHtml(query)}" placeholder="اسم الدكتور أو المادة…" autocomplete="off" aria-controls="doctor-grid"><button type="button" class="icon-btn" id="clear-search" aria-label="مسح البحث" ${query?'':'hidden'}>${ic('close')}</button></div></div><div id="doctor-grid" class="directory-rows" aria-live="polite">${directoryRows()}</div></section>`;
 }
 function directoryRows() {
   const matches=filteredDoctors();
@@ -735,7 +736,7 @@ function modal(title, body) {
 function renderModal(title, body) {
   if (!document.querySelector(".modal-backdrop")) modalTrigger = document.activeElement;
   document.querySelector("#modal-root").innerHTML =
-    `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-label="${title}"><div class="modal-heading"><div><span class="eyebrow">تجارب صادقة، بمعيارك</span><h2>${title}</h2></div><button class="icon-btn close-modal" aria-label="إغلاق">${
+    `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-label="${title}"><div class="modal-heading"><div><h2>${title}</h2></div><button class="icon-btn close-modal" aria-label="إغلاق">${
       ic("close")
     }</button></div>${body}</section></div>`;
   document.body.classList.add("modal-open");
@@ -1400,7 +1401,7 @@ function openSettings() {
     };
   modal(
     "إعداداتك في مِعيار",
-    `<form id="settings-form"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="study-settings-link">${ic("cap")} خطتي إلى التخرج</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button>${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
+    `<form id="settings-form"><div class="settings-shortcuts" role="group" aria-label="اختصارات حسابك"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="study-settings-link">${ic("cap")} خطتي إلى التخرج</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button></div>${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
       ic("users")
     }</span><div><h3>مساحتك، على طريقتك</h3><p>خصّص بياناتك وتجربة القراءة بما يناسبك.</p></div></div><label>اسم الطالب<input name="name" required maxlength="60" autocomplete="name" placeholder="كيف تحب أن نناديك؟" value="${
       escapeHtml(profile.name)

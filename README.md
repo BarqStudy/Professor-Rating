@@ -115,3 +115,7 @@ Google Client Secret يُحفظ في إعداد Google provider داخل Supabas
 ## تطبيق Android وiOS
 
 مشاريع Capacitor وطريقة البناء وتجهيز حسابات المتجر والتوقيع موثّقة في [دليل تطبيق مِعيار](docs/MOBILE-APP.md). يبدأ البناء المحلي بـ `npm run mobile:sync`. التشغيل الآلي Build Miyar mobile apps ينتج APK للتجربة وAAB غير موقّع ونسخة iOS Simulator؛ لا ينشر تلقائيًا إلى المتاجر.
+
+## تحسين التصميم باستخدام Impeccable
+
+أضيفت مهارة [Impeccable](https://github.com/pbakaus/impeccable) للمشروع محليًا في `.agents/skills/impeccable` مع رخصتها، دون إضافة مكتبة إلى واجهة المستخدم. استخدم `$impeccable polish` أو `$impeccable audit` على قسم محدد. توثيق هوية المنصة في [DESIGN.md](DESIGN.md)، ونطاق تحسين واجهة الطالب في [.impeccable/surfaces/student-public.md](.impeccable/surfaces/student-public.md).

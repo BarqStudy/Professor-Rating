@@ -1,0 +1,116 @@
+/* Impeccable polish: retain Miyar's glass, accent choices and existing motion. */
+:root {
+  --ui-space-xs: 8px;
+  --ui-space-sm: 12px;
+  --ui-space-md: 16px;
+  --ui-space-lg: 24px;
+  --ui-space-xl: 32px;
+  --ui-control-size: 44px;
+  --ui-control-radius: 14px;
+}
+
+/* Hierarchy comes from the title and useful explanation, not extra kickers. */
+.welcome h1 { margin-block: 0 var(--ui-space-md); line-height: 1.65; text-wrap: balance; }
+.welcome-tags { gap: var(--ui-space-md); margin-top: var(--ui-space-md); }
+.section-heading .eyebrow, .university-request .eyebrow { display: none; }
+.section-heading h2 { margin-block: 0 var(--ui-space-xs); text-wrap: balance; }
+.section-heading p { max-inline-size: 65ch; }
+.quick-actions { gap: var(--ui-space-md); margin-block: var(--ui-space-lg) var(--ui-space-xl); }
+.quick-actions .action-card { min-height: 128px; padding: var(--ui-space-lg); }
+.quick-actions .action-card h2 { margin-block: 0 var(--ui-space-xs); font-size: calc(22px * var(--font-scale, 1)); line-height: 1.6; }
+.quick-actions .action-card p { margin: 0; font-size: calc(14px * var(--font-scale, 1)); line-height: 1.85; }
+.quick-actions .rate-existing p { color: var(--on-accent); }
+.search-block { border-radius: 24px; }
+.search-input input, .directory-search-field > input { font-size: calc(16px * var(--font-scale, 1)); }
+.directory-search-field { border-radius: 20px; }
+.directory-search { margin-block: var(--ui-space-md) var(--ui-space-xl); }
+.directory-major-heading { margin-block-end: var(--ui-space-sm); }
+.directory-major-heading h3 { font-size: calc(21px * var(--font-scale, 1)); }
+.directory-major { margin-block-end: 40px; }
+.doctor-card .doctor-name { line-height: 1.8; }
+.rating-score, .stats [data-stat-value], .published-grade { font-variant-numeric: tabular-nums; }
+.stats .demo-data { font-size: calc(12px * var(--font-scale, 1)); line-height: 1.8; }
+footer { font-size: calc(13px * var(--font-scale, 1)); line-height: 1.9; }
+footer a { text-underline-offset: .25em; }
+
+/* Larger hit areas preserve the small, familiar icon artwork. */
+:is(.icon-btn, .carousel-control, .save-button, .clear-search) {
+  min-inline-size: var(--ui-control-size);
+  min-block-size: var(--ui-control-size);
+}
+.carousel-control { border-radius: var(--ui-control-radius); }
+:where(button, a[href], input, select, textarea, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+:where(input, textarea)::placeholder { opacity: 1; color: var(--placeholder); }
+:where(button, input, select, textarea) { -webkit-tap-highlight-color: transparent; }
+
+/* Quick access is a compact group; the personal form stays in reading order. */
+.settings-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ui-space-sm); }
+#settings-form .settings-shortcuts > button {
+  margin: 0; min-width: 0; width: 100%; min-height: 72px;
+  padding: var(--ui-space-sm); gap: var(--ui-space-xs);
+  border-radius: 16px; font-size: calc(14px * var(--font-scale, 1)); line-height: 1.7;
+}
+.settings-shortcuts .icon { flex-shrink: 0; width: 19px; height: 19px; }
+#settings-form .university-settings { padding-block: var(--ui-space-lg); border-radius: 0; border-inline: 0; background: transparent; }
+.modal-heading { align-items: flex-start; gap: var(--ui-space-md); margin-bottom: var(--ui-space-lg); }
+.modal-heading h2 { margin: 0; line-height: 1.6; font-size: calc(26px * var(--font-scale, 1)); }
+
+@media (max-width: 650px) {
+  /* A compact intro keeps the first task in reach; retain the existing artwork. */
+  .welcome {
+    display: grid; grid-template-columns: minmax(0, 1fr) 104px;
+    align-items: center; gap: var(--ui-space-sm); min-height: 0;
+    padding-block: var(--ui-space-lg);
+  }
+  .welcome h1 { font-size: calc(25px * var(--font-scale, 1)); line-height: 1.75; margin-bottom: var(--ui-space-sm); }
+  .welcome-tags { display: grid; gap: var(--ui-space-xs); margin-top: var(--ui-space-sm); }
+  .welcome-tags > span { font-size: calc(12px * var(--font-scale, 1)); line-height: 1.8; }
+  .hero-art {
+    width: 300px; height: 280px; flex: none; margin: 0;
+    zoom: .35; transform: none; justify-self: center; align-self: center;
+  }
+  .search-block { flex-wrap: nowrap; gap: var(--ui-space-xs); padding: var(--ui-space-xs); }
+  .search-input { flex: 1 1 0; padding-inline: var(--ui-space-xs); gap: var(--ui-space-xs); }
+  .search-input input { padding-block: var(--ui-space-sm); }
+  .search-block .filter-button { width: auto; max-width: 38%; min-height: 48px; padding: 10px; gap: var(--ui-space-xs); }
+  .filter-button > span { min-width: 0; max-width: 72px; }
+  .filter-button .chevron { margin: 0; }
+  .quick-actions { margin-block-start: var(--ui-space-lg); }
+  .quick-actions .action-card { padding: 20px 17px; min-height: 136px; gap: var(--ui-space-md); }
+  .quick-actions .action-card h2 { font-size: calc(20px * var(--font-scale, 1)); }
+  .quick-actions .action-card p { font-size: calc(14px * var(--font-scale, 1)); line-height: 1.8; }
+  .quick-actions .action-card > div { padding-inline-end: 6px; }
+  .quick-actions .action-card .action-icon.action-icon-3d { width: 48px; height: 48px; flex-basis: 48px; }
+  .section-heading { gap: var(--ui-space-md); }
+  .section-heading h2 { font-size: calc(24px * var(--font-scale, 1)); line-height: 1.6; }
+  .section-heading p { font-size: calc(14px * var(--font-scale, 1)); }
+  .directory-actions { margin-block-end: var(--ui-space-lg); }
+  .college-tabs { margin-block: var(--ui-space-lg) var(--ui-space-md); }
+  .directory-major-heading { gap: var(--ui-space-xs); }
+  .directory-major-heading > div:first-child { gap: var(--ui-space-xs); }
+  .directory-major-heading h3 { font-size: calc(20px * var(--font-scale, 1)); }
+  .carousel-controls { gap: 6px; }
+  .stats { padding: var(--ui-space-lg) var(--ui-space-md); }
+  .stats > div { padding-inline: var(--ui-space-sm); min-width: 0; }
+  .stats div div > span { font-size: calc(12px * var(--font-scale, 1)); line-height: 1.8; }
+  .stats .demo-data { margin-top: var(--ui-space-xs); }
+  .modal { padding: var(--ui-space-lg) 18px; }
+  .modal-heading h2 { font-size: calc(24px * var(--font-scale, 1)); }
+  .assistant-launcher { padding: 10px 12px; }
+}
+@media (max-width: 360px) {
+  .welcome { grid-template-columns: minmax(0, 1fr) 76px; gap: var(--ui-space-xs); }
+  .welcome h1 { font-size: calc(23px * var(--font-scale, 1)); }
+  .hero-art { zoom: .25; }
+  .quick-actions .action-card .action-icon.action-icon-3d { width: 42px; height: 42px; flex-basis: 42px; }
+  .search-block { flex-wrap: wrap; }
+  .search-input { flex-basis: 100%; }
+  .search-block .filter-button { width: 100%; max-width: none; justify-content: flex-start; }
+  .filter-button > span { max-width: none; }
+  .filter-button .chevron { margin-inline-start: auto; }
+  .settings-shortcuts { grid-template-columns: minmax(0, 1fr); }
+  #settings-form .settings-shortcuts > button { min-height: 52px; }
+}
