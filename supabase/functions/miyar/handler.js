@@ -117,7 +117,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if(action==='study.plans')return respond(await db('rpc/miyar_uploaded_study_plans',{method:'POST',body:{}}));
       if (action === "catalogue") {
         return respond(
-          await db("rpc/miyar_catalogue", { method: "POST", body: {} }),
+          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{reviewFlexibility:true}},
         );
       }
       if (action === "doctor.summary") return respond(await publicSummary(body, db));
