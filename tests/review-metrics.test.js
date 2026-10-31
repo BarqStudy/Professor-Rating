@@ -13,3 +13,7 @@ test('missing, unscored and invalid values never masquerade as real scores or en
  }
  assert.ok(!reviewMetrics([70,80,90],{empty:true}).includes('role="meter"'));
 });
+
+test('criterion bars follow the score scale, including a red zero and a green excellent score',()=>{
+ for(const [score,tone] of [[0,'poor'],[49,'poor'],[50,'fair'],[65,'fair'],[66,'good'],[80,'good'],[81,'very-good'],[89,'very-good'],[90,'excellent'],[100,'excellent']])assert.match(reviewMetrics([score]),new RegExp('data-score-tone="'+tone+'"'));
+});

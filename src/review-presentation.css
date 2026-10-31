@@ -20,6 +20,19 @@
 .detail-compare-button{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:52px;margin-block:0 20px;border-radius:14px;font-size:calc(17px * var(--font-scale,1))}
 .detail-compare-button .icon{width:23px;height:23px}
 .detail-compare-button.is-compared{background:var(--accent-soft);border-color:var(--green);color:var(--green)}
+.doctor-card .doctor-card-tools .doctor-compare-icon,.detail-compare-button,.detail-compare-button.is-compared{background:#176b50;color:#fff;border-color:#176b50}
+.doctor-card .doctor-card-tools .doctor-compare-icon .icon{color:inherit}
+.doctor-card .doctor-card-tools .doctor-compare-icon.is-compared{background:#10523d;color:#fff}
+.review-metric{--metric-color:#15803d;--metric-track:rgba(22,163,74,.15)}
+.review-metric[data-score-tone=poor]{--metric-color:#dc4545;--metric-track:rgba(220,69,69,.15)}
+.review-metric[data-score-tone=fair]{--metric-color:#d49a13;--metric-track:rgba(212,154,19,.18)}
+.review-metric[data-score-tone=good]{--metric-color:#829331;--metric-track:rgba(130,147,49,.17)}
+.review-metric[data-score-tone=very-good]{--metric-color:#369568;--metric-track:rgba(54,149,104,.15)}
+.review-metric .review-metric-track{background:var(--metric-track)}
+.review-metric .review-metric-track i{background:var(--metric-color)}
+.review-grade-choice{display:flex!important;align-items:flex-start;gap:12px;padding:15px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+.review-grade-choice input{width:20px;height:20px;flex:none;accent-color:var(--green)}
+.review-grade-choice small{display:block;margin-top:7px;color:var(--muted);line-height:1.9}
 .review-carousel .review-comment{background:var(--glass-strong);border:1px solid var(--line);padding:22px;display:flex;flex-direction:column;gap:0}
 .review-carousel .review-comment>b{font-size:calc(17px * var(--font-scale,1));color:var(--ink)}
 .review-carousel .review-comment>p{line-height:1.95;margin-block:15px;font-size:calc(15px * var(--font-scale,1));overflow-wrap:anywhere}
@@ -28,3 +41,5 @@
 .review-carousel .review-comment .published-tags{margin-block:13px 0}
 .review-carousel .review-comment .review-tools{margin-top:auto;padding-top:18px}
 @media(max-width:700px){.review-metrics{grid-template-columns:minmax(0,1fr);gap:14px}.review-metric-label{margin-bottom:6px;font-size:calc(14px * var(--font-scale,1))}.review-metric-value small{font-size:calc(11px * var(--font-scale,1))}.review-metric-track{height:8px}.doctor-overall-metrics{padding-block:18px}.review-carousel .review-comment{padding:18px}.doctor-card .doctor-card-actions{padding-bottom:20px}.doctor-card .doctor-card-tools{gap:3px}}
+
+#review-form [hidden]{display:none!important}

@@ -81,7 +81,7 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
   root.querySelector('#study-request-doctor').onclick=()=>onRequestDoctor?.(course,plan,root.querySelector('#study-doctor-search').value);
   paint();root.querySelector('#study-doctor-search').focus();
  }
- function attachReview(form,{university,college,major,courseId,studentOnly=false,reviewedSubjects=[],checkingSubjects=false,onEdit}={}){
+ function attachReview(form,{university,college,major,courseId,studentOnly=false,reviewedSubjects=[],optional=false,allowCustom=true,checkingSubjects=false,onEdit}={}){
   const subject=form.querySelector('[name=subject]');
   if(!subject)return;
   const reviewPlans=studentOnly?available():getStudyPlans().filter(p=>p.university===university);
@@ -90,14 +90,14 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
   // limiting this lookup to one specialty could reserve the wrong old subject.
   const allCourses=getStudyPlans().filter(p=>p.university===university).flatMap(p=>p.courses.filter(c=>c.kind==='course'&&c.linkable).map(c=>({...c,planId:p.id,planTitle:p.title})));
   const catalogue=()=>allCourses;
-  let blocked=reviewedCourseKeys(reviewedSubjects,catalogue()),loading=checkingSubjects;
+  let blocked=reviewedCourseKeys(reviewedSubjects,catalogue()),loading=checkingSubjects,optionalReview=optional;
   const section=document.createElement('div');section.className='study-review-selection';subject.closest('.form-grid').before(section);
   const note=document.createElement('p');note.className='reviewed-subject-note';note.innerHTML='المواد التي سبق تقييمها لهذا الدكتور غير متاحة لتقييم جديد. <button type="button" class="text-button">طلب تعديل تقييم سابق</button>';
   subject.closest('.form-grid').after(note);note.querySelector('button').onclick=()=>onEdit?.();
   const suggestions=document.createElement('div');suggestions.className='known-course-suggestions';suggestions.setAttribute('aria-live','polite');const subjectLabel=subject.closest('label'),subjectField=document.createElement('div');subjectField.className='review-subject-field';subjectLabel.replaceWith(subjectField);subjectField.append(subjectLabel,suggestions);
   const validate=()=>{
    const select=section.querySelector('#review-study-course');
-   const matches=studentOnly||select?.value?[]:knownCourseMatches(subject.value,catalogue());
+   const matches=!select||select.value&&select.value!=='__other__'?[]:knownCourseMatches(subject.value,catalogue());
    const previous=blocked.has(courseNameKey(subject.value));
    subject.setCustomValidity(previous?'سبق أن قيّمت هذا الدكتور في المادة نفسها. اختر مادة أخرى أو اطلب تعديل تقييمك.':matches.length?'هذه المادة موجودة في القائمة. اختر اسم المقرر ورمزه من القائمة بدل كتابته يدويًا.':'');
    suggestions.replaceChildren();suggestions.hidden=!matches.length;
@@ -109,8 +109,11 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
     const button=document.createElement('button');button.type='button';button.className='known-course-choice';button.dataset.pickReviewCourse=course.id;
     const rated=blocked.has(courseNameKey(course.name));button.disabled=loading||rated;button.textContent=`${course.name} · ${course.code} · ${course.planTitle}${rated?' — سبق تقييمها':''}`;
     button.onclick=()=>{
-     const planSelect=section.querySelector('#review-study-plan');planSelect.value=course.planId;planSelect.dispatchEvent(new Event('change'));
-     const courseSelect=section.querySelector('#review-study-course');courseSelect.value=course.id;courseSelect.dispatchEvent(new Event('change'));courseSelect.focus({preventScroll:true});
+     const planSelect=section.querySelector('#review-study-plan');
+     if([...planSelect.options].some(option=>option.value===course.planId)){planSelect.value=course.planId;planSelect.dispatchEvent(new Event('change'));}
+     const courseSelect=section.querySelector('#review-study-course');
+     if(![...courseSelect.options].some(option=>option.value===course.id)){const option=new Option(`${course.code} · ${course.name}`,course.id);option.dataset.subject=course.name;option.dataset.label=option.textContent;courseSelect.append(option);}
+     courseSelect.value=course.id;courseSelect.dispatchEvent(new Event('change'));courseSelect.focus({preventScroll:true});
     };suggestions.append(button);
    }
    if(matches.length>6){const more=document.createElement('small');more.textContent='يمكنك عرض بقية المقررات من قائمة خطة المادة.';suggestions.append(more);}
@@ -120,35 +123,40 @@ export function createStudyPlanner({api,modal,icon,universityName,ownerKey,major
     note.hidden=!blocked.size;
     const select=section.querySelector('#review-study-course');
     if(select){
-      select.disabled=loading;select.setAttribute('aria-busy',String(loading));
+      select.disabled=loading;select.required=!optionalReview;select.setAttribute('aria-busy',String(loading));
       for(const option of select.options){
         const disabled=!!option.dataset.subject&&blocked.has(courseNameKey(option.dataset.subject));
         option.disabled=disabled;option.classList.toggle('reviewed-course',disabled);
         option.textContent=option.dataset.label+(disabled?' — سبق تقييمها':'');
       }
-      if(select.selectedOptions[0]?.disabled){select.value='';subject.value='';subject.readOnly=studentOnly;}
+      if(select.selectedOptions[0]?.disabled){select.value='';subject.value='';subject.readOnly=false;}
     }
     validate();
   };
   function update(preselect){
    const choices=reviewPlans;
    section.hidden=!choices.length&&!studentOnly;
-   section.innerHTML=choices.length?`<label ${studentOnly?'hidden':''}>خطة المادة<select id="review-study-plan">${choices.map(p=>`<option value="${p.id}" ${preselect?.startsWith(p.id+'/')||(!preselect&&p.id===current()?.id)?'selected':''}>${esc(p.title)} · ${esc(p.fileLabel)}</option>`).join('')}</select></label><label>المادة من خطتك<select name="courseId" id="review-study-course" ${studentOnly?'required':''}><option value="">${studentOnly?'اختر المادة من خطتك':'مادة أخرى أو غير محددة في الخطة'}</option></select></label><small class="muted">${studentOnly?esc(current()?.title||'')+' · تظهر مواد تخصصك المحفوظ.':'اختيار مادة من الخطة يربط هذا الدكتور بها بعد اعتماد التقييم.'}</small>`:studentOnly?'<p role="status">خطة تخصصك لم تُضف بعد. يمكنك طلب إضافتها عبر <a href="mailto:info@miyar.website">info@miyar.website</a>، أو تغيير تخصصك من الإعدادات.</p>':'';
-   subjectLabel.hidden=studentOnly;
-   subject.readOnly=studentOnly;subject.placeholder=choices.length?'اسم مادة غير موجودة في القائمة':'اسم المادة';
-   if(!choices.length){apply();if(studentOnly)subject.setCustomValidity('خطة تخصصك لم تُضف بعد.');return;}
+   section.innerHTML=choices.length?`<label ${studentOnly?'hidden':''}>خطة المادة<select id="review-study-plan">${choices.map(p=>`<option value="${p.id}" ${preselect?.startsWith(p.id+'/')||(!preselect&&p.id===current()?.id)?'selected':''}>${esc(p.title)} · ${esc(p.fileLabel)}</option>`).join('')}</select></label><label>المادة من خطتك<select name="courseId" id="review-study-course"><option value="">${studentOnly?'اختر المادة من خطتك':'مادة أخرى أو غير محددة في الخطة'}</option></select></label><small class="muted">${studentOnly?esc(current()?.title||'')+' · تظهر مواد تخصصك المحفوظ.':'اختيار مادة من الخطة يربط هذا الدكتور بها بعد اعتماد التقييم.'}</small>`:studentOnly?'<p role="status">خطة تخصصك لم تُضف بعد. يمكنك طلب إضافتها عبر <a href="mailto:info@miyar.website">info@miyar.website</a>، أو تغيير تخصصك من الإعدادات.</p>':'';
+   subjectLabel.hidden=studentOnly&&(choices.length>0||!allowCustom);
+   subject.readOnly=studentOnly&&!allowCustom;subject.placeholder=choices.length?'اسم مادة غير موجودة في القائمة':'اسم المادة';
+   if(!choices.length){apply();subject.required=!optionalReview;return;}
    const fill=()=>{
     const plan=choices.find(p=>p.id===section.querySelector('#review-study-plan').value);
-    section.querySelector('#review-study-course').innerHTML=`<option value="" data-label="${studentOnly?'اختر المادة من خطتك':'مادة أخرى أو غير محددة في الخطة'}">${studentOnly?'اختر المادة من خطتك':'مادة أخرى أو غير محددة في الخطة'}</option>`+groupedCourseOptions(plan,plan.courses.filter(c=>c.kind==='course'&&c.linkable),c=>`<option value="${c.id}" data-subject="${esc(c.name)}" data-label="${esc((c.platformAddition&&c.code==='DRAWING'?'':c.code+' · ')+c.name)}" ${preselect===c.id?'selected':''}>${esc((c.platformAddition&&c.code==='DRAWING'?'':c.code+' · ')+c.name)}</option>`);
+    const placeholder=optionalReview?'بدون تحديد مادة (اختياري)':studentOnly?'اختر المادة من خطتك':'اختر مادة أو اكتب مادة أخرى';
+    section.querySelector('#review-study-course').innerHTML=`<option value="" data-label="${placeholder}">${placeholder}</option>${allowCustom?'<option value="__other__" data-label="مادة غير موجودة في القائمة — اكتب اسمها">مادة غير موجودة في القائمة — اكتب اسمها</option>':''}`+groupedCourseOptions(plan,plan.courses.filter(c=>c.kind==='course'&&c.linkable),c=>`<option value="${c.id}" data-subject="${esc(c.name)}" data-label="${esc((c.platformAddition&&c.code==='DRAWING'?'':c.code+' · ')+c.name)}" ${preselect===c.id?'selected':''}>${esc((c.platformAddition&&c.code==='DRAWING'?'':c.code+' · ')+c.name)}</option>`);
     const select=section.querySelector('#review-study-course');
-    const sync=()=>{const c=plan.courses.find(c=>c.id===select.value);if(c&&blocked.has(courseNameKey(c.name))){select.value='';subject.value='';subject.readOnly=studentOnly;}else{subject.readOnly=studentOnly||!!c;if(c)subject.value=c.name;else if(studentOnly)subject.value='';}validate();};select.onchange=sync;apply();sync();
+    const sync=()=>{const c=catalogue().find(c=>c.id===select.value),custom=select.value==='__other__',wasReadOnly=subject.readOnly;
+     if(c&&blocked.has(courseNameKey(c.name))){select.value='';subject.value='';subject.readOnly=false;}
+     else{subject.readOnly=!!c;if(c)subject.value=c.name;else if(!custom||wasReadOnly)subject.value='';}
+     subjectLabel.hidden=!!c||studentOnly&&!custom;subject.required=custom||!optionalReview;validate();
+    };select.onchange=sync;apply();sync();
    };
    section.querySelector('#review-study-plan').onchange=()=>{preselect=null;subject.value='';fill();};fill();
   }
   // The teaching department can differ from the student's course department.
   if(college&&major){const c=form.querySelector('[name=college]'),m=form.querySelector('[name=major]');c.value=college;c.dispatchEvent(new Event('change'));m.value=major;}
   update(courseId);
-  return {setReviewedSubjects(subjects){blocked=reviewedCourseKeys(subjects,catalogue());apply();},setLoading(value){loading=value;apply();}};
+  return {setOptional(value){optionalReview=value;subject.required=section.querySelector('#review-study-course')?.value==='__other__'||!value;const select=section.querySelector('#review-study-course');if(select){select.required=!value;select.options[0].dataset.label=select.options[0].textContent=value?'بدون تحديد مادة (اختياري)':'اختر المادة من خطتك';}validate();},setReviewedSubjects(subjects){blocked=reviewedCourseKeys(subjects,catalogue());apply();},setLoading(value){loading=value;apply();}};
  }
  return {page,bind,attachReview,current,available};
 }

@@ -149,15 +149,16 @@ const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>config
   closeModal,toast,
 });
 const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onReviewLikes:root=>reviewLikes.mount(root),onRequestDoctor:(course,plan)=>requestDoctorForm({course,plan}),onDoctor:(id)=>cloudDoctorDetail(id),scopeKey:()=>[googleSession?.user.id||guestProfile?.id||'',currentUniversityId(),selectedStudentMajor()?.id].join(':'),onCompare:(plan,course)=>{courseAdvisor.select(plan.id,course.id);setPage('advisor');render();window.scrollTo({top:0});}});
-let fileManager, studyImport, studyEditor, publishedReviews, adminWorkspace, adminToolsPending = null, adminToolsError = '';
+let fileManager, studyImport, studyEditor, publishedReviews, reviewLinker, adminWorkspace, adminToolsPending = null, adminToolsError = '';
 function ensureAdminTools() {
   if (studyEditor || adminToolsPending) return adminToolsPending;
   adminToolsError = '';
   adminToolsPending = import('./admin-tools.js').then(({createAdminTools}) => {
-    ({fileManager,studyImport,studyEditor,publishedReviews,adminWorkspace} = createAdminTools({
-      api,uploadPlatformFile,extractStudyPlan,publishStudyPlan,updateStudyPlan,icon:ic,
+    ({fileManager,studyImport,studyEditor,publishedReviews,reviewLinker,adminWorkspace} = createAdminTools({
+      api,uploadPlatformFile,extractStudyPlan,publishStudyPlan,updateStudyPlan,icon:ic,modal,reviewFlexibility:reviewUpdatesReady,
       catalogue:()=>cloudCatalogue,ownerKey:()=>googleSession?.user.id||'',
       onPlansChanged:async(message)=>{await refreshCloudCatalogue();render();toast(message);},
+      onReviewLinked:async()=>{await Promise.all([refreshCloudCatalogue(),loadCloudQueue(false),publishedReviews.reload()]);document.body.classList.remove('modal-open');render();toast('رُبط التقييم بالمادة المحددة.');},
       onReviewRemoved:async()=>{await Promise.all([refreshCloudCatalogue(),loadCloudQueue(false)]);render();toast('حُذف التقييم المنشور.');},
     }));
   }).catch(error=>{adminToolsError=error.message;}).finally(()=>{
@@ -864,7 +865,7 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
       escapeHtml(doctors.find((d) => d.id === id)?.name || studySelection?.name || "")
     }"><datalist id="doctor-names">${
       doctors.map((d) => `<option>${escapeHtml(d.name)}</option>`).join("")
-    }</datalist></label>${addingDoctor?'<label class="doctor-review-choice"><input type="checkbox" name="includeReview" aria-controls="doctor-rating-fields" aria-expanded="false"><span>هل تود إضافة تقييم للدكتور؟<small>اختياري؛ اتركه فارغًا لإضافة الدكتور دون تقييم.</small></span></label>':''}<fieldset class="doctor-rating-fields" id="doctor-rating-fields" ${addingDoctor?'hidden disabled':''}><legend>تفاصيل التقييم</legend><div class="form-grid"><label>المادة<input name="subject" required placeholder="اسم المادة"></label><label>درجتك في المادة<input name="grade" type="number" min="0" max="100" required placeholder="من 100"></label></div><div class="privacy-note">${
+    }</datalist></label>${addingDoctor?'<label class="doctor-review-choice"><input type="checkbox" name="includeReview" aria-controls="doctor-rating-fields" aria-expanded="false"><span>هل تود إضافة تقييم للدكتور؟<small>اختياري؛ اتركه فارغًا لإضافة الدكتور دون تقييم.</small></span></label>':''}<fieldset class="doctor-rating-fields" id="doctor-rating-fields" ${addingDoctor?'hidden disabled':''}><legend>تفاصيل التقييم</legend><div class="form-grid"><label>المادة<input name="subject" required placeholder="اسم المادة"></label><label>درجتك في المادة<input name="grade" type="number" min="0" max="100" required placeholder="من 100"></label></div><label class="review-grade-choice" ${reviewUpdatesReady()?'':'hidden'}><input type="checkbox" name="hideGrade" ${reviewUpdatesReady()?'':'disabled'}><span>لا أريد عرض درجتي في المادة<small>درجتك تساعد طلابًا غيرك، واسمك لن يظهر للطلاب الآخرين. عند تفعيل الخيار يمكنك التقييم دون تحديد مادة أو إدخال درجة.</small></span></label><div class="privacy-note" id="review-grade-notice">${
       ic("shield")
     } ستُنشر درجتك في المادة مع تقييمك دون اسمك.<small>بإرسال التقييم، تقرّ بأن درجتك ستكون ظاهرة للطلاب بعد اعتماد التقييم. لا يُنشر اسمك أو بريدك أو معرّف حسابك.</small></div><div class="sliders">${
       ["الشرح", "التعامل", "المساعدة بالدرجات"].map((t, i) =>
@@ -891,13 +892,15 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
   );
   const formForCourseChoices=document.querySelector('#review-form');
   let courseChoices=null,reviewSubjectsLoading=false;
+  const hideGrade=formForCourseChoices.elements.hideGrade,gradeInput=formForCourseChoices.elements.grade;
+  hideGrade.onchange=()=>{gradeInput.required=!hideGrade.checked;gradeInput.disabled=hideGrade.checked;gradeInput.closest('label').hidden=hideGrade.checked;formForCourseChoices.querySelector('#review-grade-notice').hidden=hideGrade.checked;courseChoices?.setOptional(hideGrade.checked);};
   const attachCourseChoices=()=>courseChoices=studyPlanner.attachReview(formForCourseChoices,{
     university:selectedUniversity()?.name||(!configured?'جامعة نجران':''),
     college:selectedDoctor?undefined:studySelection?.plan?.college,
     major:!selectedDoctor&&studySelection?.plan ? majors.find(name=>[studySelection.plan.major,...(studySelection.plan.majorAliases||[])].includes(name)) : undefined,
     courseId:studySelection?.course?.id,
     studentOnly:configured,
-    reviewedSubjects,checkingSubjects:reviewSubjectsLoading,onEdit:()=>myReviews(selectedDoctor?.id||matchedDoctor()?.id),
+    reviewedSubjects,allowCustom:reviewUpdatesReady(),optional:hideGrade.checked,checkingSubjects:reviewSubjectsLoading,onEdit:()=>myReviews(selectedDoctor?.id||matchedDoctor()?.id),
   });
   // Keep the page and doctor draft mounted while loading the student's plan;
   // rating submission waits for its official course choices.
@@ -960,7 +963,9 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
     e.preventDefault();
     const f = new FormData(e.target),name = f.get("doctor").trim();
     const includeReview=!addingDoctor||f.get('includeReview')==='on';
-    if(includeReview&&configured&&(!cloudPlansReady||!studyPlanner.available().length||!f.get('courseId'))){e.target.querySelector('.form-error').textContent=!cloudPlansReady?'انتظر تحميل مواد تخصصك أو أعد المحاولة.':!studyPlanner.available().length?'خطة تخصصك لم تُضف بعد. اطلب إضافتها أو حدّث تخصصك من الإعدادات.':'اختر المادة من خطة تخصصك أولًا.';return;}
+    if(includeReview&&configured&&!cloudPlansReady){e.target.querySelector('.form-error').textContent='انتظر تحميل مواد تخصصك أو أعد المحاولة.';return;}
+    const omitGrade=f.get('hideGrade')==='on',customCourse=f.get('courseId')==='__other__',subject=String(f.get('subject')||'').trim(),officialCourse=f.get('courseId')&&!customCourse?f.get('courseId'):null;
+    if(includeReview&&(!subject&&(!omitGrade||customCourse))){e.target.querySelector('.form-error').textContent=customCourse?'اكتب اسم المادة غير الموجودة بالقائمة.':'اختر المادة أو فعّل خيار عدم عرض الدرجة للتقييم دون مادة.';return;}
     if(!includeReview){
       if(name.split(/\s+/).length<3){e.target.querySelector('.form-error').textContent='يرجى كتابة اسم الدكتور الثلاثي.';return;}
       if(configured){
@@ -991,22 +996,23 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
       name,
       major: f.get("major"),
       college: f.get("college"),
-      subject: f.get("subject").trim(),
+      subject,
+      withoutSubject:!subject&&omitGrade,
       comment,
       scores,
       date: new Date().toISOString(),
-      grade: Number(f.get("grade")),
+      grade: omitGrade?null:Number(f.get("grade")),
       tags: chosenRatingTags(e.target),
       pledged: true,
-      publishGrade: true,
-      ...(f.get("courseId") ? {courseId:f.get("courseId")} : {}),
+      publishGrade: !omitGrade,
+      ...(officialCourse ? {courseId:officialCourse} : {}),
     };
     if (configured) {
       const button = e.target.querySelector(".submit-review");
       button.disabled = true;
       try {
         if(d){
-          const eligibility=await api(googleSession?'review.eligibility':'guest.review.eligibility',{doctor:d.id,subject:data.subject});
+          const eligibility=await api(googleSession?'review.eligibility':'guest.review.eligibility',{doctor:d.id,subject:data.subject||'بدون مادة'});
           if(!e.target.isConnected)return;
           if(eligibility.eligible===false){
             const box=e.target.querySelector('.form-error');
@@ -1921,7 +1927,7 @@ function cloudAdmin() {
           escapeHtml(r.user_id || "حساب سابق")
         }</small><p>${
           escapeHtml(r.comment)
-        }</p>${reviewTagLabels(r.tags)}<span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div><button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
+        }</p>${reviewTagLabels(r.tags)}<span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div>${reviewUpdatesReady()?`<button type="button" class="secondary" data-link-review="${r.id}">ربط بمادة موجودة</button>`:''}<button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
       ).join("")
       : '<p class="muted">لا توجد تقييمات بانتظار المراجعة.</p>'
   }</section>${institutionAdminPanel(queue)}${communityAdminPanel(queue)}${ambassadorAdminPanel(queue)}<section class="panel ai-diagnostics" id="admin-ai"><h2>حالة مساعد مِعيار</h2><p class="muted">يفحص قراءة أسرار الخادم وقبول المفتاح وتوفر النموذج، دون إرسال سؤال أو عرض المفتاح. حصة التوليد تُفحص عند إرسال سؤال فعلي.</p><button type="button" class="secondary" id="check-ai-connection">فحص ربط المساعد</button><div id="ai-diagnostics-result" class="ai-diagnostics-result" role="status" aria-live="polite"></div></section></div>`;
@@ -2028,6 +2034,7 @@ function openDoctorDean(id){
   form.querySelector('#remove-dean-office')?.addEventListener('click',()=>save({role:null}));
 }
 function bindCloudOperations(root = document) {
+  root.querySelectorAll('[data-link-review]').forEach(button=>button.onclick=()=>reviewLinker?.open(Number(button.dataset.linkReview)));
   root.querySelectorAll("[data-cloud-operation]").forEach((b) =>
     b.onclick = () => {
       const operation = b.dataset.cloudOperation;
@@ -2417,8 +2424,9 @@ function reviewPledge(next,cancel){
   document.querySelector('.modal').addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();cancel();}});
  }
 }
+function reviewUpdatesReady(){return !configured||cloudCatalogue?.features?.reviewFlexibility===true;}
 function ratingTagPicker(selected=[]){
- return `<fieldset class="rating-tag-picker"><legend>أوصاف تجربتك (اختياري)</legend><p class="muted">اختر حتى ستة أوصاف تعبّر عن تجربتك.</p><div class="rating-tag-options">${REVIEW_TAGS.map((tag)=>`<button type="button" class="rating-tag-choice" data-rating-tag="${escapeHtml(tag.label)}" data-tone="${tag.tone}" aria-pressed="${Array.isArray(selected)&&selected.includes(tag.label)}"><i aria-hidden="true"></i><span>${tag.label}</span></button>`).join('')}</div><small class="tag-count" aria-live="polite"></small></fieldset>`;
+ return `<fieldset class="rating-tag-picker"><legend>أوصاف تجربتك (اختياري)</legend><p class="muted">اختر حتى ستة أوصاف تعبّر عن تجربتك.</p><div class="rating-tag-options">${(reviewUpdatesReady()?REVIEW_TAGS:REVIEW_TAGS.slice(0,11)).map((tag)=>`<button type="button" class="rating-tag-choice" data-rating-tag="${escapeHtml(tag.label)}" data-tone="${tag.tone}" aria-pressed="${Array.isArray(selected)&&selected.includes(tag.label)}"><i aria-hidden="true"></i><span>${tag.label}</span></button>`).join('')}</div><small class="tag-count" aria-live="polite"></small></fieldset>`;
 }
 function chosenRatingTags(form){return [...form.querySelectorAll('[data-rating-tag][aria-pressed=true]')].map((button)=>button.dataset.ratingTag);}
 function bindRatingTags(form){

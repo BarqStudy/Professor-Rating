@@ -14,7 +14,7 @@ export const ADMIN_SECTIONS=[
  {id:'settings',title:'الربط والإعدادات',icon:'settings',description:'إعدادات البريد وفحص المساعد.',panels:[['admin-mail','البريد والإشعارات'],['admin-ai','المساعد والذكاء الاصطناعي']]},
 ];
 export const ADMIN_TOOLS=[
- ['review','inbox','admin-pending-reviews','مراجعة التقييمات','نشر التقييمات الجديدة أو رفضها','قبول اعتماد تقييم مراجعة تعليق'],
+ ['review','inbox','admin-pending-reviews','مراجعة التقييمات','نشر التقييمات الجديدة أو رفضها وربطها بمادة موجودة','قبول اعتماد تقييم مراجعة تعليق ربط مادة مقرر'],
  ['doctor-requests','inbox','admin-pending-doctors','طلبات إضافة الدكاترة','مراجعة الدكاترة الذين اقترحهم الطلاب','قبول رفض دكتور طلبات'],
  ['institution-requests','inbox','admin-institutions','طلبات الجامعات والكليات','مراجعة طلبات إضافة الجهات الجديدة','نموذج تسجيل طلب جامعة كلية ايميل'],
  ['review-edits','inbox','admin-review-edits','طلبات تعديل التقييمات','مراجعة التعديلات المقترحة قبل نشرها','طلب تعديل تقييم'],
@@ -28,7 +28,7 @@ export const ADMIN_TOOLS=[
  ['doctor-directory','doctors','admin-doctors','بحث وإدارة الدكاترة','الاسم والتخصص والتوثيق والمناصب','بحث تعديل توثيق حذف دكتور عميد رئيس قسم','#admin-doctor-search'],
  ['edit-plan','plans','study-editor','تعديل خطة ومقرراتها','الرموز والساعات والمستويات واسم الخطة وحذفها','تغيير اسم حذف خطة مقرر مادة مستوى ساعات رمز','#study-editor-plan'],
  ['import-plan','plans','admin-study-import','استيراد خطة جديدة','قراءة ملف الخطة بالذكاء الاصطناعي وحفظه','اضافة خطة تخصص رفع pdf قراءة ai','#study-import-form'],
- ['published','published','published-review-management','التقييمات المنشورة','البحث عن تقييم منشور وحذفه','حذف تقييم ازالة تقييمات منشورة','#published-review-search'],
+ ['published','published','published-review-management','التقييمات المنشورة','البحث عن تقييم منشور وربط مادته أو حذفه','حذف تقييم ازالة تقييمات منشورة ربط مادة مقرر','#published-review-search'],
  ['team','people','admin-team','تعيين سفير أو مساعد','توزيع صلاحيات الجامعة والكلية','سفراء مساعد صلاحية فريق تعيين','#assign-ambassador'],
  ['users','people','admin-users','إدارة المستخدمين','الحظر والتقييد وفك الحظر','حظر طالب مستخدم تقييد حساب زائر','#cloud-user-status'],
  ['files','files','file-management','ملفات المنصة','رفع الملفات وتنزيلها وفحص R2','ملف ملفات تخزين r2 كلاود رفع تنزيل'],
