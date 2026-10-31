@@ -76,10 +76,6 @@ jobs:
           target.chmod(0o600)
           PY
           supabase secrets set --env-file "$secret_file" --project-ref "$SUPABASE_PROJECT_REF" --yes
-      - name: Allow native OAuth callback without changing existing providers
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: python3 scripts/configure-native-auth.py
       - name: Deploy Miyar API
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -130,3 +126,7 @@ jobs:
           Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('Miyar assistant configuration: **' + ('enabled' if assistant['enabled'] else 'not enabled') + '**\n')
           print('Backend, guest sessions and live presence are reachable. Public catalogue contains', len(data['colleges']), 'colleges.')
           PY
+      - name: Allow native OAuth callback without changing existing providers
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: python3 scripts/configure-native-auth.py

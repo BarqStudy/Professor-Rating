@@ -12,6 +12,9 @@ on:
       - 'package*.json'
       - 'capacitor.config.json'
       - '.github/workflows/mobile-build.yml'
+env:
+  VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
 permissions:
   contents: read
 concurrency:
@@ -30,7 +33,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
+      - name: Install Android build tools in the runner SDK
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
       - run: npm ci
       - run: npm test
       - run: npm run mobile:sync

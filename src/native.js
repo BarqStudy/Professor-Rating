@@ -17,8 +17,13 @@ export function appLink(value){
  return null;
 }
 export const publicDoctorUrl=id=>`https://miyar.website/${id?`?doctor=${encodeURIComponent(id)}`:''}`;
+export function nativeExternalUrl(value,base){
+ const url=new URL(value,base),local=new URL(base);
+ // Custom WKWebView schemes can have URL.origin === 'null'; compare host/scheme.
+ return url.protocol===local.protocol&&url.host===local.host?new URL(url.pathname+url.search+url.hash,'https://miyar.website/'):url;
+}
 export async function openSystemUrl(value){
- const url=new URL(value,location.href);
+ const url=isNative()?nativeExternalUrl(value,location.href):new URL(value,location.href);
  if(!['https:','mailto:','tel:'].includes(url.protocol))throw new Error('رابط غير مدعوم.');
  if(!isNative()){window.open(url.href,'_blank','noopener,noreferrer');return;}
  if(url.protocol==='https:'){const {Browser}=await import('@capacitor/browser');await Browser.open({url:url.href});}
@@ -26,9 +31,13 @@ export async function openSystemUrl(value){
 }
 export async function shareNativeCard(card,name){
  const {Filesystem,Directory}=await import('@capacitor/filesystem'),{Share}=await import('@capacitor/share');
- const file=await Filesystem.writeFile({path:`miyar-${Date.now()}.png`,data:card.dataUrl.split(',')[1],directory:Directory.Cache});
- try{await Share.share({title:`مِعيار — ${name}`,text:card.url,files:[file.uri],dialogTitle:'مشاركة بطاقة الدكتور'});}
- finally{await Filesystem.deleteFile({path:file.uri}).catch(()=>{});}
+ // Android's chooser can finish before the receiving app reads the image.
+ // Keep shared public cards in cache until the next cleanup, never delete on selection.
+ const directory=Directory.Cache,folder='miyar-shares',now=Date.now();
+ const cached=await Filesystem.readdir({path:folder,directory}).catch(()=>({files:[]}));
+ await Promise.allSettled(cached.files.filter(file=>file.type==='file'&&file.mtime<now-86400000).map(file=>Filesystem.deleteFile({path:`${folder}/${file.name}`,directory})));
+ const file=await Filesystem.writeFile({path:`${folder}/${crypto.randomUUID()}.png`,data:card.dataUrl.split(',')[1],directory,recursive:true});
+ await Share.share({title:`مِعيار — ${name}`,text:card.url,files:[file.uri],dialogTitle:'مشاركة بطاقة الدكتور'});
 }
 export async function shareNativeLink(text,id){const {Share}=await import('@capacitor/share');await Share.share({title:'مِعيار',text,url:publicDoctorUrl(id)});}
 export async function setupNative({back,onDoctor,onError}){
@@ -44,8 +53,9 @@ export async function setupNative({back,onDoctor,onError}){
  document.addEventListener('click',event=>{
   const anchor=event.target.closest?.('a[href]');if(!anchor||event.defaultPrevented)return;
   const url=new URL(anchor.href,location.href);
-  if(url.origin===location.origin&&anchor.target!=='_blank')return;
-  if(['https:','mailto:','tel:'].includes(url.protocol)){event.preventDefault();openSystemUrl(url.href).catch(error=>onError(error.message));}
+  const local=url.protocol===location.protocol&&url.host===location.host;
+  if(local&&anchor.target!=='_blank')return;
+  if(['https:','mailto:','tel:'].includes(url.protocol)||(local&&anchor.target==='_blank')){event.preventDefault();openSystemUrl(url.href).catch(error=>onError(error.message));}
  });
  const {SplashScreen}=await import('@capacitor/splash-screen');await SplashScreen.hide();
 }

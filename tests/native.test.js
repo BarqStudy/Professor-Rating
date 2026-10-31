@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {appLink,APP_CALLBACK,publicDoctorUrl} from '../src/native.js';
+import {appLink,APP_CALLBACK,publicDoctorUrl,nativeExternalUrl} from '../src/native.js';
 import {createNativeAuth} from '../src/native-auth.js';
 import {createGoogleVerifier} from '../supabase/functions/miyar/auth.js';
 import {createHandler} from '../supabase/functions/miyar/handler.js';
@@ -55,4 +55,8 @@ test('account deletion requires explicit confirmation, binds the verified actor 
 
 test('an expired cold-start callback does not poison initialization or prevent the next login',async()=>{
  const f=fixture(APP_CALLBACK+'?code=expired');f.client.auth.exchangeCodeForSession=async()=>({error:new Error('expired')});await f.flow.initialize(f.client);assert.equal(f.errors.length,1);await f.flow.signIn(f.client,'apple','https://miyar.website/');assert.equal(f.calls.find(c=>c[0]==='signin')[1].provider,'apple');assert.equal(f.calls.at(-1)[0],'open');
+});
+
+test('bundled privacy and PDF links open their real website URL, never an unreachable localhost or null custom-scheme origin',()=>{
+ for(const base of ['https://localhost/','capacitor://localhost/']){assert.equal(nativeExternalUrl('./privacy.html',base).href,'https://miyar.website/privacy.html');assert.equal(nativeExternalUrl('./plans/plan.pdf',base).href,'https://miyar.website/plans/plan.pdf');assert.equal(nativeExternalUrl('https://example.com/file.pdf',base).href,'https://example.com/file.pdf');assert.equal(nativeExternalUrl('mailto:info@miyar.website',base).href,'mailto:info@miyar.website');}
 });
