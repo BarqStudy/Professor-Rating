@@ -1,3 +1,4 @@
+import {isNative,nativePlatform,setupNative,shareNativeLink,shareNativeCard,publicDoctorUrl} from './native.js';
 import {reviewDate} from './review-date.js';
 import {reviewLikeButton,createReviewLikes} from './review-likes.js';
 import './review-likes.css';
@@ -51,7 +52,9 @@ import {
   getGoogleSession,
   initializeAuth,
   signInGoogle,
+  signInApple,
   signOutGoogle,
+  clearGuestSession,
 } from "./cloud.js";
 let googleSession = null;
 let guestProfile = null, presenceCount = null, presenceBusy = false;
@@ -1112,7 +1115,8 @@ function toggleSave(id) {
   );
 }
 async function share(text, id) {
-  const url = new URL(location.href);
+  const url = new URL(isNative()?publicDoctorUrl():location.href);
+  if (isNative()){try{await shareNativeLink(text,id);}catch{}return;}
   if (id) url.searchParams.set("doctor", id);
   try {
     if (navigator.share) {
@@ -1372,6 +1376,21 @@ function bindAdmin() {
   });
 }
 
+function openAccountDeletion(){
+  if(!googleSession){storage.setItem('miyar-delete-account-intent','true');openGoogleMessage();return;}
+  storage.removeItem('miyar-delete-account-intent');
+  modal('حذف حساب مِعيار',`<form id="delete-account-form"><p>سيُحذف حسابك وملفك وتقييماتك ودرجاتك وطلباتك وإعجاباتك، ومساهمات جلسات الزائر المرتبطة بحسابك. لا يمكن التراجع بعد الحذف.</p><p class="muted">لا يؤدي حذف حسابك إلى حذف حساب Google أو Apple، أو خطط المنصة أو بيانات الدكاترة وتقييمات الطلاب الآخرين.</p><label>للتأكيد، اكتب «حذف حسابي»<input name="confirmation" required autocomplete="off" placeholder="حذف حسابي"></label><p class="form-error" role="alert"></p><button type="submit" class="danger">حذف حسابي نهائيًا</button><button type="button" class="secondary" id="cancel-delete-account">إلغاء</button></form>`);
+  const form=document.querySelector('#delete-account-form');form.querySelector('#cancel-delete-account').onclick=closeModal;
+  form.onsubmit=async event=>{event.preventDefault();const text=form.elements.confirmation.value;if(text!=='حذف حسابي'){form.querySelector('.form-error').textContent='اكتب «حذف حسابي» لتأكيد الإزالة النهائية.';return;}const button=form.querySelector('[type=submit]');button.disabled=true;
+   try{const owner=googleSession.user.id;await api('account.delete',{confirmation:text});localSignOut=true;await signOutGoogle();clearGuestSession();
+    try{for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(key?.includes(owner))storage.removeItem(key);}}catch{}
+    saved=[];savedOnly=false;query='';storage.removeItem('athar-saved');
+    for(const key of ['miyar-profile','miyar-guest-token'])storage.removeItem(key);
+    guestProfile=null;googleSession=null;cloudMe=null;cloudQueue=null;studentProfile=null;signedOut=true;storage.setItem('miyar-session','signed-out');setPage('home');document.body.classList.remove('modal-open');localSignOut=false;render();toast('حُذف حسابك وبياناته.');
+   }catch(error){localSignOut=false;if(form.isConnected){form.querySelector('.form-error').textContent=error.message;button.disabled=false;}}
+  };
+}
+function accountDeletionIntent(){if(!storage.getItem('miyar-delete-account-intent'))return;openAccountDeletion();}
 function openSettings() {
   const profile = studentProfile ||
     {
@@ -1434,8 +1453,9 @@ function openSettings() {
             ? "إنهاء جلسة مِعيار على هذا الجهاز."
             : "الخروج من ملفك المحلي في مِعيار."
         }</small></div>`
-    }</form>`,
+    }${googleSession?'<button type="button" class="text-button danger" id="delete-my-account">حذف حسابي</button>':''}</form>`,
   );
+  document.querySelector("#delete-my-account")?.addEventListener("click",openAccountDeletion);
   document.querySelector("#my-requests-settings")?.addEventListener("click", openRequests);
   const accountId = cloudMe?.id;
   document.querySelector('#copy-account-id')?.addEventListener('click', async () => {
@@ -1701,6 +1721,7 @@ async function loadCloud() {
     void guestSession.then(() => refreshPresence());
     scheduleStudyPlans();
     refreshSavedUpdates();
+    accountDeletionIntent();
   })().finally(() => { cloudLoadPending = null; });
   return cloudLoadPending;
 }
@@ -1747,6 +1768,7 @@ async function startGoogleLogin() {
   if (button) button.disabled = true;
   try {
     await signInGoogle();
+    if(isNative()&&button)button.disabled=false;
   } catch (error) {
     const box = document.querySelector(".google-login-error");
     if (box) box.textContent = error.message;
@@ -1759,9 +1781,10 @@ function openGoogleMessage() {
     "الدخول إلى مِعيار",
     `<div class="login-explainer"><span class="settings-avatar">${
       ic("shield")
-    }</span><h3>تجربتك تبدأ بخطوة بسيطة</h3><p>يمكنك التقييم كزائر. سجّل الدخول بحساب Google لحفظ ملفك ومتابعة طلباتك. لا يظهر اسمك أو بريدك مع التقييمات.</p><button class="google-signin-button" id="google-signin"><span class="google-g" aria-hidden="true">G</span>الدخول باستخدام Google</button><p class="google-login-error form-error" role="alert"></p><p class="local-note"><a href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener noreferrer">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html" target="_blank" rel="noopener noreferrer">شروط الاستخدام</a></p><small class="muted">يمكنك تصفّح الدكاترة دون تسجيل الدخول.</small></div>`,
+    }</span><h3>تجربتك تبدأ بخطوة بسيطة</h3><p>يمكنك التقييم كزائر. سجّل الدخول بحساب Google لحفظ ملفك ومتابعة طلباتك. لا يظهر اسمك أو بريدك مع التقييمات.</p><button class="google-signin-button" id="google-signin"><span class="google-g" aria-hidden="true">G</span>الدخول باستخدام Google</button>${nativePlatform()==='ios'||storage.getItem('miyar-delete-account-intent')?'<button type="button" class="secondary apple-signin-button" id="apple-signin">الدخول باستخدام Apple</button>':''}<p class="google-login-error form-error" role="alert"></p><p class="local-note"><a href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener noreferrer">سياسة الخصوصية</a> · <a href="${import.meta.env.BASE_URL}terms.html" target="_blank" rel="noopener noreferrer">شروط الاستخدام</a></p><small class="muted">يمكنك تصفّح الدكاترة دون تسجيل الدخول.</small></div>`,
   );
   document.querySelector("#google-signin").onclick = startGoogleLogin;
+  document.querySelector("#apple-signin")?.addEventListener("click",async event=>{const button=event.currentTarget;button.disabled=true;try{await signInApple();}catch(error){const box=document.querySelector(".google-login-error");if(box)box.textContent=error.message;}finally{if(button.isConnected)button.disabled=false;}});
 }
 function requireCloudAccount(next) {
   if(cloudStatus==='loading'){
@@ -2297,7 +2320,9 @@ async function shareDoctorCard(doctor){
   const card=await createDoctorCard(doctor,Number(document.documentElement.style.getPropertyValue('--brand-hue'))||218,university);
   if(!loading.isConnected)return;
   modal('بطاقة مشاركة الدكتور',`<img class="share-card-preview" src="${card.dataUrl}" alt="بطاقة الدكتور ${escapeHtml(doctor.name)} ومؤشراته وعدد تقييماته"><div class="detail-actions"><a class="primary" id="download-doctor-card" href="${card.dataUrl}" download="miyar-doctor-${doctor.id}.png">حفظ الصورة</a><button class="secondary" id="native-share-card">مشاركة الصورة</button></div><p class="muted">${escapeHtml(card.url)}</p>`);
+  if(isNative()){const save=document.querySelector('#download-doctor-card');save.removeAttribute('href');save.removeAttribute('download');save.setAttribute('role','button');save.tabIndex=0;save.onclick=()=>shareNativeCard(card,doctor.name).catch(()=>toast('تعذّر حفظ الصورة. حاول مجددًا.'));}
   document.querySelector('#native-share-card').onclick=async()=>{
+   if(isNative()){try{await shareNativeCard(card,doctor.name);}catch{toast('تعذّرت مشاركة الصورة. حاول مجددًا.');}return;}
    const file=new File([card.blob],`miyar-doctor-${doctor.id}.png`,{type:'image/png'});
    try{if(navigator.canShare?.({files:[file]}))await navigator.share({files:[file],title:`مِعيار — ${doctor.name}`,text:card.url});else document.querySelector('#download-doctor-card').click();}
    catch(error){if(error.name!=='AbortError')toast('يمكنك حفظ الصورة ومشاركتها من جهازك.');}
@@ -2448,6 +2473,7 @@ window.addEventListener('miyar-auth', async ({ detail }) => {
   if (generation !== authGeneration) return;
   render();
   refreshSavedUpdates();
+  accountDeletionIntent();
 });
 document.addEventListener('click',event=>{
  const link=event.target.closest?.('a[href^="#"]');
@@ -2473,11 +2499,14 @@ window.addEventListener("resize", updateCarouselControls);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });
+window.addEventListener('miyar-auth-error',event=>{authNotice=event.detail.message;toast(authNotice);});
+void setupNative({back:()=>{if(document.querySelector('.modal-backdrop')){closeModal();return true;}if(page!=='home'){previousPage();return true;}return false;},onDoctor:id=>{const url=new URL(location.href);url.searchParams.set('doctor',id);history.replaceState(history.state,'',url);if(!cloudBooting&&doctors.some(d=>d.id===id))detail(id);},onError:toast}).catch(()=>toast('تعذّر تهيئة إحدى وظائف الجهاز. أعد فتح التطبيق.'));
 setupPwa();
 setupInteractions();
 setupCursor();
 setupHero();
 setupReveals();
+if(new URLSearchParams(location.search).get('action')==='delete-account')storage.setItem('miyar-delete-account-intent','true');
 render();
 if (configured) loadCloud();
 const sharedId = +new URLSearchParams(location.search).get("doctor");

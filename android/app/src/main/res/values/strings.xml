@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">مِعيار</string>
+    <string name="title_activity_main">مِعيار</string>
+    <string name="package_name">website.miyar.app</string>
+    <string name="custom_url_scheme">website.miyar.app</string>
+</resources>

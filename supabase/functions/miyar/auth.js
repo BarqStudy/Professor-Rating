@@ -7,7 +7,7 @@ export function createGoogleVerifier(projectUrl, serviceKey, fetcher = fetch) {
     const authorization = request.headers.get("authorization") || "";
     if (
       !/^Bearer [^\s]+$/i.test(authorization) || authorization.length > 16384
-    ) throw new ApiError(401, "سجّل الدخول باستخدام Google.");
+    ) throw new ApiError(401, "سجّل الدخول باستخدام Google أو Apple.");
     if (!projectUrl || !serviceKey) {
       throw new ApiError(503, "لم يكتمل إعداد تسجيل الدخول.");
     }
@@ -33,13 +33,9 @@ export function createGoogleVerifier(projectUrl, serviceKey, fetcher = fetch) {
       throw new ApiError(503, "خدمة تسجيل الدخول غير متاحة مؤقتًا.");
     }
     const user = await response.json().catch(() => null);
-    const googleIdentity = user?.identities?.some((identity) =>
-      identity.provider === "google"
-    );
-    const googleProvider = user?.app_metadata?.providers?.includes("google") ||
-      user?.app_metadata?.provider === "google";
-    if (!user?.email_confirmed_at || !googleIdentity || !googleProvider) {
-      throw new ApiError(403, "تسجيل الدخول متاح بحساب Google فقط.");
+    const provider=['google','apple'].find(provider=>user?.identities?.some(identity=>identity.provider===provider)&&(user?.app_metadata?.providers?.includes(provider)||user?.app_metadata?.provider===provider));
+    if (!user?.email_confirmed_at || !provider) {
+      throw new ApiError(403, "استخدم تسجيل الدخول باستخدام Google أو Apple.");
     }
     let id;
     try {
@@ -48,7 +44,7 @@ export function createGoogleVerifier(projectUrl, serviceKey, fetcher = fetch) {
       throw new ApiError(401, "جلسة دخول غير صالحة.");
     }
     // Decode claims only after Auth accepted this exact token. Password sessions
-    // for an account linked to Google must not enable this Google-only API.
+    // for a linked account must not enable the OAuth-only API.
     let claims;
     try {
       const encoded = authorization.split(" ")[1].split(".")[1];
@@ -60,7 +56,7 @@ export function createGoogleVerifier(projectUrl, serviceKey, fetcher = fetch) {
       claims.sub !== id ||
       !claims.amr?.some((method) => method.method === "oauth") ||
       user.is_anonymous
-    ) throw new ApiError(403, "استخدم تسجيل الدخول باستخدام Google فقط.");
+    ) throw new ApiError(403, "استخدم تسجيل الدخول باستخدام Google أو Apple.");
     const name = typeof user.user_metadata?.full_name === "string"
       ? user.user_metadata.full_name.trim().slice(0, 60)
       : "";

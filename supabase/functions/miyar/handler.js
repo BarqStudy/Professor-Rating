@@ -23,7 +23,7 @@ import {
 export function createHandler({ db, env, authenticate, aiFetch = fetch, storageFetch = fetch, mailTransport, mailFetch=fetch, background }) {
   const mailer=createInstitutionMailer({db,env,transportFactory:mailTransport,mailFetch});
   const notifyInstitution=id=>{if(!id||!institutionMailStatus(env).configured)return;const task=mailer.deliver(id).catch(()=>{});if(background)background(task);return task;};
-  const origins = (env.ALLOWED_ORIGINS || "https://barqstudy.github.io").split(
+  const origins = (env.ALLOWED_ORIGINS || "https://barqstudy.github.io,https://miyar.website,https://www.miyar.website,https://localhost,capacitor://localhost").split(
     ",",
   ).map((x) => x.trim());
   const admins = adminIds(env.ADMIN_AUTH_IDS);
@@ -131,6 +131,10 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       // Identity comes only from a Supabase-verified Google session.
       if (!authenticate) throw new ApiError(401, "سجّل الدخول باستخدام Google.");
       const identity = await authenticate(request);
+      if(action==='account.delete'){
+        if(body.confirmation!=='حذف حسابي')throw new ApiError(400,'اكتب «حذف حسابي» لتأكيد الإزالة النهائية.');
+        return respond(await db('rpc/miyar_delete_account',{method:'POST',body:{p_account:identity.id}}));
+      }
       let rows = await db(
         `miyar_accounts?auth_id=eq.${identity.id}&select=auth_id,name,major_id,level,status,university_id`,
       );

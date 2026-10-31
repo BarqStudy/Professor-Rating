@@ -66,7 +66,7 @@ jobs:
           from pathlib import Path
           values = {
               'ADMIN_AUTH_IDS': os.environ['ADMIN_AUTH_IDS'],
-              'ALLOWED_ORIGINS': 'https://barqstudy.github.io,https://miyar.website,https://www.miyar.website',
+              'ALLOWED_ORIGINS': 'https://barqstudy.github.io,https://miyar.website,https://www.miyar.website,https://localhost,capacitor://localhost',
           }
           for value in values.values():
               if '\n' in value or '\r' in value:
@@ -76,6 +76,10 @@ jobs:
           target.chmod(0o600)
           PY
           supabase secrets set --env-file "$secret_file" --project-ref "$SUPABASE_PROJECT_REF" --yes
+      - name: Allow native OAuth callback without changing existing providers
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: python3 scripts/configure-native-auth.py
       - name: Deploy Miyar API
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

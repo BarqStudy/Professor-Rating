@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
+import {isNative} from './native.js';
+import {createNativeAuth} from './native-auth.js';
 import { configured, projectUrl, publishableKey } from "./config.js";
 export { configured } from "./config.js";
 
@@ -12,13 +14,14 @@ const client = configured
   ? createClient(projectUrl, publishableKey, {
     auth: {
       flowType: "pkce",
-      detectSessionInUrl: true,
+      detectSessionInUrl: !isNative(),
       persistSession: true,
       autoRefreshToken: true,
     },
   })
   : null;
 let cachedSession = null;
+const nativeAuth=createNativeAuth({onError:message=>window.dispatchEvent(new CustomEvent('miyar-auth-error',{detail:{message}}))});
 client?.auth.onAuthStateChange((event, session) => {
   cachedSession = session;
   // Never await another auth method inside the SDK's auth-state callback.
@@ -30,6 +33,7 @@ client?.auth.onAuthStateChange((event, session) => {
 });
 export async function initializeAuth() {
   if (!client) return null;
+  await nativeAuth.initialize(client);
   const { data, error } = await client.auth.getSession();
   if (error || oauthError) {
     throw new Error("تعذّر إكمال تسجيل الدخول باستخدام Google. حاول مجددًا.");
@@ -46,7 +50,7 @@ export async function getGoogleSession() {
   cachedSession = data.session;
   return cachedSession;
 }
-export async function signInGoogle() {
+async function signInProvider(provider) {
   if (!client) throw new Error("لم يكتمل إعداد تسجيل الدخول بعد.");
   // Give an in-app error while Google is not yet enabled, rather than navigating to an error JSON page.
   let settings;
@@ -60,16 +64,15 @@ export async function signInGoogle() {
   } catch {
     throw new Error("تعذّر الاتصال بخدمة الدخول. حاول مجددًا.");
   }
-  if (!settings.external?.google) {
-    throw new Error("تسجيل الدخول باستخدام Google لم يُفعّل بعد. جرّب لاحقًا.");
+  if (!settings.external?.[provider]) {
+    throw new Error(`تسجيل الدخول باستخدام ${provider==='apple'?'Apple':'Google'} لم يُفعّل بعد. جرّب لاحقًا.`);
   }
   const redirectTo = new URL(import.meta.env.BASE_URL, location.href).href;
-  const { error } = await client.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo, queryParams: { prompt: "select_account" } },
-  });
-  if (error) throw new Error("تعذّر بدء تسجيل الدخول باستخدام Google.");
+  const { error } = await nativeAuth.signIn(client,provider,redirectTo);
+  if (error) throw new Error("تعذّر بدء تسجيل الدخول.");
 }
+export const signInGoogle=()=>signInProvider('google');
+export const signInApple=()=>signInProvider('apple');
 export async function signOutGoogle() {
   if (!client) return;
   const { error } = await client.auth.signOut({ scope: "local" });
@@ -118,6 +121,7 @@ export async function api(action, data = {}) {
 let guestTokenMemory='';
 let guestSessionPromise=null;
 function readGuestToken(){try{return localStorage.getItem('miyar-guest-token')||guestTokenMemory;}catch{return guestTokenMemory;}}
+export function clearGuestSession(){writeGuestToken('');}
 function writeGuestToken(token){guestTokenMemory=token;try{localStorage.setItem('miyar-guest-token',token);}catch{}}
 export async function ensureGuestSession(){
  if(guestSessionPromise)return guestSessionPromise;

@@ -7,3 +7,14 @@ dist/
 !.env.example
 supabase/.temp/
 supabase/.branches/
+
+# Native signing credentials and local build products
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+keystore.properties
+releases/
+__pycache__/
+*.pyc

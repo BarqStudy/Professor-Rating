@@ -1,0 +1,9 @@
+{
+  "appId": "website.miyar.app",
+  "appName": "مِعيار",
+  "webDir": "dist",
+  "server": {"hostname": "localhost", "androidScheme": "https", "iosScheme": "capacitor"},
+  "android": {"allowMixedContent": false},
+  "ios": {"contentInset": "automatic", "preferredContentMode": "mobile"},
+  "plugins": {"SplashScreen": {"launchShowDuration": 0}, "StatusBar": {"overlaysWebView": false}}
+}
