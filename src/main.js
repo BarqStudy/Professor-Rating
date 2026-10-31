@@ -110,7 +110,7 @@ const icons = {
   code: '<path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18"/>',
   shield:
     '<path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z"/><path d="m8 12 3 3 5-6"/>',
-  compare: '<path d="M3 7h15m-4-4 4 4-4 4M21 17H6m4-4-4 4 4 4"/>',
+  compare: '<path d="M11 2v20M11 4H6a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h5M16 4h2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-2"/>',
   bookmark: '<path d="M6 3h12v18l-6-4-6 4Z"/>',
   share:
     '<circle cx="18" cy="5" r="3"/><circle cx="5" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8 11 7-4M8 13l7 4"/>',
@@ -593,7 +593,7 @@ function cards(list) {
     ? filtered.map((d) =>
       `<article class="doctor-card"><div class="card-top"><span class="avatar ${d.color}" aria-hidden="true">${
         ic("profile")
-      }</span><div class="doctor-card-tools"><button type="button" class="icon-btn doctor-compare-icon ${compareIds.includes(d.id)?'is-compared':''}" data-compare="${d.id}" data-compare-icon="true" aria-pressed="${compareIds.includes(d.id)}" aria-label="${compareIds.includes(d.id)?'إزالة من المقارنة':'قارن الدكتور'}: ${escapeHtml(d.name)}" title="قارن الدكتور">${ic('compare')}</button><button type="button" class="save-button ${saved.includes(d.id)?'is-saved':''}" data-save="${d.id}" aria-pressed="${saved.includes(d.id)}" aria-label="${saved.includes(d.id)?'إلغاء حفظ':'حفظ الدكتور'}: ${escapeHtml(d.name)}">${ic('bookmark')}</button></div></div><div class="doctor-name"><button data-doctor="${d.id}">${
+      }</span><div class="doctor-card-tools"><button type="button" class="icon-btn doctor-compare-icon ${compareIds.includes(d.id)?'is-compared':''}" data-compare="${d.id}" data-compare-icon="true" aria-pressed="${compareIds.includes(d.id)}" aria-label="${compareIds.includes(d.id)?'إزالة من المقارنة':'قارن الدكتور'}: ${escapeHtml(d.name)}" title="قارن الدكتور">${ic('compare')}<span>قارن الدكتور</span></button><button type="button" class="save-button ${saved.includes(d.id)?'is-saved':''}" data-save="${d.id}" aria-pressed="${saved.includes(d.id)}" aria-label="${saved.includes(d.id)?'إلغاء حفظ':'حفظ الدكتور'}: ${escapeHtml(d.name)}">${ic('bookmark')}</button></div></div><div class="doctor-name"><button data-doctor="${d.id}">${
         escapeHtml(d.name)
       }</button>${
         d.verified
@@ -2072,7 +2072,7 @@ function syncComparisonButtons(){
  document.querySelectorAll('[data-compare]').forEach(button=>{
   const id=Number(button.dataset.compare),selected=compareIds.includes(id),name=doctors.find(d=>d.id===id)?.name||'';
   button.setAttribute('aria-pressed',String(selected));button.classList.toggle('is-compared',selected);
-  button.innerHTML=ic('compare')+(button.hasAttribute('data-compare-icon')?'':selected?' مضاف للمقارنة':' قارن الدكتور');
+  button.innerHTML=ic('compare')+(button.hasAttribute('data-compare-icon')?'<span>قارن الدكتور</span>':selected?' مضاف للمقارنة':' قارن الدكتور');
   button.setAttribute('aria-label',`${selected?'إزالة من المقارنة':'قارن الدكتور'}: ${name}`);button.title=selected?'إزالة من المقارنة':'قارن الدكتور';
  });
 }

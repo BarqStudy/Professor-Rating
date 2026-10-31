@@ -3,6 +3,8 @@
 .doctor-card .doctor-card-tools>button{display:grid;place-items:center;width:44px;height:44px;min-width:44px;padding:0;margin:0;border-radius:13px;flex:none;color:var(--muted)}
 .doctor-card .doctor-card-tools .is-compared,.doctor-card .doctor-card-tools .is-saved{color:var(--green);background:var(--accent-soft)}
 .doctor-card .doctor-card-tools .icon{width:21px;height:21px}
+.doctor-card .doctor-card-tools .doctor-compare-icon{display:flex;align-items:center;justify-content:center;gap:6px;width:auto;padding-inline:9px}
+.doctor-compare-icon>span{font-size:calc(11px * var(--font-scale,1));line-height:1.8;white-space:nowrap}
 .doctor-card .doctor-card-actions{display:grid;gap:10px;margin-top:auto;padding-block:20px 24px;width:100%}
 .doctor-card .doctor-card-actions>button{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:48px;margin:0;padding:11px 15px;border-radius:14px;font-size:calc(15px * var(--font-scale,1));line-height:1.8}
 .doctor-card .doctor-card-actions .icon{width:20px;height:20px;flex:none}
