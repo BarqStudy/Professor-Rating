@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "supabase/**"
+      - "scripts/configure-native-auth.py"
       - ".github/workflows/setup-backend.yml"
 
 permissions:
