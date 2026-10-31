@@ -26,6 +26,19 @@ test('removed evaluations release member, guest and linked identities; anonymous
   const g=await submit(guest.id,'miyar_submit_existing_guest_review','مادة زائر');await db.query("update miyar_reviews set status='published' where id=$1",[g.id]);await rpc(db,'miyar_link_review_identity',[b,guest.id]);await rpc(db,'miyar_remove_published_review',[admin,g.id,'']);
   assert.equal((await rpc(db,'miyar_review_eligibility',[b,null,d,'مادة زائر'])).eligible,true);assert.equal((await rpc(db,'miyar_review_eligibility',[null,guest.id,d,'مادة زائر'])).eligible,true);
   await submit(b,'miyar_submit_existing_google_review','مادة زائر');await assert.rejects(submit(guest.id,'miyar_submit_existing_guest_review','مادة زائر'),/REVIEW_ALREADY_EXISTS/);
+  // Deleting a published real course review starts an independent review cycle.
+  const staticArgs=[a,d,'الاستاتيكا',92,40,50,60,'تقييم سابق',[],false,'najran-ce-2025/ge101',true];
+  const oldStatic=await rpc(db,'miyar_submit_existing_google_review',staticArgs);
+  await db.query("update miyar_reviews set status='published',created_at='2026-01-01T00:00:00Z' where id=$1",[oldStatic.id]);
+  await rpc(db,'miyar_set_review_like',[b,null,oldStatic.id,true]);assert.equal(await rpc(db,'miyar_review_like_count',[oldStatic.id]),1);
+  await rpc(db,'miyar_remove_published_review',[admin,oldStatic.id,'حذف التقييم المنشور']);
+  const eligible=await rpc(db,'miyar_review_eligibility',[a,null,d,'استاتيكا']);assert.equal(eligible.eligible,true);assert.ok(!eligible.reviewedSubjects.includes('الاستاتيكا'));
+  const freshArgs=[a,d,'الاستاتيكا',31,90,91,92,'تقييم جديد',REVIEW_TAGS.slice(-6).map(t=>t.label),false,'najran-ce-2025/ge101',true];
+  const fresh=await rpc(db,'miyar_submit_existing_google_review',freshArgs);assert.notEqual(fresh.id,oldStatic.id);assert.equal(fresh.status,'pending');assert.equal(await rpc(db,'miyar_review_like_count',[fresh.id]),0);
+  const saved=(await db.query('select grade,explanation,treatment,grading,comment,tags,created_at from miyar_reviews where id=$1',[fresh.id])).rows[0];assert.equal(saved.grade,31);assert.deepEqual([saved.explanation,saved.treatment,saved.grading],[90,91,92]);assert.equal(saved.comment,'تقييم جديد');assert.deepEqual(saved.tags,REVIEW_TAGS.slice(-6).map(t=>t.label));assert.ok(new Date(saved.created_at)>new Date('2026-01-01T00:00:00Z'));
+  await assert.rejects(rpc(db,'miyar_submit_existing_google_review',freshArgs),/REVIEW_ALREADY_EXISTS/);
+  await db.query("update miyar_reviews set status='published' where id=$1",[fresh.id]);const publicRows=await rpc(db,'miyar_public_reviews',[d,'الاستاتيكا']);assert.deepEqual(publicRows.map(r=>r.id),[fresh.id]);assert.equal(publicRows[0].likes,0);
+  const amendment=await rpc(db,'miyar_request_edit',[a,fresh.id,'الاستاتيكا','تعديل',90,91,92,REVIEW_TAGS.slice(-6).map(t=>t.label)]);assert.equal(amendment.status,'pending');
   const manual=await submit(a,'miyar_submit_existing_google_review','ميكانيك الماىع');
   const foreignCollege=(await db.query("insert into miyar_colleges(name,university_id) values('كلية أخرى',1) returning id")).rows[0].id;const foreignMajor=(await db.query("insert into miyar_majors(name,college_id) values('تخصص آخر',$1) returning id",[foreignCollege])).rows[0].id;await db.query("insert into miyar_study_plans(id,major_id,metadata) values('foreign-test',$1,'{}')",[foreignMajor]);await db.exec("insert into miyar_study_courses(id,plan_id,code,name) values('foreign-test/ge101','foreign-test','G101','استاتيكا')");
   const options=await rpc(db,'miyar_review_course_options',[manual.id]);const course=options.find(c=>c.id==='najran-ce-2025/ce211');assert.ok(course);assert.ok(!options.some(c=>c.id==='foreign-test/ge101'));await assert.rejects(rpc(db,'miyar_link_review_course',[admin,manual.id,'foreign-test/ge101']),/INVALID_STUDY_COURSE/);

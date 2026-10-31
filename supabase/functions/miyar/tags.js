@@ -12,5 +12,11 @@ export const REVIEW_TAGS = [
  {label:'الواجبات مفيدة',tone:'positive'}, {label:'اختباراته من المحتوى',tone:'positive'},
  {label:'سريع في الشرح',tone:'neutral'}, {label:'يعتمد على التعلم الذاتي',tone:'neutral'},
  {label:'قليل الأمثلة',tone:'negative'}, {label:'صعب التواصل معه',tone:'negative'},
+ {label:'ينظم محتوى المادة',tone:'positive'}, {label:'يوفر مصادر إضافية',tone:'positive'},
+ {label:'يراجع قبل الاختبار',tone:'positive'}, {label:'يوضح توزيع الدرجات',tone:'positive'},
+ {label:'يعتمد على المشاريع',tone:'neutral'}, {label:'يركز على الحضور',tone:'neutral'},
+ {label:'يكثر من الاختبارات القصيرة',tone:'neutral'},
+ {label:'يتأخر في إعلان الدرجات',tone:'negative'}, {label:'الشرح غير منظم',tone:'negative'},
+ {label:'قليل التغذية الراجعة',tone:'negative'},
 
 ];
