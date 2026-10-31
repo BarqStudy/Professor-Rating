@@ -27,7 +27,7 @@ test('one review per professor and normalized subject spans moderation states, r
   for(let i=0;i<8;i++)await existing(db,student,d,'مقرر جديد '+i);
   const own=await existing(db,admin,d,'ميكانيكا');await db.query("update miyar_reviews set status='published' where id=$1",[own.id]);
   assert.equal((await rpc(db,'miyar_review_eligibility',[admin,null,d,'ميكانيكا'])).canEdit,true);
-  await db.query("update miyar_reviews set status='rejected' where id=$1",[own.id]);await assert.rejects(existing(db,admin,d,'الميكانيكا'),/REVIEW_ALREADY_EXISTS/);
+  await db.query("update miyar_reviews set status='rejected' where id=$1",[own.id]);await existing(db,admin,d,'الميكانيكا');const rejected=await existing(db,admin,d,'مادة مرفوضة قبل النشر');await db.query("update miyar_reviews set status='rejected' where id=$1",[rejected.id]);await assert.rejects(existing(db,admin,d,'مادة مرفوضة قبل النشر'),/REVIEW_ALREADY_EXISTS/);
   await existing(db,admin,d,'مختلفة');
   const owned=await rpc(db,'miyar_review_eligibility',[student,null,d,null]);
   assert.ok(owned.reviewedSubjects.includes('الاستاتيكا'));assert.ok(owned.reviewedSubjects.includes('مقرر جديد 7'));assert.ok(!owned.reviewedSubjects.includes('ميكانيكا'));

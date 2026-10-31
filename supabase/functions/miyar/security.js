@@ -35,9 +35,9 @@ export function validateReview(data) {
     college: text(data.college, 2, 100, "الكلية"),
     major: text(data.major, 2, 100, "التخصص"),
     name: text(data.name, 8, 100, "اسم الدكتور"),
-    subject: text(data.subject, 2, 120, "المادة"),
+    subject: data.withoutSubject===true&&data.publishGrade===false&&!data.courseId&&!data.subject ? "بدون مادة" : text(data.subject, 2, 120, "المادة"),
     comment: text(data.comment == null ? "" : data.comment, 0, 600, "التعليق"),
-    grade: integer(data.grade, 0, 100, "الدرجة"),
+    grade: data.publishGrade===false ? null : integer(data.grade, 0, 100, "الدرجة"),
   };
   if (result.name.split(/\s+/).length < 3) {
     throw new ApiError(400, "اكتب اسم الدكتور الثلاثي.");

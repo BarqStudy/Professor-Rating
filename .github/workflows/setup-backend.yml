@@ -7,6 +7,7 @@ on:
     paths:
       - "supabase/**"
       - "scripts/configure-native-auth.py"
+      - "scripts/apply-backend-migrations.py"
       - ".github/workflows/setup-backend.yml"
 
 permissions:
@@ -53,9 +54,7 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          supabase link --project-ref "$SUPABASE_PROJECT_REF" --yes
-          supabase db push --linked --yes
+        run: python3 scripts/apply-backend-migrations.py
       - name: Configure private backend secrets
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

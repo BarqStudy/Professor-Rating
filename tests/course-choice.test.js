@@ -19,7 +19,7 @@ test('catalogue names, shorthand tokens and codes suggest explicit choices witho
 
 const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222';
 const rpc=(db,name,args)=>db.query(`select ${name==='miyar_known_course_matches'?'* from ':''}${name}(${args.map((_,i)=>'$'+(i+1)).join(',')})${name==='miyar_known_course_matches'?'':' result'}`,args).then(r=>name==='miyar_known_course_matches'?r.rows:r.rows[0].result);
-test('server requires real catalogue selections on all current member/guest submit paths and reserves unambiguous historical aliases',async()=>{
+test('server accepts reviewable handwritten subjects on all member/guest paths, validates explicit selections and reserves unambiguous aliases',async()=>{
  const db=new PGlite();try{
   await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);');
   const dir=new URL('../supabase/migrations/',import.meta.url);for(const name of (await readdir(dir)).filter(n=>n.endsWith('.sql')).sort())await db.exec(await readFile(new URL(name,dir),'utf8'));
@@ -32,10 +32,10 @@ test('server requires real catalogue selections on all current member/guest subm
    assert.ok((await rpc(db,'miyar_known_course_matches',[3,value])).length>0);
    for(const [actor,existing,name] of [[a,true,'miyar_submit_existing_google_review'],[guest.id,true,'miyar_submit_existing_guest_review'],[a,false,'miyar_submit_google_review'],[guest.id,false,'miyar_guest_submit']]){
     const args=existing?[actor,d,value,90,80,80,80,'',[],false,null,true]:[actor,'كلية الهندسة','الهندسة المدنية','أحمد محمد العتيبي',value,90,80,80,80,'',[],false,null,true];
-    await assert.rejects(rpc(db,name,args),/STUDY_COURSE_SELECTION_REQUIRED/);
+    await db.exec('begin');const created=await rpc(db,name,args);assert.equal(created.status,'pending');await db.exec('rollback');
    }
   }
-  assert.equal((await db.query('select count(*)::int n from miyar_reviews')).rows[0].n,0,'rejected names never create a review');
+  assert.equal((await db.query('select count(*)::int n from miyar_reviews')).rows[0].n,0,'rolled-back manual submissions do not affect duplicate tests');
   const old=await rpc(db,'miyar_submit_existing_google_review',[a,d,'رسم',90,80,80,80,'',[],false,null]);
   assert.equal((await rpc(db,'miyar_review_eligibility',[a,null,d,'الرسم الهندسي'])).eligible,false);
   assert.ok((await rpc(db,'miyar_review_eligibility',[a,null,d,null])).reviewedSubjects.includes('الرسم الهندسي'));

@@ -34,7 +34,7 @@ test('helpful votes are idempotent, anonymous and publication-scoped, with one v
   await db.query("update miyar_accounts set status='banned' where auth_id=$1",[b]);assert.equal(await rpc(db,'miyar_review_like_count',[review.id]),0);
   await db.query("update miyar_accounts set status='active',university_id=1 where auth_id=$1",[b]);await assert.rejects(set(b,null,true),/REVIEW_UNAVAILABLE/);assert.deepEqual(await rpc(db,'miyar_review_like_states',[b,null,[review.id]]),[]);
   await db.query("update miyar_reviews set status='rejected' where id=$1",[review.id]);await assert.rejects(set(a,null,true),/REVIEW_UNAVAILABLE/);assert.deepEqual(await rpc(db,'miyar_review_like_states',[a,null,[review.id]]),[]);assert.deepEqual(await rpc(db,'miyar_public_reviews',[d,null]),[]);
-  await db.query("update miyar_reviews set status='published' where id=$1",[review.id]);await db.query("update miyar_doctors set status='archived' where id=$1",[d]);await assert.rejects(set(a,null,true),/REVIEW_UNAVAILABLE/);
+  await db.query("update miyar_reviews set status='published',removed_at=null where id=$1",[review.id]);await db.query("update miyar_doctors set status='archived' where id=$1",[d]);await assert.rejects(set(a,null,true),/REVIEW_UNAVAILABLE/);
   for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from miyar_review_likes'),/permission denied/);await assert.rejects(set(a,null,true),/permission denied/);await assert.rejects(rpc(db,'miyar_review_like_states',[a,null,[review.id]]),/permission denied/);await db.exec('reset role');}
  }finally{await db.close();}
 });

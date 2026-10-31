@@ -242,7 +242,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
         return respond(await majorAdministration(operation,body,identity.id,db));
       }
-      if(['review.published.list','review.remove'].includes(operation)){
+      if(['review.published.list','review.remove','review.course.options','review.course.link'].includes(operation)){
         if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
         return respond(await publishedReviewAdmin(operation,body,identity.id,db));
       }
