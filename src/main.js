@@ -40,6 +40,7 @@ import "./hero.css";
 import "./appearance.css";
 import "./performance.css";
 import "./interface-polish.css";
+import "./course-finder.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {
@@ -144,7 +145,7 @@ const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>config
   onAdvisor:(course,plan)=>{courseAdvisor.select(plan.id,course.id);setPage('advisor');render();window.scrollTo({top:0});},
   closeModal,toast,
 });
-const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onReviewLikes:root=>reviewLikes.mount(root),onRequestDoctor:(course,plan)=>requestDoctorForm({course,plan}),onDoctor:(id)=>cloudDoctorDetail(id)});
+const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onReviewLikes:root=>reviewLikes.mount(root),onRequestDoctor:(course,plan)=>requestDoctorForm({course,plan}),onDoctor:(id)=>cloudDoctorDetail(id),scopeKey:()=>[googleSession?.user.id||guestProfile?.id||'',currentUniversityId(),selectedStudentMajor()?.id].join(':'),onCompare:(plan,course)=>{courseAdvisor.select(plan.id,course.id);setPage('advisor');render();window.scrollTo({top:0});}});
 let fileManager, studyImport, studyEditor, publishedReviews, adminWorkspace, adminToolsPending = null, adminToolsError = '';
 function ensureAdminTools() {
   if (studyEditor || adminToolsPending) return adminToolsPending;
@@ -354,7 +355,7 @@ function renderPage() {
         ambassador: "مساحة الفريق",
         assistant: "مساعد مِعيار",
         plan: "خطتي إلى التخرج",
-        advisor: "اختيار الدكتور المناسب",
+        advisor: "دكاترة المادة",
       })[page]
     }</b></div>${configured?`<button type="button" class="secondary header-change-university" id="header-change-university" title="${escapeHtml(selectedUniversity()?.name||'اختر جامعتك')}">${ic("cap")}<span>تغيير الجامعة</span></button>`:''}<div class="header-actions">${roleBadge(cloudMe,cloudCatalogue)?`<span class="header-member-role"><b>${escapeHtml(displayName().trim().split(/\s+/)[0])}</b>${roleBadge(cloudMe,cloudCatalogue)}</span>`:''}${
       !googleSession
@@ -400,6 +401,7 @@ function renderPage() {
   if (page === 'assistant') miyarAssistant.bind();
   if (page === 'plan') studyPlanner.bind();
   if (page === 'advisor') courseAdvisor.bind();
+  if (page === 'home') bindHomeCourseCard();
   if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();
   if (page === "requests" && googleSession && requestsOwner !== googleSession.user.id && !requestsLoading) loadMyRequests();
   if(needsStudentMajor())queueMicrotask(()=>{if(needsStudentMajor()&&!document.querySelector('.modal-backdrop'))openStudentMajor();});
@@ -407,9 +409,12 @@ function renderPage() {
 function studyContent() {
   if (!configured || cloudPlansReady) return page==='advisor'?courseAdvisor.page():studyPlanner.page();
   if (!cloudPlansPending && !cloudPlansError) void refreshCloudStudyPlans().catch(()=>{});
-  return `<section class="${page==='advisor'?'course-advisor':'study-page'} study-loading"><div class="study-intro"><h1>${page==='advisor'?'اختيار الدكتور المناسب':'خطتي إلى التخرج'}</h1></div>${cloudPlansError?'<section class="panel"><p role="alert">تعذّر تحميل الخطط. أعد المحاولة.</p><button type="button" class="secondary" id="retry-study-plans">إعادة المحاولة</button></section>':'<div role="status" aria-busy="true"><p>جارٍ تحميل خطتك…</p><div class="study-loading-blocks" aria-hidden="true"><span class="startup-block"></span><span class="startup-block"></span><span class="startup-block"></span></div></div>'}</section>`;
+  return `<section class="${page==='advisor'?'course-advisor':'study-page'} study-loading"><div class="study-intro"><h1>${page==='advisor'?'دكاترة المادة':'خطتي إلى التخرج'}</h1></div>${cloudPlansError?'<section class="panel"><p role="alert">تعذّر تحميل الخطط. أعد المحاولة.</p><button type="button" class="secondary" id="retry-study-plans">إعادة المحاولة</button></section>':'<div role="status" aria-busy="true"><p>جارٍ تحميل خطتك…</p><div class="study-loading-blocks" aria-hidden="true"><span class="startup-block"></span><span class="startup-block"></span><span class="startup-block"></span></div></div>'}</section>`;
 }
 
+function homeCourseCard(){return courseAdvisor.card({pending:configured&&!cloudPlansReady&&!cloudPlansError,error:configured&&!cloudPlansReady?cloudPlansError:''});}
+function bindHomeCourseCard(){courseAdvisor.bindCard();document.querySelector('#finder-plans-retry')?.addEventListener('click',()=>{void refreshCloudStudyPlans().catch(()=>{});refreshHomeCourseCard();});}
+function refreshHomeCourseCard(){const root=document.querySelector('.course-finder');if(page!=='home'||!root)return;root.outerHTML=homeCourseCard();bindHomeCourseCard();}
 const actionDecoration = '<span class="action-decoration" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M50 8v84M8 50h84M20 20l60 60M20 80l60-60" stroke="currentColor" stroke-width="12"/></svg></span>';
 function actionCardSurface(decoration = '') { return `<span class="action-card-surface" aria-hidden="true"><span class="action-card-fill">${decoration}</span></span>`; }
 function home() {
@@ -439,7 +444,7 @@ function home() {
     ic("arrow")
   }</span></button><button class="action-card new-review add-new-doctor" id="new-review">${actionCardSurface(actionDecoration)}${homeIcon("add")}<div><h2>إضافة دكتور</h2><p>دكتور غير مضاف في الأقسام</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span></button><button type="button" class="action-card browse study-action" data-page="plan">${actionCardSurface()}${homeIcon("plan")}<div><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button><button type="button" class="action-card browse advisor-action" data-page="advisor">${actionCardSurface()}${homeIcon("advisor")}<div><h2>اختيار الدكتور المناسب</h2><p>اختر المادة من خطتك وقارن دكاترتها حسب تقييمات الطلاب</p></div><span class="action-arrow">${ic("arrow")}</span></button></section><section class="stats"><div><span class="stat-icon">${ic('cap')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.doctors ?? cloudCatalogue?.doctors.length ?? 0) : doctors.length === 4 ? 48 : doctors.length, '+')}<span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${ic('star')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length, '+')}<span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${ic('users')}</span><div>${statNumber(configured ? (cloudCatalogue?.colleges.length || 0) : 850, configured ? '' : '+')}<span>${configured ? 'كلية في مِعيار' : 'طالب يصنعون الأثر'}</span></div></div><span class="demo-data">${configured ? 'إحصائيات جميع الجامعات · تقييمات منشورة فقط' : 'إحصاءات توضيحية'}</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
+  }</span></button><button type="button" class="action-card browse study-action" data-page="plan">${actionCardSurface()}${homeIcon("plan")}<div><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button></section>${homeCourseCard()}<section class="stats"><div><span class="stat-icon">${ic('cap')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.doctors ?? cloudCatalogue?.doctors.length ?? 0) : doctors.length === 4 ? 48 : doctors.length, '+')}<span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${ic('star')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length, '+')}<span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${ic('users')}</span><div>${statNumber(configured ? (cloudCatalogue?.colleges.length || 0) : 850, configured ? '' : '+')}<span>${configured ? 'كلية في مِعيار' : 'طالب يصنعون الأثر'}</span></div></div><span class="demo-data">${configured ? 'إحصائيات جميع الجامعات · تقييمات منشورة فقط' : 'إحصاءات توضيحية'}</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
     ic("shield")
   }</div><div><h3>مساحة آمنة. آراء صادقة. أثر حقيقي.</h3><p>نحترم خصوصيتك، ونؤمن أن النقد البنّاء هو بداية التطوير.</p></div><button id="privacy">تعرّف على معاييرنا ${
     ic("arrow")
@@ -1660,6 +1665,7 @@ function refreshCloudStudyPlans() {
   }).catch(error=>{cloudPlansError=error.message;throw error;}).finally(()=>{
     if(cloudPlansPending===pending)cloudPlansPending=null;
     if(!cloudBooting&&['plan','advisor'].includes(page)&&!document.querySelector('.modal-backdrop'))render();
+    else if(!cloudBooting&&page==='home')refreshHomeCourseCard();
   });
   cloudPlansPending=pending;
   return pending;

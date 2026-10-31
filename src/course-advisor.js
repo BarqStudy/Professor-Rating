@@ -6,17 +6,56 @@ import {courseNameKey} from './course-names.js';
 import {officeBadge} from './doctor-office.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=n=>Number(n).toLocaleString('en-US');
-export function createCourseAdvisor({api,modal,icon,plans,currentPlan,onDoctor,onRequestDoctor,onReviewLikes}){
+export function createCourseAdvisor({api,modal,icon,plans,currentPlan,onDoctor,onRequestDoctor,onReviewLikes,onCompare,scopeKey=()=>''}){
  let selectedPlan='',selectedCourse='',search='',revision=0;
  function plan(){const list=plans();return list.find(p=>p.id===selectedPlan)||currentPlan()||list[0];}
  function courses(p){return p.courses.filter(c=>c.kind==='course'&&c.linkable);}
  function select(planId,courseId){selectedPlan=planId;selectedCourse=courseId;search='';}
  function page(){
   const p=plan();
-  if(!p)return `<section class="course-advisor"><h1>اختيار الدكتور المناسب</h1><p class="panel empty">خطة تخصصك لم تُضف بعد.</p></section>`;
+  if(!p)return `<section class="course-advisor"><h1>دكاترة المادة</h1><p class="panel empty">خطة تخصصك لم تُضف بعد.</p></section>`;
   selectedPlan=p.id;
   if(!courses(p).some(c=>c.id===selectedCourse))selectedCourse='';
-  return `<section class="course-advisor"><div class="study-intro"><span class="eyebrow">اختيارك يبدأ من المادة</span><h1>اختيار الدكتور المناسب</h1><p>اختر مادتك من خطة تخصصك، وقارن الدكاترة الذين درّسوها من جميع تخصصات وكليات جامعتك.</p></div><section class="panel advisor-controls"><label>خطة التخصص<select id="advisor-plan">${plans().map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.title)} · ${esc(x.fileLabel)}</option>`).join('')}</select></label><label class="study-search">${icon('search')}<input id="advisor-search" type="search" value="${esc(search)}" placeholder="ابحث باسم المادة أو رمزها…" aria-label="البحث عن مادة لاختيار الدكتور"></label><label>المادة<select id="advisor-course">${courseOptions(p)}</select></label><p class="muted">نُظهر دكاترة المادة من جميع تخصصات الجامعة، ونجمع صيغ الاسم مثل «استاتيكا» و«الاستاتيكا». الترتيب يعتمد على تقييمات المادة المنشورة، ويظهر عدد التجارب بجانب كل دكتور.</p></section><div id="advisor-results" aria-live="polite"></div></section>`;
+  return `<section class="course-advisor"><div class="study-intro"><span class="eyebrow">اختيارك يبدأ من المادة</span><h1>دكاترة المادة</h1><p>اختر مادتك من خطة تخصصك، وقارن الدكاترة الذين درّسوها من جميع تخصصات وكليات جامعتك.</p></div><section class="panel advisor-controls"><label>خطة التخصص<select id="advisor-plan">${plans().map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.title)} · ${esc(x.fileLabel)}</option>`).join('')}</select></label><label class="study-search">${icon('search')}<input id="advisor-search" type="search" value="${esc(search)}" placeholder="ابحث باسم المادة أو رمزها…" aria-label="البحث عن مادة لاختيار الدكتور"></label><label>المادة<select id="advisor-course">${courseOptions(p)}</select></label><p class="muted">نُظهر دكاترة المادة من جميع تخصصات الجامعة، ونجمع صيغ الاسم مثل «استاتيكا» و«الاستاتيكا». الترتيب يعتمد على تقييمات المادة المنشورة، ويظهر عدد التجارب بجانب كل دكتور.</p></section><div id="advisor-results" aria-live="polite"></div></section>`;
+ }
+ function card({pending=false,error=''}={}){
+  const p=plan(),list=plans();
+  const heading=`<div class="course-finder-heading"><span class="course-finder-icon" aria-hidden="true">${icon('cap')}</span><div><h2 id="course-finder-title">مين يدرّس مادتك؟</h2><p>اختر مادتك من خطة تخصصك، وشوف دكاترتها من جميع تخصصات الجامعة.</p></div></div>`;
+  let body;
+  if(pending)body='<div class="course-finder-message" role="status" aria-busy="true">جارٍ تحميل مواد تخصصك…</div>';
+  else if(error)body='<div class="course-finder-message"><p role="alert">تعذّر تحميل مواد تخصصك.</p><button type="button" class="secondary" id="finder-plans-retry">إعادة المحاولة</button></div>';
+  else if(!p||!courses(p).length)body='<p class="course-finder-message">خطة تخصصك لم تُضف بعد. ستظهر موادك هنا عند إضافتها.</p>';
+  else{
+   selectedPlan=p.id;search='';
+   if(!courses(p).some(c=>c.id===selectedCourse))selectedCourse='';
+   body=`<div class="course-finder-controls">${list.length>1?`<label>نسخة الخطة<select id="finder-plan">${list.map(x=>`<option value="${esc(x.id)}" ${x.id===p.id?'selected':''}>${esc(x.title)} · ${esc(x.fileLabel)}</option>`).join('')}</select></label>`:''}<label for="finder-course">المادة من خطتك</label><select id="finder-course">${courseOptions(p)}</select><p class="course-finder-context">${esc(p.major)} · ${esc(p.university)}</p><p class="course-finder-note">النتائج من تقييمات المادة المنشورة، ولا تعني توفر شعبة حالية.</p></div><div class="course-finder-result" id="finder-result" aria-live="polite"><p class="course-finder-message">اختر المادة لعرض دكاترتها وتقييماتهم.</p></div>`;
+  }
+  return `<section class="panel course-finder" aria-labelledby="course-finder-title">${heading}${body}</section>`;
+ }
+ function bindCard(){
+  const root=document.querySelector('.course-finder'),control=root?.querySelector('#finder-course');if(!control)return;
+  const result=root.querySelector('#finder-result'),owner=scopeKey();let request=0;
+  const current=()=>root.isConnected&&scopeKey()===owner;
+  root.querySelector('#finder-plan')?.addEventListener('change',event=>{selectedPlan=event.target.value;selectedCourse='';search='';control.innerHTML=courseOptions(plan());root.querySelector('.course-finder-context').textContent=plan().major+' · '+plan().university;void load();});
+  control.onchange=()=>{selectedCourse=control.value;void load();};
+  async function load(){
+   if(!current())return;
+   const revision=++request,p=plan(),course=p?courses(p).find(c=>c.id===control.value):null;
+   if(!course){result.innerHTML='<p class="course-finder-message">اختر المادة لعرض دكاترتها وتقييماتهم.</p>';return;}
+   result.innerHTML='<div class="course-finder-message" role="status" aria-busy="true">جارٍ تحميل دكاترة المادة…</div>';
+   try{
+    const rows=await api('course.doctors',{courseId:course.id});
+    if(revision!==request||!current())return;
+    if(!Array.isArray(rows))throw new Error('تعذّر تحميل دكاترة المادة.');
+    if(!rows.length){result.innerHTML='<div class="course-finder-message"><p>لا توجد تقييمات منشورة لهذه المادة بعد.</p><button type="button" class="secondary" id="finder-add-doctor">إضافة دكتور المادة</button></div>';result.querySelector('button').onclick=()=>onRequestDoctor?.(course,p);return;}
+    const doctor=rows[0];
+    result.innerHTML=`<div class="course-finder-person"><span class="avatar" aria-hidden="true">${icon('profile')}</span><div><h3>${esc(doctor.name)} ${officeBadge(doctor)}</h3><p>${[doctor.college,doctor.major].filter(Boolean).map(esc).join(' · ')}</p></div><button type="button" class="text-button" id="finder-profile" aria-label="بطاقة ${esc(doctor.name)}">${icon('arrow')}</button></div><div class="course-finder-score"><div><strong dir="ltr">${number(doctor.score)}<small>/ 100</small></strong><span>${number(doctor.count)} تقييمًا منشورًا لهذه المادة</span></div><span class="course-finder-count">${number(rows.length)} ${rows.length===1?'دكتور':'دكاترة'} للمادة</span></div><div class="course-finder-actions"><button type="button" class="primary" id="finder-compare">استعرض وقارن دكاترة المادة ${icon('arrow')}</button><button type="button" class="text-button" id="finder-reviews">تقييمات هذه المادة ${icon('book')}</button></div>`;
+    result.querySelector('#finder-profile').onclick=()=>onDoctor(doctor.id);
+    result.querySelector('#finder-reviews').onclick=()=>reviews(course,doctor);
+    result.querySelector('#finder-compare').onclick=()=>onCompare?.(p,course);
+   }catch(error){if(revision===request&&current()){result.innerHTML=`<div class="course-finder-message"><p role="alert">${esc(error.message)}</p><button type="button" class="secondary" id="finder-retry">إعادة المحاولة</button></div>`;result.querySelector('button').onclick=load;}}
+  }
+  void load();
  }
  function courseOptions(p){
   const q=courseNameKey(search);
@@ -60,5 +99,5 @@ export function createCourseAdvisor({api,modal,icon,plans,currentPlan,onDoctor,o
   }catch(error){if(root.isConnected){root.querySelector('.advisor-review-list').innerHTML=`<p role="alert">${esc(error.message)}</p><button type="button" class="secondary">إعادة المحاولة</button>`;root.querySelector('.advisor-review-list button').onclick=load;}}}
   void load();
  }
- return {page,bind,select};
+ return {page,bind,select,card,bindCard};
 }

@@ -1,0 +1,29 @@
+/* The course workbench uses the student's existing theme and accent palette. */
+.course-finder{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px 32px;margin-block:0 28px;padding:28px;border-radius:24px;min-width:0}
+.course-finder-heading{display:flex;align-items:flex-start;gap:16px;grid-column:1/-1}
+.course-finder-heading h2{font-size:calc(25px * var(--font-scale,1));margin:0 0 6px;line-height:1.6}
+.course-finder-heading p{font-size:calc(14px * var(--font-scale,1));color:var(--muted);margin:0;line-height:1.9}
+.course-finder-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:var(--accent-soft);color:var(--green);flex:none}
+.course-finder-icon .icon{width:25px;height:25px}
+.course-finder-controls{min-width:0;align-self:center}
+.course-finder-controls label{display:block;font-size:calc(15px * var(--font-scale,1));margin:0 0 10px}
+.course-finder-controls select{display:block;width:100%;padding:13px 14px;min-height:48px;border:1px solid var(--control-border);border-radius:14px;background:var(--field);color:var(--ink);font-size:calc(15px * var(--font-scale,1))}
+.course-finder-controls label:has(select){margin-bottom:16px}
+.course-finder-context{font-size:calc(13px * var(--font-scale,1));color:var(--green);margin:12px 0 0;line-height:1.8}
+.course-finder-note{font-size:calc(12px * var(--font-scale,1));color:var(--muted);margin:10px 0 0;line-height:1.9}
+.course-finder-result{min-width:0;border-inline-start:1px solid var(--line);padding-inline-start:28px;align-self:stretch;display:flex;flex-direction:column;justify-content:center;min-height:170px}
+.course-finder-message{color:var(--muted);font-size:calc(15px * var(--font-scale,1));line-height:1.9;align-self:center}
+.course-finder> .course-finder-message{grid-column:1/-1;justify-self:start;min-height:70px}
+.course-finder-message p{margin:0 0 14px}.course-finder-message button{margin-top:8px}
+.course-finder-person{display:flex;align-items:center;gap:12px;min-width:0}
+.course-finder-person>div{min-width:0;flex:1}.course-finder-person .avatar{flex:none;width:44px;height:44px;display:grid;place-items:center;background:var(--accent-soft);color:var(--green);border-radius:14px}
+.course-finder-person h3{font-size:calc(18px * var(--font-scale,1));line-height:1.8;margin:0;overflow-wrap:anywhere}
+.course-finder-person p{color:var(--muted);font-size:calc(12px * var(--font-scale,1));margin:4px 0 0;line-height:1.8}
+.course-finder-person>.text-button{flex:none;min-width:36px;min-height:44px}
+.course-finder-score{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-block:18px;padding-block:16px;border-block:1px solid var(--line)}
+.course-finder-score strong{display:block;font-size:calc(32px * var(--font-scale,1));font-variant-numeric:tabular-nums;text-align:right;line-height:1.4;color:var(--ink)}
+.course-finder-score strong small{font-size:calc(13px * var(--font-scale,1));font-weight:400;color:var(--muted);margin-inline-start:5px}
+.course-finder-score span{font-size:calc(12px * var(--font-scale,1));color:var(--muted);line-height:1.8}
+.course-finder-score .course-finder-count{padding:6px 10px;border-radius:9px;background:var(--accent-soft);color:var(--green);flex:none}
+.course-finder-actions{display:flex;flex-direction:column;gap:10px}.course-finder-actions button{font-size:calc(14px * var(--font-scale,1));min-height:44px;justify-content:center}.course-finder-actions .primary{display:flex;align-items:center;gap:9px}
+@media(max-width:700px){.course-finder{grid-template-columns:minmax(0,1fr);gap:20px;padding:22px 18px}.course-finder-heading{gap:12px}.course-finder-heading h2{font-size:calc(23px * var(--font-scale,1))}.course-finder-icon{width:42px;height:42px;flex-basis:42px}.course-finder-heading p{font-size:calc(13px * var(--font-scale,1))}.course-finder-result{border-inline-start:0;border-top:1px solid var(--line);padding-inline-start:0;padding-top:20px;min-height:90px}.course-finder-score{gap:10px}.course-finder-score strong{font-size:calc(29px * var(--font-scale,1))}}
