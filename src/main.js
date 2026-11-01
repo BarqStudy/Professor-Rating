@@ -1,5 +1,6 @@
 import {isNative,nativePlatform,setupNative,shareNativeLink,shareNativeCard,publicDoctorUrl} from './native.js';
 import {reviewDate} from './review-date.js';
+import {parseDoctorBatch} from './doctor-batch.js';
 import {reviewMetrics} from './review-metrics.js';
 import {reviewLikeButton,createReviewLikes} from './review-likes.js';
 import './review-likes.css';
@@ -677,7 +678,7 @@ function bulkDoctorForm() {
   const options = configured
     ? (cloudCatalogue?.majors || []).map((m) => `<option value="${m.id}">${escapeHtml(m.name)} · ${escapeHtml(cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.name || "")} · ${escapeHtml(cloudCatalogue.universities?.find((u) => u.id === cloudCatalogue.colleges.find((c) => c.id === m.college_id)?.university_id)?.name || "")}</option>`).join("")
     : majors.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
-  return `<form id="bulk-doctors" class="bulk-doctors"><h3>إضافة دكاترة دفعة واحدة</h3><p class="muted">اختر التخصص واكتب الاسم الثلاثي مع المسمى الذي تريده في سطر مستقل. يُضافون بدون تقييمات.</p><label>الكلية والتخصص<select name="major" required>${options}</select></label><label>أسماء الدكاترة<textarea name="names" rows="6" maxlength="10100" required placeholder="د. أحمد محمد العتيبي&#10;م. خالد عبدالله الحربي"></textarea></label><small>حتى 100 اسم في الدفعة. تُستبعد الأسماء المكررة في التخصص.</small><p class="bulk-result" role="status" aria-live="polite"></p><button class="primary" type="submit">${ic("plus")} إضافة الدفعة</button></form>`;
+  return `<form id="bulk-doctors" class="bulk-doctors"><h3>إضافة دكاترة دفعة واحدة</h3><p class="muted">اختر التخصص واكتب الاسم الثلاثي مع المسمى الذي تريده في سطر مستقل. يُضافون بدون تقييمات.</p><label>الكلية والتخصص<select name="major" required>${options}</select></label><label>أسماء الدكاترة<textarea name="names" rows="6" maxlength="10100" required aria-describedby="bulk-names-help bulk-doctors-result" placeholder="د. أحمد محمد العتيبي&#10;م. خالد عبدالله الحربي"></textarea></label><small id="bulk-names-help">حتى 100 اسم في الدفعة، كل اسم بين 8 و100 حرف. تُستبعد الأسماء المكررة في التخصص.</small><p id="bulk-doctors-result" class="bulk-result" role="status" aria-live="polite"></p><button class="primary" type="submit">${ic("plus")} إضافة الدفعة</button></form>`;
 }
 function bindBulkDoctors() {
   const form = document.querySelector("#bulk-doctors");
@@ -686,10 +687,15 @@ function bindBulkDoctors() {
     event.preventDefault();
     if (configured ? !cloudMe?.isAdmin : !demoAdmin) return;
     const major = form.elements.major.value;
-    const names = [...new Set(form.elements.names.value.split(/\r?\n/).map((n) => n.trim().replace(/\s+/g, " ")).filter(Boolean))];
+    if (form.querySelector('[type=submit]').disabled) return;
+    const input = form.elements.names, batch = parseDoctorBatch(input.value), names = batch.names;
     const status = form.querySelector(".bulk-result");
-    if (!names.length || names.length > 100 || names.some((n) => n.length < 8 || n.length > 100 || n.split(/\s+/).length < 3)) {
-      status.textContent = "اكتب من 1 إلى 100 اسم ثلاثي، كل اسم بين 8 و100 حرف في سطر مستقل.";
+    input.removeAttribute('aria-invalid');
+    if (batch.message || batch.issues.length) {
+      input.setAttribute('aria-invalid', 'true');
+      status.textContent = [batch.message, ...batch.issues.slice(0, 10).map(row => `السطر ${row.line}: «${row.name}» — ${row.reason}`), batch.issues.length > 10 ? `و${batch.issues.length - 10} أسطر أخرى تحتاج تصحيحًا.` : '', 'لم تتم إضافة أي اسم؛ صحّح القائمة ثم أعد الإرسال.'].filter(Boolean).join('\n');
+      input.focus();
+      if (batch.first) input.setSelectionRange(batch.first.start, batch.first.end);
       return;
     }
     const majorName = configured ? cloudCatalogue.majors.find((m) => m.id === Number(major))?.name : major;
