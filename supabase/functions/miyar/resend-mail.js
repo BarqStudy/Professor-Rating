@@ -1,7 +1,7 @@
 import {ApiError} from './security.js';
 
 // The recipient comes from private server configuration; content from the saved request.
-export function createResendMailer({key,from,request=fetch}){
+export function createResendMailer({key,from,request=fetch,category="institution"}){
  async function api(path,options={}){
   let response;
   try{response=await request('https://api.resend.com'+path,{...options,redirect:'error',headers:{Authorization:'Bearer '+key.trim(),'Content-Type':'application/json',...options.headers},signal:AbortSignal.timeout(10000)});}
@@ -26,7 +26,7 @@ export function createResendMailer({key,from,request=fetch}){
    // Retries stay stable; an intentional server-side sender/recipient change gets a new key.
    const routeBytes=new TextEncoder().encode(JSON.stringify([from.toLowerCase(),message.to.toLowerCase()]));
    const routeHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',routeBytes)),byte=>byte.toString(16).padStart(2,'0')).join('').slice(0,24);
-   const result=await api('/emails',{method:'POST',headers:{'Idempotency-Key':'miyar-institution-'+id+'-'+routeHash},body:JSON.stringify({from:'مِعيار <'+from+'>',to:[message.to],subject:message.subject,text:message.text,...(message.replyTo?{reply_to:message.replyTo}:{}),headers:{'Message-ID':message.messageId}})});
+   const result=await api('/emails',{method:'POST',headers:{'Idempotency-Key':'miyar-'+category+'-'+id+'-'+routeHash},body:JSON.stringify({from:'مِعيار <'+from+'>',to:[message.to],subject:message.subject,text:message.text,...(message.replyTo?{reply_to:message.replyTo}:{}),headers:{'Message-ID':message.messageId}})});
    if(typeof result?.id!=='string'||!result.id)throw new ApiError(503,'لم تؤكد Resend قبول الرسالة. أعد المحاولة لاحقًا.');
   }
  };

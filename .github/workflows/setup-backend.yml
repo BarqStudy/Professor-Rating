@@ -90,7 +90,7 @@ jobs:
               data = json.load(response)
           if not all(isinstance(data.get(key), list) for key in ['universities', 'colleges', 'majors', 'doctors']):
               raise SystemExit('Unexpected catalogue response.')
-          if not all(data.get('features', {}).get(key) is True for key in ['reviewFlexibility', 'doctorScopeRemoval']):
+          if not all(data.get('features', {}).get(key) is True for key in ['reviewFlexibility', 'doctorScopeRemoval', 'reviewRejectionEmail']):
               raise SystemExit('The deployed API has not enabled the review and doctor-management updates.')
           if not any(u.get('name') == 'جامعة نجران' for u in data['universities']):
               raise SystemExit('University catalogue migration is missing.')
@@ -127,8 +127,11 @@ jobs:
           from pathlib import Path
           Path(os.environ['GITHUB_STEP_SUMMARY']).write_text(
               'Review and doctor-management updates: **enabled and verified**\n\n'
+              'Review rejection sender configuration: **' + ('present' if data['features'].get('reviewRejectionEmailReady') else 'requires configuration') + '**\n\n'
+              +
               'Miyar assistant configuration: **' + ('enabled' if assistant['enabled'] else 'not enabled') + '**\n'
           )
+          print('Review rejection sender configuration:', 'present' if data['features'].get('reviewRejectionEmailReady') else 'requires configuration')
           print('Backend, guest sessions and live presence are reachable. Public catalogue contains', len(data['colleges']), 'colleges.')
           PY
       - name: Allow native OAuth callback without changing existing providers

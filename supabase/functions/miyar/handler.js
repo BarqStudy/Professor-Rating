@@ -1,3 +1,4 @@
+import {createReviewRejectionMailer} from './review-rejection-mail.js';
 import {doctorScopeRemoval} from './doctor-administration.js';
 import {reviewLikes} from './review-likes.js';
 import {createInstitutionMailer,institutionMailStatus,institutionInbox} from './institution-mail.js';
@@ -23,6 +24,7 @@ import {
 
 export function createHandler({ db, env, authenticate, aiFetch = fetch, storageFetch = fetch, mailTransport, mailFetch=fetch, background }) {
   const mailer=createInstitutionMailer({db,env,transportFactory:mailTransport,mailFetch});
+  const rejectionMailer=createReviewRejectionMailer({db,env,transportFactory:mailTransport,mailFetch});
   const notifyInstitution=id=>{if(!id||!institutionMailStatus(env).configured)return;const task=mailer.deliver(id).catch(()=>{});if(background)background(task);return task;};
   const origins = (env.ALLOWED_ORIGINS || "https://barqstudy.github.io,https://miyar.website,https://www.miyar.website,https://localhost,capacitor://localhost").split(
     ",",
@@ -118,7 +120,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if(action==='study.plans')return respond(await db('rpc/miyar_uploaded_study_plans',{method:'POST',body:{}}));
       if (action === "catalogue") {
         return respond(
-          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{reviewFlexibility:true,doctorScopeRemoval:true}},
+          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{reviewFlexibility:true,doctorScopeRemoval:true,reviewRejectionEmail:true,reviewRejectionEmailReady:rejectionMailer.status().configured}},
         );
       }
       if (action === "doctor.summary") return respond(await publicSummary(body, db));
@@ -256,6 +258,18 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         if(operation==='study.delete')return respond(await deleteStudyPlan(body,identity.id,db));
         return respond(operation==='study.list'?await db('rpc/miyar_admin_study_plans',{method:'POST',body:{}}):await loadEditablePlan(body.id,db));
       }
+      if(['review.rejection-mail.list','review.rejection-mail.retry'].includes(operation)){
+        if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
+        return respond(await rejectionMailer.admin(operation,body));
+      }
+      if(operation==='review.reject'){
+        if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
+        const result=await db('rpc/miyar_reject_review',{method:'POST',body:{p_admin:identity.id,p_review:validId(body.id),p_reason:text(body.reason,3,300,'سبب الرفض')}});
+        if(result.mailStatus!=='no_recipient'){
+          const task=rejectionMailer.deliver(result.id).catch(()=>{});if(background)background(task);else await task;
+        }
+        return respond({...result,ok:true});
+      }
       if(typeof operation==='string'&&operation.startsWith('institution.mail.')){
         if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
         const result=await mailer.admin(operation,body);if(result!==null)return respond(result);
@@ -379,7 +393,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
           },
         });
       } else if (
-        operation === "review.approve" || operation === "review.reject"
+        operation === "review.approve"
       ) {
         const id = validId(body.id);
         const rows = await db(

@@ -34,6 +34,7 @@ export function createDatabase(url, key, fetcher = fetch) {
         );
       }
       const reasons = {
+        REVIEW_ALREADY_DECIDED:[409,'تمت مراجعة هذا التقييم بالفعل. حدّث قائمة الطلبات.'],
         INVALID_DOCTOR_SCOPE:[400,'اختر كلية أو تخصصًا موجودًا لحذف دكاترته.'],
         DOCTOR_SCOPE_CHANGED:[409,'تغيّرت قائمة الدكاترة منذ المعاينة. حدّث المعاينة وأكّد الحذف مجددًا.'],
         DOCTOR_ALREADY_EXISTS:[409,'هذا الدكتور موجود بالفعل في التخصص. لا يمكن إضافة نسخة مكررة.'],

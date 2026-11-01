@@ -1,3 +1,4 @@
+import {createReviewRejectionMail} from './review-rejection-mail.js';
 // Students never download plan import/editing, review moderation or R2 management.
 import {createFileManager} from './files.js';
 import {createStudyImport} from './study-import.js';
@@ -7,10 +8,11 @@ import {createReviewLinker} from './review-link.js';
 import {createPublishedReviews} from './published-reviews.js';
 import {createAdminWorkspace} from './admin-workspace.js';
 import './admin-workspace.css';
-export function createAdminTools({api,uploadPlatformFile,extractStudyPlan,publishStudyPlan,updateStudyPlan,catalogue,ownerKey,icon,modal,onPlansChanged,onReviewRemoved,onReviewLinked,reviewFlexibility=()=>true,doctorScopeEnabled=()=>true,onDoctorScopeRemoved}) {
+export function createAdminTools({api,uploadPlatformFile,extractStudyPlan,publishStudyPlan,updateStudyPlan,catalogue,ownerKey,icon,modal,onPlansChanged,onReviewRemoved,onReviewLinked,reviewFlexibility=()=>true,doctorScopeEnabled=()=>true,onDoctorScopeRemoved,rejectionMailEnabled=()=>true}) {
   const reviewLinker=createReviewLinker({api,modal,ownerKey,onLinked:onReviewLinked});
   return {
     reviewLinker,
+    reviewRejectionMail:createReviewRejectionMail({api,ownerKey,enabled:rejectionMailEnabled}),
     doctorScopeRemoval:createDoctorScopeRemoval({api,catalogue,modal,ownerKey,onRemoved:onDoctorScopeRemoved,enabled:doctorScopeEnabled}),
     adminWorkspace:createAdminWorkspace({ownerKey,icon}),
     fileManager:createFileManager({api,upload:uploadPlatformFile,ownerKey}),

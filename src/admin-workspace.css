@@ -87,3 +87,5 @@
 .doctor-scope-removal{margin-block:22px}.doctor-scope-removal [hidden]{display:none!important}.doctor-scope-consent{display:flex!important;align-items:flex-start;gap:12px;line-height:1.9}.doctor-scope-consent input{width:20px;height:20px;flex:none;accent-color:var(--green)}
 
 .modal .doctor-scope-submit{background:#b42336;color:#fff;width:100%;white-space:normal}
+
+.review-rejection-mail{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}.review-rejection-mail>summary{cursor:pointer;color:var(--green);padding-block:12px;font-size:calc(16px * var(--font-scale,1))}.review-rejection-mail-results .moderation-review{display:grid;gap:12px;margin-block:14px;overflow-wrap:anywhere}

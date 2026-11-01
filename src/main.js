@@ -149,13 +149,13 @@ const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>config
   closeModal,toast,
 });
 const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onReviewLikes:root=>reviewLikes.mount(root),onRequestDoctor:(course,plan)=>requestDoctorForm({course,plan}),onDoctor:(id)=>cloudDoctorDetail(id),scopeKey:()=>[googleSession?.user.id||guestProfile?.id||'',currentUniversityId(),selectedStudentMajor()?.id].join(':'),onCompare:(plan,course)=>{courseAdvisor.select(plan.id,course.id);setPage('advisor');render();window.scrollTo({top:0});}});
-let fileManager, studyImport, studyEditor, publishedReviews, reviewLinker, doctorScopeRemoval, adminWorkspace, adminToolsPending = null, adminToolsError = '';
+let fileManager, studyImport, studyEditor, publishedReviews, reviewLinker, doctorScopeRemoval, reviewRejectionMail, adminWorkspace, adminToolsPending = null, adminToolsError = '';
 function ensureAdminTools() {
   if (studyEditor || adminToolsPending) return adminToolsPending;
   adminToolsError = '';
   adminToolsPending = import('./admin-tools.js').then(({createAdminTools}) => {
-    ({fileManager,studyImport,studyEditor,publishedReviews,reviewLinker,doctorScopeRemoval,adminWorkspace} = createAdminTools({
-      api,uploadPlatformFile,extractStudyPlan,publishStudyPlan,updateStudyPlan,icon:ic,modal,reviewFlexibility:reviewUpdatesReady,doctorScopeEnabled:()=>cloudCatalogue?.features?.doctorScopeRemoval===true,
+    ({fileManager,studyImport,studyEditor,publishedReviews,reviewLinker,doctorScopeRemoval,reviewRejectionMail,adminWorkspace} = createAdminTools({
+      api,uploadPlatformFile,extractStudyPlan,publishStudyPlan,updateStudyPlan,icon:ic,modal,reviewFlexibility:reviewUpdatesReady,doctorScopeEnabled:()=>cloudCatalogue?.features?.doctorScopeRemoval===true,rejectionMailEnabled:()=>cloudCatalogue?.features?.reviewRejectionEmail===true,
       catalogue:()=>cloudCatalogue,ownerKey:()=>googleSession?.user.id||'',
       onPlansChanged:async(message)=>{await refreshCloudCatalogue();render();toast(message);},
       onDoctorScopeRemoved:async(count)=>{adminChosen.clear();await Promise.all([refreshCloudCatalogue(),loadCloudQueue(false)]);document.body.classList.remove('modal-open');render();toast(`حُذف ${Number(count).toLocaleString('en-US')} دكتور من الدليل.`);},
@@ -1931,7 +1931,7 @@ function cloudAdmin() {
         }</p>${reviewTagLabels(r.tags)}<span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div class="review-tools">${reviewUpdatesReady()?`<button type="button" class="secondary" data-link-review="${r.id}">ربط المادة بمادة موجودة</button>`:''}<button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
       ).join("")
       : '<p class="muted">لا توجد تقييمات بانتظار المراجعة.</p>'
-  }</section>${institutionAdminPanel(queue)}${communityAdminPanel(queue)}${ambassadorAdminPanel(queue)}<section class="panel ai-diagnostics" id="admin-ai"><h2>حالة مساعد مِعيار</h2><p class="muted">يفحص قراءة أسرار الخادم وقبول المفتاح وتوفر النموذج، دون إرسال سؤال أو عرض المفتاح. حصة التوليد تُفحص عند إرسال سؤال فعلي.</p><button type="button" class="secondary" id="check-ai-connection">فحص ربط المساعد</button><div id="ai-diagnostics-result" class="ai-diagnostics-result" role="status" aria-live="polite"></div></section></div>`;
+  }${reviewRejectionMail.panel()}</section>${institutionAdminPanel(queue)}${communityAdminPanel(queue)}${ambassadorAdminPanel(queue)}<section class="panel ai-diagnostics" id="admin-ai"><h2>حالة مساعد مِعيار</h2><p class="muted">يفحص قراءة أسرار الخادم وقبول المفتاح وتوفر النموذج، دون إرسال سؤال أو عرض المفتاح. حصة التوليد تُفحص عند إرسال سؤال فعلي.</p><button type="button" class="secondary" id="check-ai-connection">فحص ربط المساعد</button><div id="ai-diagnostics-result" class="ai-diagnostics-result" role="status" aria-live="polite"></div></section></div>`;
 }
 async function cloudAdminAction(operation, data) {
   const scrollTop = window.scrollY;
@@ -1948,10 +1948,11 @@ async function cloudAdminAction(operation, data) {
     render();
     window.scrollTo({ top: scrollTop, behavior: "instant" });
     refreshSavedUpdates();
-    toast("تم حفظ التغيير في المنصة.");
+    if(operation==='review.reject'){const details=document.querySelector('#review-rejection-mail');if(details)details.open=true;}
+    toast(operation==='review.reject'?'رُفض التقييم وحُفظ السبب. يمكنك متابعة حالة البريد في رسائل أسباب الرفض.':'تم حفظ التغيير في المنصة.');
     return true;
   } catch (error) {
-    const deleteError = document.querySelector('#delete-operation-error');
+    const deleteError = document.querySelector('#delete-operation-error,#request-rejection-error');
     if (deleteError) deleteError.textContent = error.message;
     toast(error.message);
     return false;
@@ -2009,6 +2010,7 @@ function bindCloudAdmin() {
   }
   bindAdminDirectory();
   doctorScopeRemoval.bind();
+  reviewRejectionMail.bind();
   bindAmbassadorAdmin();
   document.querySelector('#check-ai-connection')?.addEventListener('click', async (event) => {
     const button = event.currentTarget, result = document.querySelector('#ai-diagnostics-result');
@@ -2041,6 +2043,7 @@ function bindCloudOperations(root = document) {
     b.onclick = () => {
       const operation = b.dataset.cloudOperation;
       const data = { id: Number(b.dataset.id) };
+      if(operation==='review.reject'&&cloudCatalogue?.features?.reviewRejectionEmail!==true){toast('حدّث الصفحة لتفعيل رفض التقييم مع إرسال السبب.');return;}
       if(operation==='major.delete'){
         b.disabled=true;
         openMajorRemoval({id:data.id,api,modal,remove:values=>cloudAdminAction('major.delete',values),ownerKey:()=>googleSession?.user.id||''}).finally(()=>{if(b.isConnected)b.disabled=false;});
@@ -2054,7 +2057,7 @@ function bindCloudOperations(root = document) {
       if (operation === "doctor.verify") {
         data.verified = b.dataset.verified === "true";
       }
-      if (["doctor.reject", "edit.reject", "catalogue.reject", "institution.reject"].includes(operation)) {
+      if (["review.reject", "doctor.reject", "edit.reject", "catalogue.reject", "institution.reject"].includes(operation)) {
         rejectionForm(operation, data.id);
       } else if (operation.endsWith(".delete")) {
         const university = operation === 'university.delete' ? cloudCatalogue?.universities?.find((item) => item.id === data.id) : null;
@@ -2065,7 +2068,7 @@ function bindCloudOperations(root = document) {
         document.querySelector("#confirm-cloud-delete").onclick = async () => {
           const button = document.querySelector("#confirm-cloud-delete");
           button.disabled = true;
-          document.querySelector('#delete-operation-error').textContent = '';
+          document.querySelector('#delete-operation-error,#request-rejection-error').textContent = '';
           const deleted = await cloudAdminAction(operation, data);
           if (!deleted && button.isConnected) button.disabled = false;
         };
@@ -2142,7 +2145,7 @@ async function myReviews(doctorId) {
   try {
     const rows=await api(googleSession?'mine':'guest.mine');if(!loading.isConnected)return;
     const list=doctorId?rows.filter((row)=>row.doctor_id===doctorId):rows;
-    modal('تقييماتي وطلبات التعديل',`<p class="muted">التعديل يُرسل للإدارة، ويظل تقييمك المنشور كما هو حتى الموافقة.</p>${list.length?list.map((row)=>`<article class="my-review"><h3>${escapeHtml(row.doctor_name)}</h3><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>تاريخ التقييم: ${reviewDate(row.created_at)}</small><small>${reviewStatus[row.status]||''}${row.edit_status==='pending'?' · طلب تعديل قيد المراجعة':row.edit_status==='rejected'?' · رُفض طلب التعديل السابق':row.edit_status==='approved'?' · تمت الموافقة على التعديل':''}</small>${row.status==='published'?`<button class="secondary" data-edit-review="${row.id}" ${row.edit_status==='pending'?'disabled':''}>${row.edit_status==='pending'?'التعديل بانتظار الإدارة':'طلب تعديل التقييم'}</button>`:''}</article>`).join(''):'<p class="empty">لا توجد تقييمات لك في جامعتك الحالية.</p>'}`);
+    modal('تقييماتي وطلبات التعديل',`<p class="muted">التعديل يُرسل للإدارة، ويظل تقييمك المنشور كما هو حتى الموافقة.</p>${list.length?list.map((row)=>`<article class="my-review"><h3>${escapeHtml(row.doctor_name)}</h3><b>${escapeHtml(row.subject)}</b><p>${escapeHtml(row.comment)}</p>${reviewTagLabels(row.tags)}<small>تاريخ التقييم: ${reviewDate(row.created_at)}</small><small>${reviewStatus[row.status]||''}${row.edit_status==='pending'?' · طلب تعديل قيد المراجعة':row.edit_status==='rejected'?' · رُفض طلب التعديل السابق':row.edit_status==='approved'?' · تمت الموافقة على التعديل':''}</small>${row.rejection_reason?`<p class="decision-reason">سبب الرفض: ${escapeHtml(row.rejection_reason)}</p>`:''}${row.status==='published'?`<button class="secondary" data-edit-review="${row.id}" ${row.edit_status==='pending'?'disabled':''}>${row.edit_status==='pending'?'التعديل بانتظار الإدارة':'طلب تعديل التقييم'}</button>`:''}</article>`).join(''):'<p class="empty">لا توجد تقييمات لك في جامعتك الحالية.</p>'}`);
     document.querySelectorAll('[data-edit-review]').forEach((button)=>button.onclick=()=>editReview(list.find((row)=>row.id===Number(button.dataset.editReview))));
   } catch(error) {if(loading.isConnected)modal('تعذّر تحميل تقييماتك',`<p role="alert">${escapeHtml(error.message)}</p>`);}
 }
@@ -2244,8 +2247,8 @@ function openRequests(){
  document.body.classList.remove('modal-open');setPage('requests');render();loadMyRequests();
 }
 function rejectionForm(operation,id){
- modal('سبب رفض الطلب',`<form id="request-rejection-form"><p>سيظهر السبب لصاحب الطلب مع قرار الرفض.</p><label>سبب الرفض<textarea name="reason" minlength="3" maxlength="300" rows="4" required placeholder="اكتب سببًا واضحًا يساعد الطالب على تصحيح طلبه"></textarea></label><button type="submit" class="primary">تأكيد الرفض وإرسال السبب</button></form>`);
- document.querySelector('#request-rejection-form').onsubmit=async(event)=>{event.preventDefault();const button=event.target.querySelector('button');button.disabled=true;await cloudAdminAction(operation,{id,reason:new FormData(event.target).get('reason')});button.disabled=false;};
+ modal('سبب رفض الطلب',`<form id="request-rejection-form"><p>${operation==='review.reject'?'يُحفظ السبب في تقييمات الطالب، ويُرسل إلى البريد الموثّق لحسابه إن كان متاحًا.':'سيظهر السبب لصاحب الطلب مع قرار الرفض.'}</p><label>سبب الرفض<textarea name="reason" minlength="3" maxlength="300" rows="4" required placeholder="اكتب سببًا واضحًا يساعد الطالب على تصحيح طلبه"></textarea></label><p class="form-error" id="request-rejection-error" role="alert"></p><button type="submit" class="primary">تأكيد الرفض وإرسال السبب</button></form>`);
+ document.querySelector('#request-rejection-form').onsubmit=async(event)=>{event.preventDefault();const button=event.target.querySelector('button');if(button.disabled)return;button.disabled=true;await cloudAdminAction(operation,{id,reason:new FormData(event.target).get('reason')});button.disabled=false;};
 }
 const proposalNames = {
  'doctor.add':'إضافة دكتور','college.add':'إضافة كلية','major.add':'إضافة تخصص',
