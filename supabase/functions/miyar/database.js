@@ -34,6 +34,7 @@ export function createDatabase(url, key, fetcher = fetch) {
         );
       }
       const reasons = {
+        REVIEW_GRADE_REQUIRED:[400,'أدخل درجتك في المادة من 0 إلى 100 قبل إرسال التقييم.'],
         REVIEW_ALREADY_DECIDED:[409,'تمت مراجعة هذا التقييم بالفعل. حدّث قائمة الطلبات.'],
         INVALID_DOCTOR_SCOPE:[400,'اختر كلية أو تخصصًا موجودًا لحذف دكاترته.'],
         DOCTOR_SCOPE_CHANGED:[409,'تغيّرت قائمة الدكاترة منذ المعاينة. حدّث المعاينة وأكّد الحذف مجددًا.'],

@@ -59,6 +59,8 @@ test('new-grade notice and subject checks bind verified identities; retired grad
   assert.equal((await handle(req({...review,action,accountId:other,guestId:other},headers))).status,201);
   const call=calls.findLast(c=>c.path.includes('submit_existing'));assert.equal(call.body[key],actor);assert.equal(call.body.p_public_grade,true);
   assert.equal((await handle(req({...review,action,publishGrade:'true'},headers))).status,400);
+  for(const grade of [undefined,null,'',false,-1,101,90.5])assert.equal((await handle(req({...review,action,grade,publishGrade:false,withoutSubject:true},headers))).status,400);
+  for(const grade of [0,100]){assert.equal((await handle(req({...review,action,grade,publishGrade:false},headers))).status,201);assert.equal(calls.findLast(c=>c.path.includes('submit_existing')).body.p_grade,grade);}
   assert.equal((await handle(req({action:action==='submit'?'review.eligibility':'guest.review.eligibility',doctor:1,subject:'استاتيكا'},headers))).status,200);
   assert.equal(calls.findLast(c=>c.path==='rpc/miyar_review_eligibility').body.p_subject,'استاتيكا');
  }

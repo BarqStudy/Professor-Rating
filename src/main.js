@@ -866,7 +866,7 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
       escapeHtml(doctors.find((d) => d.id === id)?.name || studySelection?.name || "")
     }"><datalist id="doctor-names">${
       doctors.map((d) => `<option>${escapeHtml(d.name)}</option>`).join("")
-    }</datalist></label>${addingDoctor?'<label class="doctor-review-choice"><input type="checkbox" name="includeReview" aria-controls="doctor-rating-fields" aria-expanded="false"><span>هل تود إضافة تقييم للدكتور؟<small>اختياري؛ اتركه فارغًا لإضافة الدكتور دون تقييم.</small></span></label>':''}<fieldset class="doctor-rating-fields" id="doctor-rating-fields" ${addingDoctor?'hidden disabled':''}><legend>تفاصيل التقييم</legend><div class="form-grid"><label>المادة<input name="subject" required placeholder="اسم المادة"></label><label>درجتك في المادة<input name="grade" type="number" min="0" max="100" required placeholder="من 100"></label></div><label class="review-grade-choice" ${reviewUpdatesReady()?'':'hidden'}><input type="checkbox" name="hideGrade" ${reviewUpdatesReady()?'':'disabled'}><span>لا أريد عرض درجتي في المادة<small>درجتك تساعد طلابًا غيرك، واسمك لن يظهر للطلاب الآخرين. عند تفعيل الخيار يمكنك التقييم دون تحديد مادة أو إدخال درجة.</small></span></label><div class="privacy-note" id="review-grade-notice">${
+    }</datalist></label>${addingDoctor?'<label class="doctor-review-choice"><input type="checkbox" name="includeReview" aria-controls="doctor-rating-fields" aria-expanded="false"><span>هل تود إضافة تقييم للدكتور؟<small>اختياري؛ اتركه فارغًا لإضافة الدكتور دون تقييم.</small></span></label>':''}<fieldset class="doctor-rating-fields" id="doctor-rating-fields" ${addingDoctor?'hidden disabled':''}><legend>تفاصيل التقييم</legend><div class="form-grid"><label>المادة<input name="subject" required placeholder="اسم المادة"></label><label>درجتك في المادة (إلزامي)<input name="grade" type="number" min="0" max="100" step="1" required placeholder="من 100"></label></div><div class="privacy-note" id="review-grade-notice">${
       ic("shield")
     } ستُنشر درجتك في المادة مع تقييمك دون اسمك.<small>بإرسال التقييم، تقرّ بأن درجتك ستكون ظاهرة للطلاب بعد اعتماد التقييم. لا يُنشر اسمك أو بريدك أو معرّف حسابك.</small></div><div class="sliders">${
       ["الشرح", "التعامل", "المساعدة بالدرجات"].map((t, i) =>
@@ -893,15 +893,13 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
   );
   const formForCourseChoices=document.querySelector('#review-form');
   let courseChoices=null,reviewSubjectsLoading=false;
-  const hideGrade=formForCourseChoices.elements.hideGrade,gradeInput=formForCourseChoices.elements.grade;
-  hideGrade.onchange=()=>{gradeInput.required=!hideGrade.checked;gradeInput.disabled=hideGrade.checked;gradeInput.closest('label').hidden=hideGrade.checked;formForCourseChoices.querySelector('#review-grade-notice').hidden=hideGrade.checked;courseChoices?.setOptional(hideGrade.checked);};
   const attachCourseChoices=()=>courseChoices=studyPlanner.attachReview(formForCourseChoices,{
     university:selectedUniversity()?.name||(!configured?'جامعة نجران':''),
     college:selectedDoctor?undefined:studySelection?.plan?.college,
     major:!selectedDoctor&&studySelection?.plan ? majors.find(name=>[studySelection.plan.major,...(studySelection.plan.majorAliases||[])].includes(name)) : undefined,
     courseId:studySelection?.course?.id,
     studentOnly:configured,
-    reviewedSubjects,allowCustom:reviewUpdatesReady(),optional:hideGrade.checked,checkingSubjects:reviewSubjectsLoading,onEdit:()=>myReviews(selectedDoctor?.id||matchedDoctor()?.id),
+    reviewedSubjects,allowCustom:reviewUpdatesReady(),optional:false,checkingSubjects:reviewSubjectsLoading,onEdit:()=>myReviews(selectedDoctor?.id||matchedDoctor()?.id),
   });
   // Keep the page and doctor draft mounted while loading the student's plan;
   // rating submission waits for its official course choices.
@@ -965,8 +963,8 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
     const f = new FormData(e.target),name = f.get("doctor").trim();
     const includeReview=!addingDoctor||f.get('includeReview')==='on';
     if(includeReview&&configured&&!cloudPlansReady){e.target.querySelector('.form-error').textContent='انتظر تحميل مواد تخصصك أو أعد المحاولة.';return;}
-    const omitGrade=f.get('hideGrade')==='on',customCourse=f.get('courseId')==='__other__',subject=String(f.get('subject')||'').trim(),officialCourse=f.get('courseId')&&!customCourse?f.get('courseId'):null;
-    if(includeReview&&(!subject&&(!omitGrade||customCourse))){e.target.querySelector('.form-error').textContent=customCourse?'اكتب اسم المادة غير الموجودة بالقائمة.':'اختر المادة أو فعّل خيار عدم عرض الدرجة للتقييم دون مادة.';return;}
+    const customCourse=f.get('courseId')==='__other__',subject=String(f.get('subject')||'').trim(),officialCourse=f.get('courseId')&&!customCourse?f.get('courseId'):null;
+    if(includeReview&&!subject){e.target.querySelector('.form-error').textContent=customCourse?'اكتب اسم المادة غير الموجودة بالقائمة.':'اختر المادة من القائمة أو أضف اسم مادة غير موجودة.';return;}
     if(!includeReview){
       if(name.split(/\s+/).length<3){e.target.querySelector('.form-error').textContent='يرجى كتابة اسم الدكتور الثلاثي.';return;}
       if(configured){
@@ -979,6 +977,8 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
       }
       return;
     }
+    const gradeValue=String(f.get('grade')??'').trim(),grade=Number(gradeValue);
+    if(!gradeValue||!Number.isInteger(grade)||grade<0||grade>100){e.target.querySelector('.form-error').textContent='أدخل درجتك في المادة من 0 إلى 100 قبل إرسال التقييم.';return;}
     const comment=f.get('comment').trim();
     let error = "";
     if (name.split(/\s+/).length < 3) error = "يرجى كتابة اسم الدكتور الثلاثي.";
@@ -998,14 +998,13 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
       major: f.get("major"),
       college: f.get("college"),
       subject,
-      withoutSubject:!subject&&omitGrade,
       comment,
       scores,
       date: new Date().toISOString(),
-      grade: omitGrade?null:Number(f.get("grade")),
+      grade,
       tags: chosenRatingTags(e.target),
       pledged: true,
-      publishGrade: !omitGrade,
+      publishGrade: true,
       ...(officialCourse ? {courseId:officialCourse} : {}),
     };
     if (configured) {
@@ -1926,7 +1925,7 @@ function cloudAdmin() {
           )
         }</b><small>المادة: ${escapeHtml(r.subject)} · ${r.identity_type === "guest" ? "زائر" : "الطالب"} ${
           escapeHtml(r.user_id || "حساب سابق")
-        }</small><p>${
+        }</small><p class="published-grade pending-review-grade">درجة الطالب في المادة: <b>${Number.isInteger(r.grade)&&r.grade>=0&&r.grade<=100?`${r.grade} / 100`:"لم تُسجّل في التقييم السابق"}</b></p><p>${
           escapeHtml(r.comment)
         }</p>${reviewTagLabels(r.tags)}<span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div class="review-tools">${reviewUpdatesReady()?`<button type="button" class="secondary" data-link-review="${r.id}">ربط المادة بمادة موجودة</button>`:''}<button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
       ).join("")

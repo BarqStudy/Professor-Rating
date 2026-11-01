@@ -90,7 +90,7 @@ jobs:
               data = json.load(response)
           if not all(isinstance(data.get(key), list) for key in ['universities', 'colleges', 'majors', 'doctors']):
               raise SystemExit('Unexpected catalogue response.')
-          if not all(data.get('features', {}).get(key) is True for key in ['reviewFlexibility', 'doctorScopeRemoval', 'reviewRejectionEmail']):
+          if not all(data.get('features', {}).get(key) is True for key in ['reviewFlexibility', 'doctorScopeRemoval', 'reviewRejectionEmail', 'reviewGradeRequired']):
               raise SystemExit('The deployed API has not enabled the review and doctor-management updates.')
           if not any(u.get('name') == 'جامعة نجران' for u in data['universities']):
               raise SystemExit('University catalogue migration is missing.')

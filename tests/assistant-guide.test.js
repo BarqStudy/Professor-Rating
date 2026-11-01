@@ -9,6 +9,7 @@ test('the assistant guide describes current review, grade, specialty, drawing an
  assert.ok(MIYAR_HELP.every(source=>['#home','#ratings','#plan','#advisor','#requests','#admin'].includes(source.href)));
  assert.match(help('help-review-rules'),/أكثر من مادة/);assert.match(help('help-review-rules'),/لا يوجد حد يومي/);assert.match(help('help-review-rules'),/باهتة وغير قابلة للاختيار/);
  assert.match(help('help-outcomes'),/بما في ذلك درجات التقييمات السابقة/);assert.match(help('help-outcomes'),/دون اسم الطالب/);assert.match(help('help-outcomes'),/16\/11\/2026/);assert.match(help('help-outcomes'),/خريطة الدرجات ملغاة/);assert.match(help('help-outcomes'),/غير موجود في الإعدادات أو نموذج التقييم/);
+ assert.match(help('help-rating'),/الدرجة إلزامية من 0 إلى 100/);assert.match(help('help-outcomes'),/تظهر الدرجة للإدارة/);assert.ok(!help('help-rating').includes('يمكن تفعيل «لا أريد عرض درجتي'));
  assert.match(help('help-university'),/نافذة إلزامية/);assert.match(help('help-university'),/يدخل الطالب مباشرة/);assert.match(help('help-rating'),/من تخصصك المحفوظ/);
  assert.match(help('help-drawing'),/يختلف عن «الرسم الهندسي الميكانيكي»/);assert.match(help('help-drawing'),/درستها في السنة التحضيرية/);assert.match(help('help-drawing'),/المستوى 3/);
  assert.match(help('help-course-advisor'),/جميع تخصصات وكليات الجامعة نفسها/);assert.match(help('help-review-likes'),/مفيد/);assert.match(help('help-review-likes'),/منزلقة أفقيًا/);

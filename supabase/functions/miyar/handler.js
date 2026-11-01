@@ -120,7 +120,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if(action==='study.plans')return respond(await db('rpc/miyar_uploaded_study_plans',{method:'POST',body:{}}));
       if (action === "catalogue") {
         return respond(
-          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{reviewFlexibility:true,doctorScopeRemoval:true,reviewRejectionEmail:true,reviewRejectionEmailReady:rejectionMailer.status().configured}},
+          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{reviewGradeRequired:true,reviewFlexibility:true,doctorScopeRemoval:true,reviewRejectionEmail:true,reviewRejectionEmailReady:rejectionMailer.status().configured}},
         );
       }
       if (action === "doctor.summary") return respond(await publicSummary(body, db));
@@ -294,7 +294,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
             "miyar_doctors?status=eq.pending&select=id,name,major_id,submitted_by_account,submitted_by_guest,requested_course,created_at&order=created_at.asc&limit=100",
           ),
           db(
-            "miyar_reviews?status=eq.pending&select=id,doctor_id,account_id,guest_id,subject,comment,tags,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
+            "miyar_reviews?status=eq.pending&select=id,doctor_id,account_id,guest_id,subject,grade,comment,tags,explanation,treatment,grading,created_at&order=created_at.asc&limit=100",
           ),
         ]);
         const [extra, catalogueRequests, ambassadors, institutions,assistants] = await Promise.all([
@@ -304,7 +304,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
           institutionInbox(db,env),
           db('rpc/miyar_assistant_list',{method:'POST',body:{}}),
         ]);
-        // Grade is deliberately excluded even from the moderation response.
+        // Only verified administrators can access pending reviews and their grades.
         return respond({
           ...institutions,
           edits: extra?.edits || [], reports: extra?.reports || [],
@@ -327,6 +327,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
               account_id,
               guest_id,
               subject,
+              grade,
               comment,
               tags,
               explanation,
@@ -340,6 +341,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
             user_id: account_id || guest_id,
             identity_type: guest_id ? "guest" : "google",
             subject,
+            grade,
             comment,
             tags: tags || [],
             explanation,

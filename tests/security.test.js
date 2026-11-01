@@ -213,7 +213,7 @@ test("public reviews use the service-only anonymous projection", async () => {
   assert.deepEqual(calls[0],{path:'rpc/miyar_public_reviews',method:'POST',body:{p_doctor:1,p_subject:'مادة'}});
   assert.ok(!JSON.stringify(data).includes(member));assert.equal(data[0].grade,92);assert.deepEqual(data[0].scores,[90,80,70]);
 });
-test("admin queue excludes private grades, and pending doctors cannot have their reviews published", async () => {
+test("admin queue includes submitted grades for verified administrators, and pending doctors cannot have their reviews published", async () => {
   const calls = [];
   const handle = handler(async (path, options) => {
     calls.push({ path, ...options });
@@ -245,7 +245,8 @@ test("admin queue excludes private grades, and pending doctors cannot have their
   );
   assert.equal(response.status, 200);
   const queue = await response.json();
-  assert.ok(!("grade" in queue.reviews[0]));
+  assert.equal(queue.reviews[0].grade,92);
+  assert.match(calls.find(c=>c.path.startsWith("miyar_reviews")).path,/select=[^&]*subject,grade,/);
   assert.ok(!("grade" in queue.doctors[0]));
   assert.equal(queue.reviews[0].user_id, member);
   assert.equal(queue.doctors[0].submitted_by, member);
