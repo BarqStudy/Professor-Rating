@@ -57,3 +57,5 @@
 .study-preparatory-button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;line-height:1.7}
 .study-preparatory-button[aria-pressed=true]{background:var(--soft);border-color:var(--green);color:var(--green)}
 .study-review-selection[hidden],.study-review-selection label[hidden],.review-subject-field label[hidden],#review-form>.form-grid[hidden]{display:none!important}
+
+.study-review-selection .review-add-custom-course{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;width:100%;margin:0;background:var(--surface);border-color:var(--green);color:var(--green);border-radius:14px;white-space:normal;font-size:calc(14px * var(--font-scale,1))}.study-review-selection .review-add-custom-course .icon{width:19px;height:19px}.review-subject-field[hidden]{display:none!important}.study-review-selection .review-subject-field{display:grid;gap:8px}.study-review-selection .review-subject-field input{width:100%;min-width:0}.study-review-selection .review-subject-field small{display:block}.review-grade-grid{grid-template-columns:minmax(0,1fr)!important}

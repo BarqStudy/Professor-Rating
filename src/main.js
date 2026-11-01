@@ -1928,7 +1928,7 @@ function cloudAdmin() {
           escapeHtml(r.user_id || "حساب سابق")
         }</small><p>${
           escapeHtml(r.comment)
-        }</p>${reviewTagLabels(r.tags)}<span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div>${reviewUpdatesReady()?`<button type="button" class="secondary" data-link-review="${r.id}">ربط بمادة موجودة</button>`:''}<button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
+        }</p>${reviewTagLabels(r.tags)}<span>الشرح ${r.explanation} · التعامل ${r.treatment} · المساعدة ${r.grading}</span><div class="review-tools">${reviewUpdatesReady()?`<button type="button" class="secondary" data-link-review="${r.id}">ربط المادة بمادة موجودة</button>`:''}<button class="secondary" data-cloud-operation="review.approve" data-id="${r.id}">نشر التقييم</button><button class="secondary danger" data-cloud-operation="review.reject" data-id="${r.id}">رفض</button></div></div>`
       ).join("")
       : '<p class="muted">لا توجد تقييمات بانتظار المراجعة.</p>'
   }</section>${institutionAdminPanel(queue)}${communityAdminPanel(queue)}${ambassadorAdminPanel(queue)}<section class="panel ai-diagnostics" id="admin-ai"><h2>حالة مساعد مِعيار</h2><p class="muted">يفحص قراءة أسرار الخادم وقبول المفتاح وتوفر النموذج، دون إرسال سؤال أو عرض المفتاح. حصة التوليد تُفحص عند إرسال سؤال فعلي.</p><button type="button" class="secondary" id="check-ai-connection">فحص ربط المساعد</button><div id="ai-diagnostics-result" class="ai-diagnostics-result" role="status" aria-live="polite"></div></section></div>`;
