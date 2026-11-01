@@ -1,0 +1,33 @@
+name: Check review rejection mail readiness
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/review-mail-readiness.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect public mail capability without sending email
+        env:
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'bbnsorjxgehvoddluvyo' }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          url = 'https://' + os.environ['SUPABASE_PROJECT_REF'] + '.supabase.co/functions/v1/miyar'
+          request = urllib.request.Request(url, data=b'{"action":"catalogue"}', headers={'Content-Type': 'application/json', 'Origin': 'https://miyar.website'})
+          with urllib.request.urlopen(request, timeout=30) as response:
+              features = json.load(response).get('features', {})
+          if features.get('reviewRejectionEmail') is not True:
+              raise SystemExit('Review rejection email capability is not deployed.')
+          if features.get('reviewRejectionEmailReady') is True:
+              print('::notice title=Review rejection mail::Sender configuration is present. No email was sent by this check.')
+          else:
+              print('::warning title=Review rejection mail::Sender configuration requires attention. Open rejection mail status in the admin panel. No email was sent by this check.')
+          PY
