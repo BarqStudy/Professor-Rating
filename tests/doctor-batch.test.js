@@ -13,7 +13,7 @@ test('visible screenshot names pass; a bad line beyond them is reported with its
 });
 
 test('pasted CR and Unicode line separators preserve line numbers; formatting marks and duplicates are normalized', () => {
-  const source = '\u200fد. أحمد محمد علي\r\rد. خالد عبدالله الحربي\u2028د. أحمد محمد علي\u2029اسم ناقص';
+  const source = '\u200fد. أحمد محمد علي\r\rد. خالد عبدالله الحربي\u2028د. \u200f أحمد محمد علي\u2029اسم ناقص';
   const batch = parseDoctorBatch(source);
   assert.deepEqual(batch.names, ['د. أحمد محمد علي', 'د. خالد عبدالله الحربي', 'اسم ناقص']);
   assert.equal(batch.issues[0].line, 5);

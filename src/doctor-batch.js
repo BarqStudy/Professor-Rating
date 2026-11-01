@@ -6,7 +6,7 @@ export function parseDoctorBatch(source) {
   for (const match of source.matchAll(/([^\r\n\u2028\u2029]*)(\r\n|[\r\n\u2028\u2029]|$)/g)) {
     line++;
     const name = match[1].normalize('NFKC').replace(/\s+/g, ' ')
-      .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, '').trim();
+      .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, '').trim().replace(/\s+/g, ' ');
     if (!name) continue;
     const row = {line, name, start: match.index, end: match.index + match[1].length};
     let reason = '';
