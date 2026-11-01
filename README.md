@@ -119,3 +119,7 @@ Google Client Secret يُحفظ في إعداد Google provider داخل Supabas
 ## تحسين التصميم باستخدام Impeccable
 
 أضيفت مهارة [Impeccable](https://github.com/pbakaus/impeccable) للمشروع محليًا في `.agents/skills/impeccable` مع رخصتها، دون إضافة مكتبة إلى واجهة المستخدم. استخدم `$impeccable polish` أو `$impeccable audit` على قسم محدد. توثيق هوية المنصة في [DESIGN.md](DESIGN.md)، ونطاق تحسين واجهة الطالب في [.impeccable/surfaces/student-public.md](.impeccable/surfaces/student-public.md).
+
+## الظهور في محركات البحث
+
+إعدادات الصفحة وخريطة الموقع وخطوات إثبات ملكية النطاق وإرساله إلى Google موضحة في [دليل ظهور مِعيار في البحث](docs/SEARCH-VISIBILITY.md). الفهرسة والترتيب يعتمدان على محرك البحث؛ ظهور كل دكتور بنتيجة مستقلة يحتاج صفحات عامة مستقلة.
