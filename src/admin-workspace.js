@@ -27,7 +27,7 @@ export const ADMIN_TOOLS=[
  ['add-doctor','doctors','admin-doctors','إضافة دكتور','إضافة دكتور إلى الدليل مباشرة','دكتور جديد اضافة','#cloud-add-doctor'],
  ['bulk-doctors','doctors','admin-doctors','إضافة دكاترة دفعة واحدة','إضافة مجموعة أسماء إلى تخصص واحد','جماعي مجموعة دفعة استيراد دكاترة','#bulk-doctors'],
  ['doctor-directory','doctors','admin-doctors','بحث وإدارة الدكاترة','الاسم والتخصص والتوثيق والمناصب','بحث تعديل توثيق حذف دكتور عميد رئيس قسم','#admin-doctor-search'],
- ['edit-plan','plans','study-editor','تعديل خطة ومقرراتها','الرموز والساعات والمستويات واسم الخطة وحذفها','تغيير اسم حذف خطة مقرر مادة مستوى ساعات رمز','#study-editor-plan'],
+ ['edit-plan','plans','study-editor','تعديل خطة ومقرراتها','الرموز والساعات والمستويات واسم الخطة وحذفها','تغيير اسم حذف خطة مقرر مادة مستوى ساعات رمز كلية','#study-editor-college'],
  ['import-plan','plans','admin-study-import','استيراد خطة جديدة','قراءة ملف الخطة بالذكاء الاصطناعي وحفظه','اضافة خطة تخصص رفع pdf قراءة ai','#study-import-form'],
  ['published','published','published-review-management','التقييمات المنشورة','البحث عن تقييم منشور وربط مادته أو حذفه','حذف تقييم ازالة تقييمات منشورة ربط مادة مقرر','#published-review-search'],
  ['team','people','admin-team','تعيين سفير أو مساعد','توزيع صلاحيات الجامعة والكلية','سفراء مساعد صلاحية فريق تعيين','#assign-ambassador'],
