@@ -7,7 +7,7 @@ export function showUniversityEntrance({ loading = false } = {}) {
   const entrance = document.createElement('div');
   entrance.className = 'university-entrance';
   entrance.setAttribute('aria-hidden', 'true');
-  entrance.innerHTML = `<div class="entrance-caption"><span>مِعيار</span><small>${loading ? 'نجهّز مساحتك…' : 'من هنا، تبدأ رحلتك.'}</small></div><div class="entrance-doorway"><div class="entrance-light"></div><div class="entrance-door entrance-door-right"><span></span></div><div class="entrance-door entrance-door-left"><span></span></div></div><div class="entrance-floor"></div>`;
+  entrance.innerHTML = `<div class="entrance-caption"><span>مِعيار</span><small>${loading ? 'نجهّز مساحتك…' : 'من هنا، تبدأ رحلتك.'}</small></div><div class="entrance-doorway"><div class="entrance-light"></div><div class="entrance-door entrance-door-right"><span></span></div><div class="entrance-door entrance-door-left"><span></span></div></div><div class="entrance-motes"><i></i><i></i><i></i><i></i><i></i></div><div class="entrance-floor"></div>`;
   document.body.append(entrance);
   let opening = false, closeTimer;
   const gate = { loading, open };

@@ -45,6 +45,7 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);re
   await page.locator('.university-entrance').waitFor();
   assert.equal(await page.locator('.startup-block').count(),0);
   await page.waitForTimeout(1200);
+  assert.ok(await page.locator('.entrance-door-right').evaluate(el=>el.getAnimations().some(a=>a.playState==='running')), 'the waiting gate must visibly animate');
   assert.equal(await page.locator('.university-entrance.is-opening').count(),0);
   test.gates.catalogue.resolve();test.gates.me.resolve();
   await page.locator('.connection-banner.live').waitFor();
