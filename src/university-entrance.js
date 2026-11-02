@@ -1,31 +1,40 @@
-const seenKey = 'miyar-university-door-seen-v1';
-let shown = false;
+let active = null;
 
-// Keep the entrance outside the app: catalogue refreshes must not restart it.
-export function showUniversityEntrance({ replay = false } = {}) {
-  if (document.querySelector('.university-entrance')) return;
-  if (shown && !replay) return;
-  shown = true;
-  try {
-    if (!replay && localStorage.getItem(seenKey)) return;
-    localStorage.setItem(seenKey, '1');
-  } catch { /* The in-memory guard still works when storage is unavailable. */ }
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+// The loading gate lives outside #app, so auth/catalogue renders cannot reset it.
+export function showUniversityEntrance({ loading = false } = {}) {
+  if (active) return;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const entrance = document.createElement('div');
   entrance.className = 'university-entrance';
   entrance.setAttribute('aria-hidden', 'true');
-  entrance.innerHTML = `<div class="entrance-caption"><span>مِعيار</span><small>من هنا، تبدأ رحلتك.</small></div><div class="entrance-doorway"><div class="entrance-light"></div><div class="entrance-door entrance-door-right"><span></span></div><div class="entrance-door entrance-door-left"><span></span></div></div><div class="entrance-floor"></div>`;
+  entrance.innerHTML = `<div class="entrance-caption"><span>مِعيار</span><small>${loading ? 'نجهّز مساحتك…' : 'من هنا، تبدأ رحلتك.'}</small></div><div class="entrance-doorway"><div class="entrance-light"></div><div class="entrance-door entrance-door-right"><span></span></div><div class="entrance-door entrance-door-left"><span></span></div></div><div class="entrance-floor"></div>`;
   document.body.append(entrance);
-  const open = setTimeout(() => entrance.classList.add('is-opening'), 3000);
-  const finish = setTimeout(cleanup, 4050);
-  // Keyboard and touch users can continue immediately without waiting.
-  function cleanup() {
-    clearTimeout(open);
-    clearTimeout(finish);
-    entrance.remove();
-    window.removeEventListener('keydown', cleanup);
-    window.removeEventListener('pointerdown', cleanup);
+  let opening = false, closeTimer;
+  const gate = { loading, open };
+  active = gate;
+  // A slow/offline request must not trap the student behind the gate.
+  const waitTimer = setTimeout(open, loading ? 6000 : 3000);
+  function open() {
+    if (opening) return;
+    opening = true;
+    clearTimeout(waitTimer);
+    if (reduced) { cleanup(); return; }
+    entrance.classList.add('is-opening');
+    closeTimer = setTimeout(cleanup, 1050);
   }
-  window.addEventListener('keydown', cleanup, { once: true });
-  window.addEventListener('pointerdown', cleanup, { once: true });
+  function cleanup() {
+    clearTimeout(waitTimer);
+    clearTimeout(closeTimer);
+    entrance.remove();
+    if (active === gate) active = null;
+    window.removeEventListener('keydown', skip);
+    window.removeEventListener('pointerdown', skip);
+  }
+  function skip() { if (!loading) cleanup(); }
+  window.addEventListener('keydown', skip);
+  window.addEventListener('pointerdown', skip);
+}
+
+export function finishUniversityLoading() {
+  if (active?.loading) active.open();
 }

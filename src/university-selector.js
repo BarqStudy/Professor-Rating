@@ -1,4 +1,3 @@
-import {showUniversityEntrance} from './university-entrance.js';
 import './university-grid.css';
 import directory from '../data/saudi-universities.json';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -19,7 +18,6 @@ export function createUniversitySelector({catalogue,currentId,select,request,mod
  function bind(){
   const root=document.querySelector('#university-directory');if(!root)return;
   const error=root.querySelector('#university-choice-error');
-  if(root.closest('.university-entry'))showUniversityEntrance();
   const bindCards=()=>{
    root.querySelectorAll('.uni-logo img').forEach(img=>{img.onerror=()=>{img.hidden=true;img.nextElementSibling.hidden=false;};if(img.complete&&!img.naturalWidth)img.onerror();});
    root.querySelectorAll('[data-request-another-university]').forEach(b=>b.onclick=()=>request({}));

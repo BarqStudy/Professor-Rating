@@ -7,7 +7,7 @@ import './review-likes.css';
 import {reviewCarousel,bindReviewCarousel} from './review-carousel.js';
 import './review-carousel.css';
 import {createUniversitySelector} from './university-selector.js';
-import {showUniversityEntrance} from './university-entrance.js';
+import {showUniversityEntrance,finishUniversityLoading} from './university-entrance.js';
 import {homeIcon} from './home-icons.js';
 import {openMajorRemoval} from './major-removal.js';
 import {startupSkeleton} from './startup.js';
@@ -320,10 +320,17 @@ function previousPage(){
 function renderStartup() {
   cancelHero();
   stopStatCounters();
-  if (!document.querySelector('.platform-startup')) document.querySelector('#app').innerHTML = startupSkeleton(page);
+  showUniversityEntrance({loading:true});
+  if (!document.querySelector('.platform-startup')) {
+    document.querySelector('#app').innerHTML = startupSkeleton();
+    document.querySelector('#startup-retry').onclick = () => location.reload();
+  }
 }
 function render() {
-  return heroUpdate(renderPage, () => document.querySelector('main,.signed-out-page'));
+  return heroUpdate(() => {
+    renderPage();
+    if (!cloudBooting) finishUniversityLoading();
+  }, () => document.querySelector('main,.signed-out-page'));
 }
 function renderPage() {
   adminWorkspace?.dispose();
@@ -524,7 +531,7 @@ function renderUniversityLanding(){
 function changeUniversityPage(){
   document.body.classList.remove('modal-open');
   setPage('universities');render();window.scrollTo({top:0});
-  showUniversityEntrance({replay:true});
+  showUniversityEntrance();
 }
 function openUniversityChoice(required=false,onSelected){
   const selector=universitySelector(onSelected);modal('اختر جامعتك',selector.content());document.querySelector('.modal').classList.add('university-picker-modal');selector.bind();
@@ -2533,6 +2540,7 @@ setupCursor();
 setupHero();
 setupReveals();
 if(new URLSearchParams(location.search).get('action')==='delete-account')storage.setItem('miyar-delete-account-intent','true');
+showUniversityEntrance({loading:true});
 render();
 if (configured) loadCloud();
 const sharedId = +new URLSearchParams(location.search).get("doctor");

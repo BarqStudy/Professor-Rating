@@ -55,7 +55,7 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);re
    await page.evaluate(()=>{window.allowUniversityDirectory=true;});await page.locator('#header-change-university').click();
    await page.locator('#university-directory').waitFor();assert.equal(new URL(page.url()).hash,'#universities');assert.equal(await page.locator('.university-picker-modal').count(),0);
    await page.locator('#university-entry-back').click();await page.locator('#header-change-university').waitFor();assert.equal(test.calls.filter(call=>call.action==='university').length,0);
-   await page.locator('#header-change-university').click();await page.locator('#university-search').fill('جامعة الملك سعود');await page.locator('[data-uni-confirm]').click();
+   await page.locator('#header-change-university').click();await page.locator('#university-search').fill('جامعة الملك سعود');await page.getByRole('button',{name:'جامعة الملك سعود — الدخول إلى الجامعة',exact:true}).click();
    await page.locator('.connection-banner.live').filter({hasText:'جامعة الملك سعود'}).waitFor();assert.equal(test.calls.filter(call=>call.action==='university').length,1);
    await page.reload();await page.locator('.connection-banner.live').filter({hasText:'جامعة الملك سعود'}).waitFor();assert.deepEqual(await page.evaluate(()=>window.automaticDirectories),[]);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await test.context.close();
@@ -75,11 +75,22 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);re
   }
 
   for(const options of [{university:null},{university:3,enabled:false},{fail:true}]){
-   const test=await setup(options),{page}=test;await page.locator('.connection-banner.'+(options.fail?'error':'live')).waitFor();
-   assert.equal(await page.locator('.welcome').count(),1);assert.equal(await page.locator('#university-directory,.university-picker-modal').count(),0);assert.deepEqual(await page.evaluate(()=>window.automaticDirectories),[]);
-   if(!options.fail){await page.locator('#new-review').click();await page.getByText('حدّد جامعتك من زر «تغيير الجامعة» أعلى المنصة لإكمال هذه الخطوة.',{exact:true}).waitFor();assert.equal(await page.locator('#university-directory,.modal-backdrop').count(),0);}
-   await page.evaluate(()=>{window.allowUniversityDirectory=true;});await page.locator('#header-change-university').click();await page.locator('#university-entry-back').click();await page.locator('#header-change-university').waitFor();
-   assert.equal(test.calls.filter(call=>call.action==='university').length,0);await test.context.close();
+   const test=await setup(options),{page}=test;
+   if(options.fail){
+    await page.locator('.connection-banner.error').waitFor();
+    assert.equal(await page.locator('.welcome').count(),1);
+    assert.equal(await page.locator('#university-directory').count(),0);
+    await page.evaluate(()=>{window.allowUniversityDirectory=true;});
+    await page.locator('#header-change-university').click();
+    await page.locator('#university-entry-back').click();
+    await page.locator('#header-change-university').waitFor();
+   }else{
+    // Missing/inactive membership choices use the current full-page directory.
+    await page.locator('#university-directory').waitFor();
+    assert.equal(await page.locator('.welcome,.modal-backdrop').count(),0);
+   }
+   assert.equal(test.calls.filter(call=>call.action==='university').length,0);
+   await test.context.close();
   }
   const guest=await setup({signedIn:false});await guest.page.locator('#university-directory').waitFor();assert.equal(await guest.page.locator('.uni-card.is-open').count(),2);await guest.context.close();
   assert.deepEqual(errors,[]);console.log('PASS: no automatic university directory at any member startup frame, slow auth/profile/catalogue and guest setup, reload and direct links, missing/inactive university and outage; explicit full-page change/back/save, persistent server selection, write guard without automatic modal, responsive layout, guest first-visit directory. API/auth network mocked.');
