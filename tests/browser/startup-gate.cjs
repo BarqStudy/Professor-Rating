@@ -62,18 +62,21 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);re
   assert.ok(phases.wide.every(angle=>angle>85),'then open fully');
   await page.locator('.university-entrance').waitFor({state:'detached'});
   test.gates.guest.resolve();
-  // Reload always gets a fresh gate, independent of stored first-visit flags.
-  await page.reload();await page.locator('.connection-banner.live').waitFor();
-  await page.locator('.university-entrance').waitFor({state:'detached'});
-  assert.equal(await page.evaluate(()=>window.gateAppearances),1);
+  // A refresh previews the current page with skeletons instead of replaying the gate.
+  test.gates.catalogue=deferred();test.gates.me=deferred();
+  await page.reload();await page.locator('.startup-block:visible').first().waitFor();
+  assert.equal(await page.locator('.university-entrance').count(),0);
+  assert.equal(await page.evaluate(()=>window.gateAppearances),0);
+  test.gates.catalogue.resolve();test.gates.me.resolve();
+  await page.locator('.connection-banner.live').waitFor();
   await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
   await page.waitForTimeout(150);
-  assert.equal(await page.evaluate(()=>window.gateAppearances),1);
+  assert.equal(await page.evaluate(()=>window.gateAppearances),0);
   await page.locator('#header-change-university').click();
   await page.locator('.university-entrance').waitFor();
   assert.equal(await page.locator('.university-entrance.is-opening').count(),0);
   await page.locator('.university-entrance').waitFor({state:'detached'});
-  assert.equal(await page.evaluate(()=>window.gateAppearances),2);
+  assert.equal(await page.evaluate(()=>window.gateAppearances),1);
   await test.context.close();
 
   // A stalled request reveals an actionable fallback instead of a locked gate.
@@ -95,6 +98,6 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);re
    await failed.context.close();
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS: gate follows real startup, no grey placeholders, every reload, no foreground replay, university-change replay, slow/offline fallback, reduced motion and API failures.');
+  console.log('PASS: gate follows new-entry startup, grey skeletons only on reload, no foreground replay, university-change replay, slow/offline fallback, reduced motion and API failures.');
  }finally{await browser.close();server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;server.close();});

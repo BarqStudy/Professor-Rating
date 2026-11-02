@@ -10,7 +10,7 @@ import {createUniversitySelector} from './university-selector.js';
 import {showUniversityEntrance,finishUniversityLoading} from './university-entrance.js';
 import {homeIcon} from './home-icons.js';
 import {openMajorRemoval} from './major-removal.js';
-import {startupSkeleton} from './startup.js';
+import {startupSkeleton,startupConnection} from './startup.js';
 import {statNumber,animateStats} from './stats.js';
 import {setupCursor} from './cursor.js';
 import {setupReveals} from './reveal.js';
@@ -65,6 +65,8 @@ import {
 let googleSession = null;
 let guestProfile = null, presenceCount = null, presenceBusy = false;
 const presenceTabId = crypto.randomUUID();
+// Browser reloads use the page preview; new entries retain the animated gate.
+const useEntryGate = performance.getEntriesByType('navigation')[0]?.type !== 'reload';
 let compareIds = [];
 let savedUpdates = [];
 let requestUpdates = [];
@@ -320,10 +322,11 @@ function previousPage(){
 function renderStartup() {
   cancelHero();
   stopStatCounters();
-  showUniversityEntrance({loading:true});
+  if (useEntryGate) showUniversityEntrance({loading:true});
   if (!document.querySelector('.platform-startup')) {
-    document.querySelector('#app').innerHTML = startupSkeleton();
-    document.querySelector('#startup-retry').onclick = () => location.reload();
+    document.querySelector('#app').innerHTML = useEntryGate ? startupConnection() : startupSkeleton(page);
+    const retry = document.querySelector('#startup-retry');
+    if (retry) retry.onclick = () => location.reload();
   }
 }
 function render() {
@@ -2540,7 +2543,7 @@ setupCursor();
 setupHero();
 setupReveals();
 if(new URLSearchParams(location.search).get('action')==='delete-account')storage.setItem('miyar-delete-account-intent','true');
-showUniversityEntrance({loading:true});
+if (useEntryGate) showUniversityEntrance({loading:true});
 render();
 if (configured) loadCloud();
 const sharedId = +new URLSearchParams(location.search).get("doctor");
