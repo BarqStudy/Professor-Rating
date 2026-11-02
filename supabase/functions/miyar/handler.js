@@ -4,6 +4,7 @@ import {reviewLikes} from './review-likes.js';
 import {createInstitutionMailer,institutionMailStatus,institutionInbox} from './institution-mail.js';
 import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
+import {extractTimetable} from './timetable-import.js';
 import {loadEditablePlan,updateStudyPlan,deleteStudyPlan} from './plan-editor.js';
 import {publishedReviewAdmin} from './published-reviews.js';
 import {majorAdministration} from './major-removal.js';
@@ -57,7 +58,13 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if (request.method !== "POST") {
         throw new ApiError(405, "استخدم طلب POST.");
       }
-      const query=new URL(request.url).searchParams,studyOperation=query.get('study'),fileOperation=query.get('files');
+      const query=new URL(request.url).searchParams,studyOperation=query.get('study'),fileOperation=query.get('files'),scheduleOperation=query.get('schedule');
+      let scheduleGuest=null;
+      if(scheduleOperation!==null){
+        if(scheduleOperation!=='extract'||studyOperation!==null||fileOperation!==null)throw new ApiError(400,'عملية جدول غير صالحة.');
+        scheduleGuest=await verifiedGuest(request,db);
+        if(scheduleGuest.status!=='active')throw new ApiError(403,'جلسة الطالب غير متاحة لقراءة الملفات.');
+      }
       if(fileOperation!==null&&fileOperation!=='upload')throw new ApiError(400,'عملية ملف غير معروفة.');
       if(fileOperation!==null&&studyOperation!==null)throw new ApiError(400,'اختر عملية واحدة للرفع.');
       let studyAdmin=null;
@@ -70,7 +77,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         if(rows[0]?.status!=='active')throw new ApiError(403,'حساب الإدارة غير متاح للاستيراد.');
         studyAdmin=identity.id;
       }
-      const limit=fileOperation==='upload'?21*1024*1024:studyOperation==='extract'?8*1024*1024:['publish','update'].includes(studyOperation)?768*1024:16384;
+      const limit=fileOperation==='upload'?21*1024*1024:(studyOperation==='extract'||scheduleOperation==='extract')?8*1024*1024:['publish','update'].includes(studyOperation)?768*1024:16384;
       let size = 0;
       const chunks = [];
       const reader = request.body?.getReader();
@@ -92,12 +99,13 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         bytes.set(chunk, offset);
         offset += chunk.length;
       }
-      if(studyOperation==='extract'||fileOperation==='upload'){
+      if(studyOperation==='extract'||fileOperation==='upload'||scheduleOperation==='extract'){
         const contentType=request.headers.get('content-type')||'';
-        if(!contentType.toLowerCase().startsWith('multipart/form-data;'))throw new ApiError(400,'ارفع ملف الخطة من لوحة الإدارة.');
+        if(!contentType.toLowerCase().startsWith('multipart/form-data;'))throw new ApiError(400,scheduleOperation==='extract'?'ارفع ملف الجدول من نموذج الرفع.':'ارفع ملف الخطة من لوحة الإدارة.');
         let form;
         try{form=await new Response(bytes,{headers:{'Content-Type':contentType}}).formData();}
         catch{throw new ApiError(400,'ملف الرفع غير صالح.');}
+        if(scheduleOperation==='extract')return respond(await extractTimetable(form,scheduleGuest,db,env,aiFetch));
         if(fileOperation==='upload')return respond(await uploadPlatformFile(form,studyAdmin,db,env,storageFetch),201);
         return respond(await extractStudyPlan(form,studyAdmin,db,env,aiFetch,storageFetch));
       }
@@ -120,7 +128,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if(action==='study.plans')return respond(await db('rpc/miyar_uploaded_study_plans',{method:'POST',body:{}}));
       if (action === "catalogue") {
         return respond(
-          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{reviewGradeRequired:true,reviewFlexibility:true,doctorScopeRemoval:true,reviewRejectionEmail:true,reviewRejectionEmailReady:rejectionMailer.status().configured}},
+          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{studentTimetableImport:true,reviewGradeRequired:true,reviewFlexibility:true,doctorScopeRemoval:true,reviewRejectionEmail:true,reviewRejectionEmailReady:rejectionMailer.status().configured}},
         );
       }
       if (action === "doctor.summary") return respond(await publicSummary(body, db));

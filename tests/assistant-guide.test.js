@@ -6,7 +6,8 @@ const help=id=>MIYAR_HELP.find(source=>source.id===id).text;
 
 test('the assistant guide describes current review, grade, specialty, drawing and admin workflows without reviving retired settings',()=>{
  assert.equal(new Set(MIYAR_HELP.map(source=>source.id)).size,MIYAR_HELP.length);
- assert.ok(MIYAR_HELP.every(source=>['#home','#ratings','#plan','#advisor','#requests','#admin'].includes(source.href)));
+ assert.ok(MIYAR_HELP.every(source=>['#home','#ratings','#plan','#advisor','#requests','#admin','#timetable'].includes(source.href)));
+ assert.match(help('help-timetable'),/لا يخمنها القارئ/);assert.match(help('help-timetable'),/للقراءة فقط/);
  assert.match(help('help-review-rules'),/أكثر من مادة/);assert.match(help('help-review-rules'),/لا يوجد حد يومي/);assert.match(help('help-review-rules'),/باهتة وغير قابلة للاختيار/);
  assert.match(help('help-outcomes'),/بما في ذلك درجات التقييمات السابقة/);assert.match(help('help-outcomes'),/دون اسم الطالب/);assert.match(help('help-outcomes'),/16\/11\/2026/);assert.match(help('help-outcomes'),/خريطة الدرجات ملغاة/);assert.match(help('help-outcomes'),/غير موجود في الإعدادات أو نموذج التقييم/);
  assert.match(help('help-rating'),/الدرجة إلزامية من 0 إلى 100/);assert.match(help('help-outcomes'),/تظهر الدرجة للإدارة/);assert.ok(!help('help-rating').includes('يمكن تفعيل «لا أريد عرض درجتي'));

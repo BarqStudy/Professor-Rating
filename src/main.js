@@ -1,3 +1,5 @@
+import {createTimetable} from './timetable.js';
+import {extractStudentTimetable} from './cloud.js';
 import {isNative,nativePlatform,setupNative,shareNativeLink,shareNativeCard,publicDoctorUrl} from './native.js';
 import {reviewDate} from './review-date.js';
 import {parseDoctorBatch} from './doctor-batch.js';
@@ -65,6 +67,8 @@ import {
 let googleSession = null;
 let guestProfile = null, presenceCount = null, presenceBusy = false;
 const presenceTabId = crypto.randomUUID();
+const readSharedTimetable = () => location.hash.startsWith('#timetable/') ? location.hash.slice('#timetable/'.length) : null;
+let sharedTimetablePayload = readSharedTimetable();
 // Browser reloads use the page preview; new entries retain the animated gate.
 const useEntryGate = performance.getEntriesByType('navigation')[0]?.type !== 'reload';
 let compareIds = [];
@@ -246,7 +250,8 @@ function displayName() {
 let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
-const pageNames = ["home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "plan", "advisor", "universities"];
+const timetable = createTimetable({ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest:'+(guestProfile?.id||'local'),extract:extractStudentTimetable,plan:()=>studyPlanner.current()});
+const pageNames = ["timetable", "home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "plan", "advisor", "universities"];
 let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
 const persist = () => {
@@ -296,7 +301,7 @@ function nav() {
       "developer",
       "users",
       "من نحن",
-    ]].map(([p, i, t]) =>
+    ], ["timetable", "cap", "جدولي الدراسي"]].map(([p, i, t]) =>
       `<button data-page="${p}" class="nav-item ${
         page === p ? "active" : ""
       }" aria-label="${t}">${ic(i)}${p==='plan'?'<span class="nav-label-long">خطتي إلى التخرج</span><span class="nav-label-short" aria-hidden="true">خطتي</span>':`<span>${t}</span>`}${page === p ? "<i></i>" : ""}</button>`
@@ -337,6 +342,11 @@ function render() {
 }
 function renderPage() {
   adminWorkspace?.dispose();
+  if(sharedTimetablePayload!==null){
+    document.querySelector('#app').innerHTML=`<main class="timetable-public">${timetable.sharedPage(sharedTimetablePayload)}</main>`;
+    timetable.bindShared(sharedTimetablePayload);
+    return;
+  }
   if (cloudBooting) { renderStartup(); return; }
   stopStatCounters();
   // Older links used a placeholder page solely behind the review dialog.
@@ -371,6 +381,7 @@ function renderPage() {
         admin: "لوحة الإدارة",
         ambassador: "مساحة الفريق",
         assistant: "مساعد مِعيار",
+        timetable: "جدولي الدراسي",
         plan: "خطتي إلى التخرج",
         advisor: "دكاترة المادة",
       })[page]
@@ -407,6 +418,8 @@ function renderPage() {
         ? ambassadorPage()
         : page === "advisor"
         ? studyContent()
+        : page === "timetable"
+        ? timetable.page()
         : page === "plan"
         ? studyContent()
         : page === "assistant"
@@ -416,6 +429,7 @@ function renderPage() {
   bind();
   stopStatCounters = animateStats(document.querySelector('.stats'));
   if (page === 'assistant') miyarAssistant.bind();
+  if (page === 'timetable') timetable.bind();
   if (page === 'plan') studyPlanner.bind();
   if (page === 'advisor') courseAdvisor.bind();
   if (page === 'home') bindHomeCourseCard();
@@ -461,7 +475,7 @@ function home() {
     ic("arrow")
   }</span></button><button class="action-card new-review add-new-doctor" id="new-review">${actionCardSurface(actionDecoration)}${homeIcon("add")}<div><h2>إضافة دكتور</h2><p>دكتور غير مضاف في الأقسام</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span></button><button type="button" class="action-card browse study-action" data-page="plan">${actionCardSurface()}${homeIcon("plan")}<div><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button></section>${homeCourseCard()}<section class="stats"><div><span class="stat-icon">${ic('cap')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.doctors ?? cloudCatalogue?.doctors.length ?? 0) : doctors.length === 4 ? 48 : doctors.length, '+')}<span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${ic('star')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length, '+')}<span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${ic('users')}</span><div>${statNumber(configured ? (cloudCatalogue?.colleges.length || 0) : 850, configured ? '' : '+')}<span>${configured ? 'كلية في مِعيار' : 'طالب يصنعون الأثر'}</span></div></div><span class="demo-data">${configured ? 'إحصائيات جميع الجامعات · تقييمات منشورة فقط' : 'إحصاءات توضيحية'}</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
+  }</span></button><button type="button" class="action-card browse study-action" data-page="plan">${actionCardSurface()}${homeIcon("plan")}<div><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button><button type="button" class="action-card browse study-action" data-page="timetable">${actionCardSurface()}${homeIcon("plan")}<div><h2>جدولي الدراسي</h2><p>ارفع ملفك، رتّب مواعيدك، وشارك جدولك أو احفظه صورة وPDF</p></div><span class="action-arrow">${ic("arrow")}</span></button></section>${homeCourseCard()}<section class="stats"><div><span class="stat-icon">${ic('cap')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.doctors ?? cloudCatalogue?.doctors.length ?? 0) : doctors.length === 4 ? 48 : doctors.length, '+')}<span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${ic('star')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length, '+')}<span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${ic('users')}</span><div>${statNumber(configured ? (cloudCatalogue?.colleges.length || 0) : 850, configured ? '' : '+')}<span>${configured ? 'كلية في مِعيار' : 'طالب يصنعون الأثر'}</span></div></div><span class="demo-data">${configured ? 'إحصائيات جميع الجامعات · تقييمات منشورة فقط' : 'إحصاءات توضيحية'}</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
     ic("shield")
   }</div><div><h3>مساحة آمنة. آراء صادقة. أثر حقيقي.</h3><p>نحترم خصوصيتك، ونؤمن أن النقد البنّاء هو بداية التطوير.</p></div><button id="privacy">تعرّف على معاييرنا ${
     ic("arrow")
@@ -2519,11 +2533,14 @@ document.addEventListener('click',event=>{
  event.preventDefault();document.body.classList.remove('modal-open');setPage(next);render();window.scrollTo({top:0});
 });
 window.addEventListener("popstate", () => {
+  const wasShared = sharedTimetablePayload !== null;
+  sharedTimetablePayload = readSharedTimetable();
   cancelHero(true);
   rememberHero(document.querySelector("main"));
   document.body.classList.remove("modal-open");
   page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home";
   render();
+  if (wasShared && sharedTimetablePayload === null && configured && cloudBooting) void loadCloud();
   window.scrollTo({top:navigation.savedScroll(),behavior:'instant'});
 });
 window.addEventListener("focus", () => { if (!document.hidden) {refreshSavedUpdates();refreshPresence();} });
@@ -2543,8 +2560,8 @@ setupCursor();
 setupHero();
 setupReveals();
 if(new URLSearchParams(location.search).get('action')==='delete-account')storage.setItem('miyar-delete-account-intent','true');
-if (useEntryGate) showUniversityEntrance({loading:true});
+if (useEntryGate&&sharedTimetablePayload===null) showUniversityEntrance({loading:true});
 render();
-if (configured) loadCloud();
+if (configured&&sharedTimetablePayload===null) loadCloud();
 const sharedId = +new URLSearchParams(location.search).get("doctor");
 if (doctors.some((d) => d.id === sharedId)) detail(sharedId);

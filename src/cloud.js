@@ -159,3 +159,14 @@ export async function uploadPlatformFile(file,id){
  let response;try{response=await fetch(`${projectUrl}/functions/v1/miyar?files=upload`,{method:'POST',headers:{apikey:publishableKey,Authorization:`Bearer ${session.access_token}`},body:form,signal:AbortSignal.timeout(90000)});}catch{throw new Error('تعذّر إكمال رفع الملف. أعد المحاولة بنفس الملف؛ لا يُنشأ سجل مكرر.');}
  const result=await response.json().catch(()=>{throw new Error('تعذّرت قراءة نتيجة الرفع.');});if(!response.ok)throw new Error(result.error||'تعذّر حفظ الملف في R2.');return result;
 }
+
+export async function extractStudentTimetable(file){
+ await ensureGuestSession();
+ const form=new FormData();form.set('file',file);
+ let response;
+ try{response=await fetch(`${projectUrl}/functions/v1/miyar?schedule=extract`,{method:'POST',headers:{apikey:publishableKey,'x-miyar-guest':readGuestToken()},body:form,signal:AbortSignal.timeout(100000)});}
+ catch{throw new Error('تعذّر إكمال قراءة الجدول. تحقق من اتصالك أو أعد المحاولة بملف أصغر.');}
+ const result=await response.json().catch(()=>{throw new Error('استجابة غير متوقعة من قارئ الجدول.');});
+ if(!response.ok)throw new Error(result.error||'تعذّر قراءة الملف.');
+ return result;
+}
