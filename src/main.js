@@ -7,6 +7,7 @@ import './review-likes.css';
 import {reviewCarousel,bindReviewCarousel} from './review-carousel.js';
 import './review-carousel.css';
 import {createUniversitySelector} from './university-selector.js';
+import {showUniversityEntrance} from './university-entrance.js';
 import {homeIcon} from './home-icons.js';
 import {openMajorRemoval} from './major-removal.js';
 import {startupSkeleton} from './startup.js';
@@ -523,6 +524,7 @@ function renderUniversityLanding(){
 function changeUniversityPage(){
   document.body.classList.remove('modal-open');
   setPage('universities');render();window.scrollTo({top:0});
+  showUniversityEntrance({replay:true});
 }
 function openUniversityChoice(required=false,onSelected){
   const selector=universitySelector(onSelected);modal('اختر جامعتك',selector.content());document.querySelector('.modal').classList.add('university-picker-modal');selector.bind();
