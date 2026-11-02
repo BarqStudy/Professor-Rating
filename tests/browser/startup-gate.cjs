@@ -50,6 +50,16 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);re
   test.gates.catalogue.resolve();test.gates.me.resolve();
   await page.locator('.connection-banner.live').waitFor();
   await page.locator('.university-entrance.is-opening').waitFor();
+  const phases=await page.locator('.university-entrance').evaluate(root=>{
+   const doors=[...root.querySelectorAll('.entrance-door')];
+   const flights=doors.map(door=>door.getAnimations().find(a=>a.animationName==='entrance-staged-open'));
+   const sample=time=>{flights.forEach(a=>{a.pause();a.currentTime=time;});return doors.map(door=>{const m=new DOMMatrix(getComputedStyle(door).transform);return Math.abs(Math.atan2(-m.m13,m.m11)*180/Math.PI);});};
+   const crack=sample(300),hold=sample(400),wide=sample(850);
+   flights.forEach(a=>a.play());return{crack,hold,wide};
+  });
+  assert.ok(phases.crack.every(angle=>angle>15&&angle<22),'first stage is a small crack');
+  assert.ok(phases.hold.every((angle,i)=>Math.abs(angle-phases.crack[i])<1),'briefly hold the crack');
+  assert.ok(phases.wide.every(angle=>angle>85),'then open fully');
   await page.locator('.university-entrance').waitFor({state:'detached'});
   test.gates.guest.resolve();
   // Reload always gets a fresh gate, independent of stored first-visit flags.

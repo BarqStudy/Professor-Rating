@@ -19,6 +19,9 @@ export function showUniversityEntrance({ loading = false } = {}) {
     opening = true;
     clearTimeout(waitTimer);
     if (reduced) { cleanup(); return; }
+    entrance.querySelectorAll('.entrance-door').forEach(door => {
+      door.style.setProperty('--door-start', getComputedStyle(door).transform);
+    });
     entrance.classList.add('is-opening');
     closeTimer = setTimeout(cleanup, 1050);
   }

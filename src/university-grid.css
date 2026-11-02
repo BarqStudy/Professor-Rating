@@ -23,7 +23,7 @@
 .university-grid-directory .uni-card-city{padding-top:16px;font-size:12px;color:#68776f;border-color:var(--directory-line)}
 .university-grid-directory .uni-card-city .icon{color:var(--directory-green)}
 .university-picker-modal .university-grid-directory .university-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.university-entrance{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fafcf9;pointer-events:none;overflow:hidden;transition:opacity .45s ease .55s}
+.university-entrance{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fafcf9;pointer-events:none;overflow:hidden;transition:opacity .28s ease .72s}
 .entrance-caption{text-align:center;margin-bottom:30px;color:#174f3d;transition:opacity .3s ease}
 .entrance-caption>span{display:block;font-size:42px;line-height:1.5;font-weight:700}
 .entrance-caption small{font-size:15px;color:#6a7b70}
@@ -41,13 +41,14 @@
 .is-opening .entrance-light{opacity:1}
 .is-opening .entrance-light:before{opacity:1;transform:scale(1.35)}
 .is-opening .entrance-doorway:after{animation:entrance-light-spill 1s ease-out both}
-@keyframes entrance-light-spill{0%{opacity:.4;transform:translateX(-50%) scaleX(1)}35%{opacity:.95;transform:translateX(-50%) scaleX(18);box-shadow:0 0 45px 30px rgb(255 241 191/.7)}100%{opacity:0;transform:translateX(-50%) scaleX(100);box-shadow:0 0 80px 60px rgb(255 247 218/.4)}}
+@keyframes entrance-staged-open{0%{transform:var(--door-start,rotateY(0deg))}26%,42%{transform:rotateY(var(--door-crack))}100%{transform:rotateY(var(--door-full))}}
+@keyframes entrance-light-spill{0%{opacity:.4;transform:translateX(-50%) scaleX(1)}30%,42%{opacity:.85;transform:translateX(-50%) scaleX(5);box-shadow:0 0 20px 10px rgb(255 241 191/.6)}78%{opacity:.75;transform:translateX(-50%) scaleX(65);box-shadow:0 0 60px 40px rgb(255 241 191/.6)}100%{opacity:0;transform:translateX(-50%) scaleX(100);box-shadow:0 0 80px 60px rgb(255 247 218/.4)}}
 .entrance-floor{width:min(420px,85vw);height:1px;background:#dbe5dc;box-shadow:0 10px 25px 2px rgb(22 70 48/.12)}
 .university-entrance.is-opening{opacity:0}
-.is-opening .entrance-door-right{transform:rotateY(105deg)}
-.is-opening .entrance-door-left{transform:rotateY(-105deg)}
+.is-opening .entrance-door-right{--door-crack:18deg;--door-full:105deg;transform:rotateY(105deg);animation:entrance-staged-open 1s cubic-bezier(.22,.7,.3,1) both;transition:none}
+.is-opening .entrance-door-left{--door-crack:-18deg;--door-full:-105deg;transform:rotateY(-105deg);animation:entrance-staged-open 1s cubic-bezier(.22,.7,.3,1) both;transition:none}
 .is-opening .entrance-caption{opacity:0}
-.is-opening .entrance-doorway{scale:1.4}
+.is-opening .entrance-doorway{scale:1.4;transition:scale .68s cubic-bezier(.4,0,.2,1) .32s}
 /* The gate stays alive while data loads; opening never waits for these loops. */
 .university-entrance:not(.is-opening) .entrance-door-right{animation:entrance-right-breathe 2.6s ease-in-out infinite}
 .university-entrance:not(.is-opening) .entrance-door-left{animation:entrance-left-breathe 2.6s ease-in-out infinite}
