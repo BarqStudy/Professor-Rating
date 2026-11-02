@@ -14,7 +14,7 @@ export function showUniversityEntrance({ replay = false } = {}) {
   const entrance = document.createElement('div');
   entrance.className = 'university-entrance';
   entrance.setAttribute('aria-hidden', 'true');
-  entrance.innerHTML = `<div class="entrance-caption"><span>مِعيار</span><small>من هنا، تبدأ رحلتك.</small></div><div class="entrance-doorway"><div class="entrance-door entrance-door-right"><span></span></div><div class="entrance-door entrance-door-left"><span></span></div></div><div class="entrance-floor"></div>`;
+  entrance.innerHTML = `<div class="entrance-caption"><span>مِعيار</span><small>من هنا، تبدأ رحلتك.</small></div><div class="entrance-doorway"><div class="entrance-light"></div><div class="entrance-door entrance-door-right"><span></span></div><div class="entrance-door entrance-door-left"><span></span></div></div><div class="entrance-floor"></div>`;
   document.body.append(entrance);
   const open = setTimeout(() => entrance.classList.add('is-opening'), 3000);
   const finish = setTimeout(cleanup, 4050);
