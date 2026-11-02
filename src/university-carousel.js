@@ -26,19 +26,23 @@ export function mountUniversityCarousel(root, { activeKey, onFocus } = {}) {
     root.classList.toggle('is-empty', !count);
     root.classList.toggle('is-dragging', !!pointer?.dragging);
     const focused = current();
-    const radius = Math.min(470, stage.clientWidth * .86);
-    const step = count > 2 && count < 7 ? 360 / count : 35;
+    const compact = stage.clientWidth < 650;
+    const spread = Math.min(570, stage.clientWidth * .45);
     cards.forEach((card, index) => {
       const distance = offset(index, position, count), magnitude = Math.abs(distance);
-      const angle = distance * step * Math.PI / 180;
-      const visible = magnitude < 3.35;
-      const x = -Math.sin(angle) * radius;
-      const z = (Math.cos(angle) - 1) * 240;
-      const y = (1 - Math.cos(angle)) * 38;
-      const scale = Math.max(.5, 1 - magnitude * .14);
-      card.style.transform = `translate(-50%, -50%) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px) rotateY(${(distance * 23).toFixed(2)}deg) scale(${scale.toFixed(3)})`;
-      card.style.opacity = visible ? String(Math.max(.12, 1 - magnitude * .23)) : '0';
-      card.style.filter = magnitude > 1.2 ? `blur(${Math.min(2, (magnitude - 1.2) * 1.3).toFixed(2)}px)` : 'none';
+      const visible = magnitude < (compact ? 4.5 : 8.5);
+      // An open constellation: the selected university stays readable at its heart.
+      const side = Math.sign(distance), lane = Math.ceil(magnitude / 2);
+      const x = -side * spread * Math.min(1.05, .46 + lane * .15);
+      const y = (Math.round(magnitude) % 2 ? -1 : 1) * (95 + (lane % 3) * 35);
+      const influence = Math.min(1, magnitude);
+      const scale = magnitude < 1 ? 1 - magnitude * .46 : Math.max(.32, .58 - lane * .045);
+      const tilt = side * (Math.round(magnitude) % 2 ? 7 : -9);
+      card.style.transform = `translate(-50%, -50%) translate3d(${(x * influence).toFixed(2)}px, ${(y * influence).toFixed(2)}px, ${(-magnitude * 22).toFixed(2)}px) rotate(${(tilt * influence).toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+      card.style.setProperty('--float-delay', `${-(index % 7) * 1.4}s`);
+      card.style.setProperty('--float-duration', `${7 + index % 5}s`);
+      card.style.opacity = visible ? String(Math.max(.3, 1 - magnitude * .075)) : '0';
+      card.style.filter = 'none';
       card.style.visibility = visible ? 'visible' : 'hidden';
       card.style.zIndex = String(100 - Math.round(magnitude * 10));
       card.style.pointerEvents = visible ? 'auto' : 'none';

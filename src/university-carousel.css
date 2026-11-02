@@ -83,3 +83,39 @@
  .university-picker-modal .uni-carousel .uni-card{height:310px;padding:20px 18px 15px;width:calc(100% - 66px)}
 }
 @media(prefers-reduced-motion:reduce){.uni-carousel .uni-card,.uni-carousel-progress span{transition:none}.uni-carousel .uni-card{will-change:auto}}
+
+/* A white, airy constellation of university emblems. */
+.university-entry:has(.university-orbit-directory){background:#fff}
+.uni-orbit-stage{height:620px;border-radius:0;background:#fff;perspective:1600px}
+.uni-orbit-stage:before{display:none}
+.uni-orbit-stage:after{bottom:75px;opacity:.05;width:240px}
+.uni-carousel .uni-card{top:49%;width:310px;height:330px;padding:22px 24px 18px;border-radius:12px;border:1px solid #e8eceb;background:#fff;color:#182337;box-shadow:0 8px 24px rgb(24 35 55/.06);animation:university-float var(--float-duration,9s) ease-in-out var(--float-delay,0s) infinite alternate;will-change:transform,translate}
+.uni-carousel .uni-card.is-open{background:#fff}
+.uni-carousel .uni-card.is-front{border-color:var(--accent-solid);box-shadow:0 24px 65px rgb(24 35 55/.1);animation-duration:10s}
+.uni-carousel .uni-card.is-front:hover{box-shadow:0 28px 70px rgb(24 35 55/.14)}
+.uni-carousel .uni-card>strong{color:#182337;font-size:21px}
+.uni-carousel .uni-card-state,.uni-carousel .uni-card-city,.uni-carousel .uni-card-ordinal{color:#637183}
+.uni-carousel .uni-card.is-open .uni-card-state{color:#26745d}
+.uni-carousel .uni-card-city{border-color:#e8eceb}
+.uni-carousel .uni-logo{height:128px;flex-basis:128px;width:180px;margin:16px auto 10px}
+.uni-carousel .uni-logo img{height:120px;max-width:170px}
+.uni-carousel .uni-logo img.uni-university-mark{height:145px}
+.uni-carousel-navigation{margin:0 auto 12px}
+.uni-carousel.is-dragging .uni-card,.uni-orbit-stage:hover .uni-card,.uni-orbit-stage:focus-within .uni-card{animation-play-state:paused}
+.university-picker-modal .uni-orbit-stage{height:550px}
+.university-picker-modal .uni-carousel .uni-card{height:330px;padding:22px 24px 18px}
+:root[data-theme=dark] .uni-carousel .uni-card,:root[data-theme=dark] .uni-carousel .uni-card.is-front{background:#fff;box-shadow:0 16px 40px rgb(0 0 0/.12)}
+:root[data-theme=dark] .uni-orbit-stage:after{background:#182337;opacity:.05}
+@keyframes university-float{from{translate:0 -7px}to{translate:0 9px}}
+@media(max-width:650px){
+ .uni-orbit-stage{height:510px;margin-inline:-12px}
+ .uni-carousel .uni-card{width:255px;max-width:calc(100% - 70px);height:300px;top:49%;padding:19px 20px 16px;border-radius:12px}
+ .uni-carousel .uni-card>strong{font-size:18px}
+ .uni-carousel .uni-logo{height:112px;flex-basis:112px;width:155px;margin:13px auto 10px}
+ .uni-carousel .uni-logo img{height:105px;max-width:145px}
+ .uni-carousel .uni-logo img.uni-university-mark{height:132px}
+ .uni-orbit-stage:after{bottom:60px}
+ .university-picker-modal .uni-orbit-stage{height:480px}
+ .university-picker-modal .uni-carousel .uni-card{width:245px;height:295px;padding:19px 20px 16px}
+}
+@media(prefers-reduced-motion:reduce){.uni-carousel .uni-card{animation:none;transition:none;will-change:auto}}
