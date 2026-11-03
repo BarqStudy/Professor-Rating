@@ -108,6 +108,7 @@ const icons = {
     '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/>',
   book:
     '<path d="M3 4h6a4 4 0 0 1 3 2 4 4 0 0 1 3-2h6v15h-6a4 4 0 0 0-3 2 4 4 0 0 0-3-2H3Z M12 6v15"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   arrow: '<path d="M19 12H5m6-6-6 6 6 6"/>',
@@ -297,14 +298,14 @@ function appearanceSettings() {
 }
 function nav() {
   return `<nav>${
-    [["home", "home", "الرئيسية"], ["ratings", "star", "التقييمات"], ["plan", "cap", "خطتي إلى التخرج"], ["saved", "bookmark", "المحفوظات"], [
+    [["home", "home", "الرئيسية"], ["ratings", "star", "التقييمات"], ["plan", "cap", "خطتي إلى التخرج"], ["saved", "bookmark", "المحفوظات"], ["timetable", "calendar", "جدولي الدراسي"], [
       "developer",
       "users",
       "من نحن",
-    ], ["timetable", "cap", "جدولي الدراسي"]].map(([p, i, t]) =>
+    ]].map(([p, i, t]) =>
       `<button data-page="${p}" class="nav-item ${
         page === p ? "active" : ""
-      }" aria-label="${t}">${ic(i)}${p==='plan'?'<span class="nav-label-long">خطتي إلى التخرج</span><span class="nav-label-short" aria-hidden="true">خطتي</span>':`<span>${t}</span>`}${page === p ? "<i></i>" : ""}</button>`
+      }" aria-label="${t}">${ic(i)}${p==='plan'?'<span class="nav-label-long">خطتي إلى التخرج</span><span class="nav-label-short" aria-hidden="true">خطتي</span>':p==='timetable'?'<span class="nav-label-long">جدولي الدراسي</span><span class="nav-label-short" aria-hidden="true">جدولي</span>':`<span>${t}</span>`}${page === p ? "<i></i>" : ""}</button>`
     ).join("")
   }${
     (configured ? cloudMe?.isAdmin : demoAdmin)
@@ -590,6 +591,14 @@ function selectCollege(college) {
   collegeSelected = true;
   if(page==='ratings')query='';
   render();
+}
+function arrangeTimetableNavigation(){
+  const nav=document.querySelector('aside nav'),item=nav?.querySelector('[data-page="timetable"]');
+  const target=nav?.querySelector(matchMedia('(max-width:650px)').matches?'[data-page="saved"]':'[data-page="developer"]');
+  if(!item||!target||item.nextElementSibling===target)return;
+  const focused=document.activeElement===item;
+  target.before(item);
+  if(focused)item.focus({preventScroll:true});
 }
 function updateCarouselControls() {
   document.querySelectorAll('.doctor-carousel,.course-finder-track').forEach(track=>track.onscroll?.());
@@ -1173,6 +1182,7 @@ async function share(text, id) {
   }
 }
 function bind() {
+  arrangeTimetableNavigation();
   document.querySelector("#dismiss-auth-notice")?.addEventListener(
     "click",
     () => {
@@ -2554,7 +2564,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) refr
 window.addEventListener("pagehide",()=>refreshPresence(false));
 setInterval(()=>{if(!document.hidden)refreshPresence();},30000);
 setInterval(() => { if (!document.hidden) refreshSavedUpdates(); }, 60000);
-window.addEventListener("resize", updateCarouselControls);
+window.addEventListener("resize", () => {arrangeTimetableNavigation();updateCarouselControls();});
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });

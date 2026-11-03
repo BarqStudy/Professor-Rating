@@ -2,6 +2,10 @@
 @media(max-width:650px){.timetable-page .panel{padding:18px 14px}.tt-fields{grid-template-columns:1fr;gap:0}.tt-session{grid-template-columns:1fr 1fr;padding:12px;gap:10px}.tt-session>label:first-child{grid-column:1/-1}.tt-week{grid-template-columns:repeat(7,160px)}.tt-export{gap:8px}.tt-export>button{font-size:12px;flex:1;padding:12px 8px}.tt-heading{align-items:stretch;flex-direction:column}.tt-heading label{max-width:none}.timetable-public{padding:16px 12px}.timetable-public>.timetable-page{padding:18px 12px}.tt-pending>div>span{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.timetable-page *{scroll-behavior:auto}}
 
-.study-timetable-link{display:inline-flex;margin-bottom:20px;line-height:1.8}@media(max-width:1199px){nav .nav-item[data-page=timetable]{display:none!important}}
+.study-timetable-link{display:inline-flex;margin-bottom:20px;line-height:1.8}
 
 .timetable-page .tt-upload form{display:grid;grid-template-columns:1fr;align-items:start;gap:18px}.timetable-page .tt-editor form{display:block}.timetable-page .tt-consent{display:flex;flex-direction:row;align-items:flex-start;gap:12px}.timetable-page .tt-import-courses>label{display:flex;flex-direction:row}.timetable-page .tt-session label{display:grid;gap:8px}
+
+@media(max-width:650px){aside nav{overflow-x:auto;scrollbar-width:none}aside nav .nav-item{flex:1 0 44px;min-width:44px;padding-inline:2px;font-size:calc(10px * var(--font-scale,1))}aside nav .nav-item>span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+
+@media(min-width:651px) and (max-width:1200px),(min-width:1201px) and (max-width:1400px) and (pointer:coarse){aside nav .nav-label-long{display:none}aside nav .nav-label-short{display:inline}}
