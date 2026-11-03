@@ -575,19 +575,20 @@ function syncHomeSearch() {
   section.querySelector(".section-heading p").textContent = searching ? "اختر الدكتور لاستعراض تقييماته أو إضافة تجربتك." : "الأعلى في متوسط التقييم، وعند التعادل نقدّم الأكثر تقييمات.";
 }
 function listSection() {
-  return `<section class="doctors-section directory-section"><div class="section-heading"><div><h2>دليل الدكاترة والتقييمات</h2><p>اختر كليتك، وابحث عن الدكتور أو تصفّح دكاترة كل تخصص</p></div><button class="text-button" id="saved-filter">${savedOnly ? "عرض الجميع" : "المحفوظات"} ${ic("bookmark")}</button></div><div class="college-tabs" role="group" aria-label="الكليات">${colleges.map(college=>`<button class="college-tab ${college===activeCollege?'selected':''}" data-college="${escapeHtml(college)}" aria-pressed="${college===activeCollege}" aria-controls="doctor-grid"><span class="college-tab-icon">${ic('cap')}</span><span>${escapeHtml(college)}</span><small>${doctors.filter(d=>(d.college||'كلية الهندسة')===college).length.toLocaleString('en-US')} دكتور</small></button>`).join('')}</div><div class="directory-search"><label for="search">ابحث في ${escapeHtml(activeCollege||'دليل الدكاترة')}</label><div class="directory-search-field">${ic('search')}<input type="search" id="search" value="${escapeHtml(query)}" placeholder="اسم الدكتور أو المادة…" autocomplete="off" aria-controls="doctor-grid"><button type="button" class="icon-btn" id="clear-search" aria-label="مسح البحث" ${query?'':'hidden'}>${ic('close')}</button></div></div><div id="doctor-grid" class="directory-rows" aria-live="polite">${directoryRows()}</div></section>`;
+  return `<section class="doctors-section directory-section"><div class="section-heading"><div><h2>دليل الدكاترة والتقييمات</h2><p>ابحث في جميع كليات الجامعة، أو اختر كلية لتصفّح تخصصاتها</p></div><button class="text-button" id="saved-filter">${savedOnly ? "عرض الجميع" : "المحفوظات"} ${ic("bookmark")}</button></div><div class="college-tabs" role="group" aria-label="الكليات">${colleges.map(college=>`<button class="college-tab ${!searchKey(query)&&college===activeCollege?'selected':''}" data-college="${escapeHtml(college)}" aria-pressed="${!searchKey(query)&&college===activeCollege}" aria-controls="doctor-grid"><span class="college-tab-icon">${ic('cap')}</span><span>${escapeHtml(college)}</span><small>${doctors.filter(d=>(d.college||'كلية الهندسة')===college).length.toLocaleString('en-US')} دكتور</small></button>`).join('')}</div><div class="directory-search"><label for="search">ابحث في جميع كليات الجامعة</label><div class="directory-search-field">${ic('search')}<input type="search" id="search" value="${escapeHtml(query)}" placeholder="اسم الدكتور أو المادة…" autocomplete="off" aria-controls="doctor-grid"><button type="button" class="icon-btn" id="clear-search" aria-label="مسح البحث" ${query?'':'hidden'}>${ic('close')}</button></div></div><div id="doctor-grid" class="directory-rows" aria-live="polite">${directoryRows()}</div></section>`;
 }
 function directoryRows() {
   const matches=filteredDoctors();
-  const names=majors.filter(name=>majorBelongs(name,activeCollege));
-  const groups=names.map((name,index)=>({name,index,list:matches.filter(doctor=>doctor.major===name)})).filter(group=>!(query||savedOnly)||group.list.length);
-  if(!matches.length&&(query||savedOnly||!names.length))return cards([]);
-  return groups.map(({name,index,list})=>`<section class="directory-major" aria-labelledby="directory-major-${index}"><div class="directory-major-heading"><div><h3 id="directory-major-${index}">${escapeHtml(name)}</h3><span class="muted">${list.length.toLocaleString('en-US')} دكتور</span></div><div class="carousel-controls"><button type="button" class="carousel-control previous" data-carousel-previous="major-doctors-${index}" aria-label="الدكاترة السابقون في ${escapeHtml(name)}" aria-controls="major-doctors-${index}">${ic('arrow')}</button><button type="button" class="carousel-control" data-carousel-next="major-doctors-${index}" aria-label="الدكاترة التاليون في ${escapeHtml(name)}" aria-controls="major-doctors-${index}">${ic('arrow')}</button></div></div><div class="doctor-carousel" id="major-doctors-${index}" role="region" aria-label="دكاترة ${escapeHtml(name)}" tabindex="0">${list.length?cards(list):'<p class="empty">لا يوجد دكاترة مضافون لهذا التخصص بعد.</p>'}</div></section>`).join('');
+  const searching=Boolean(searchKey(query));
+  const groups=(searching?colleges:[activeCollege]).flatMap(college=>majors.filter(name=>majorBelongs(name,college)).map(name=>({name,college,list:matches.filter(doctor=>doctor.major===name&&(doctor.college||'كلية الهندسة')===college)}))).filter(group=>!(searching||savedOnly)||group.list.length);
+  if(!groups.length)return cards([]);
+  return groups.map(({name,college,list},index)=>`<section class="directory-major" aria-labelledby="directory-major-${index}"><div class="directory-major-heading"><div><h3 id="directory-major-${index}">${escapeHtml(name)}</h3>${searching?`<small class="directory-college-label">${escapeHtml(college)}</small>`:''}<span class="muted">${list.length.toLocaleString('en-US')} دكتور</span></div><div class="carousel-controls"><button type="button" class="carousel-control previous" data-carousel-previous="major-doctors-${index}" aria-label="الدكاترة السابقون في ${escapeHtml(name)}" aria-controls="major-doctors-${index}">${ic('arrow')}</button><button type="button" class="carousel-control" data-carousel-next="major-doctors-${index}" aria-label="الدكاترة التاليون في ${escapeHtml(name)}" aria-controls="major-doctors-${index}">${ic('arrow')}</button></div></div><div class="doctor-carousel" id="major-doctors-${index}" role="region" aria-label="دكاترة ${escapeHtml(name)}" tabindex="0">${list.length?cards(list):'<p class="empty">لا يوجد دكاترة مضافون لهذا التخصص بعد.</p>'}</div></section>`).join('');
 }
 function selectCollege(college) {
   activeCollege = college;
   activeMajor = "الكل";
   collegeSelected = true;
+  if(page==='ratings')query='';
   render();
 }
 function updateCarouselControls() {
@@ -605,10 +606,11 @@ function bindCarousel() {
 }
 const searchKey=value=>String(value??'').normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').toLowerCase().replace(/\s+/g,' ').trim();
 function filteredDoctors() {
+  const needle=searchKey(query);
   return doctors.filter(d=>
-    (page==='home'||page==='saved'||(d.college||'كلية الهندسة')===activeCollege)&&
+    (page==='home'||page==='saved'||(page==='ratings'&&needle)||(d.college||'كلية الهندسة')===activeCollege)&&
     (!(savedOnly||page==='saved')||saved.includes(d.id))&&
-    (!query||[d.name,...d.subjects].some(value=>searchKey(value).includes(searchKey(query))))
+    (!needle||[d.name,...d.subjects].some(value=>searchKey(value).includes(needle)))
   );
 }
 function cards(list) {
@@ -1220,6 +1222,10 @@ function bind() {
     const clear = document.querySelector("#clear-search");
     if (clear) clear.hidden = !e.target.value;
     syncHomeSearch();
+    if(page==='ratings')document.querySelectorAll('.college-tab[data-college]').forEach(button=>{
+      const selected=!searchKey(query)&&button.dataset.college===activeCollege;
+      button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));
+    });
     document.querySelector("#doctor-grid").innerHTML = page === "ratings" ? directoryRows() : cards();
     bindCards();
     bindCarousel();
