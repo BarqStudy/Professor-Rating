@@ -6,13 +6,13 @@ const help=id=>MIYAR_HELP.find(source=>source.id===id).text;
 
 test('the assistant guide describes current review, grade, specialty, drawing and admin workflows without reviving retired settings',()=>{
  assert.equal(new Set(MIYAR_HELP.map(source=>source.id)).size,MIYAR_HELP.length);
- assert.ok(MIYAR_HELP.every(source=>['#home','#ratings','#plan','#advisor','#requests','#admin','#timetable'].includes(source.href)));
+ assert.ok(MIYAR_HELP.every(source=>['#home','#ratings','#advisor','#requests','#admin','#timetable'].includes(source.href)));
  assert.match(help('help-timetable'),/لا يخمنها القارئ/);assert.match(help('help-timetable'),/للقراءة فقط/);
  assert.match(help('help-review-rules'),/أكثر من مادة/);assert.match(help('help-review-rules'),/لا يوجد حد يومي/);assert.match(help('help-review-rules'),/باهتة وغير قابلة للاختيار/);
  assert.match(help('help-outcomes'),/بما في ذلك درجات التقييمات السابقة/);assert.match(help('help-outcomes'),/دون اسم الطالب/);assert.match(help('help-outcomes'),/16\/11\/2026/);assert.match(help('help-outcomes'),/خريطة الدرجات ملغاة/);assert.match(help('help-outcomes'),/غير موجود في الإعدادات أو نموذج التقييم/);
  assert.match(help('help-rating'),/الدرجة إلزامية من 0 إلى 100/);assert.match(help('help-outcomes'),/تظهر الدرجة للإدارة/);assert.ok(!help('help-rating').includes('يمكن تفعيل «لا أريد عرض درجتي'));
  assert.match(help('help-university'),/نافذة إلزامية/);assert.match(help('help-university'),/يدخل الطالب مباشرة/);assert.match(help('help-rating'),/من تخصصك المحفوظ/);
- assert.match(help('help-drawing'),/يختلف عن «الرسم الهندسي الميكانيكي»/);assert.match(help('help-drawing'),/درستها في السنة التحضيرية/);assert.match(help('help-drawing'),/المستوى 3/);
+ assert.match(help('help-drawing'),/يختلف عن «الرسم الهندسي الميكانيكي»/);assert.match(help('help-study'),/تم حذف قسم/);assert.match(help('help-drawing'),/المستوى 3/);
  assert.match(help('help-course-advisor'),/جميع تخصصات وكليات الجامعة نفسها/);assert.match(help('help-review-likes'),/مفيد/);assert.match(help('help-review-likes'),/منزلقة أفقيًا/);
  assert.match(help('help-admin'),/البحث أعلى اللوحة/);assert.match(help('help-admin'),/حذف تقييم/);assert.match(help('help-team'),/سفيرًا لجامعة كاملة أو مساعدًا لكلية محددة/);
  assert.ok(!help('help-study').includes('حتى عند تغيير المادة'));assert.ok(!help('help-rating').includes('الهوية والدرجة لا تظهران'));

@@ -1,5 +1,5 @@
 const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const prompts = ['كيف أقيّم دكتورًا؟', 'كيف أغيّر جامعتي أو تخصصي؟', 'هل أقدر أقيّم الدكتور في أكثر من مادة؟', 'ليش درجتي ظاهرة في التقييم؟', 'وين الرسم الهندسي في خطتي؟', 'كيف أختار دكتورًا لمادة مشتركة؟'];
+const prompts = ['كيف أقيّم دكتورًا؟', 'كيف أغيّر جامعتي أو تخصصي؟', 'هل أقدر أقيّم الدكتور في أكثر من مادة؟', 'ليش درجتي ظاهرة في التقييم؟', 'كيف أنشئ جدولي الدراسي وأشاركه؟', 'كيف أختار دكتورًا لمادة مشتركة؟'];
 export function createAssistant({ api, ensureGuestSession, universityId, universityName, configured }) {
   let messages = [], pending = false, error = '', ready = null, scope, revision = 0;
   const checkScope = () => {

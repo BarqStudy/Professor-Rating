@@ -139,23 +139,11 @@ const ic = (n, c = "") =>
   }</svg>`;
 const verifiedBadge = '<span class="verified" role="img" aria-label="موثق من إدارة مِعيار" title="موثق من إدارة مِعيار"><svg class="verified-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8.603 3.799a4.49 4.49 0 0 1 6.794 0 4.49 4.49 0 0 1 4.804 4.804 4.49 4.49 0 0 1 0 6.794 4.49 4.49 0 0 1-4.804 4.804 4.49 4.49 0 0 1-6.794 0 4.49 4.49 0 0 1-4.804-4.804 4.49 4.49 0 0 1 0-6.794 4.49 4.49 0 0 1 4.804-4.804Z"/><path d="m8.3 12 2.4 2.4 5-5.1" fill="none" stroke="#fff" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
 const reviewLikes=createReviewLikes({api,ensureGuest:async()=>{if(!guestProfile)guestProfile=await ensureGuestSession();},isMember:()=>!!googleSession,ownerKey:()=>googleSession?.user.id||'guest',configured:()=>configured});
-const studyPlanner = createStudyPlanner({api,modal,icon:ic,configured:()=>configured,
+const studyPlanner = createStudyPlanner({icon:ic,
   universityName:()=>selectedUniversity()?.name,
   studentPlans:()=>configured?plansForStudent(getStudyPlans(),studentAcademicScope()):null,
   ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest',
   majorName:()=>selectedStudentMajor()?.name||'',
-  doctorsForPlan:(plan)=>{
-    if(!configured)return doctors;
-    const catalogue=cloudCatalogue;if(!catalogue)return [];
-    const university=catalogue.universities.find(u=>u.name===plan.university);
-    const collegeIds=new Set(catalogue.colleges.filter(c=>c.university_id===university?.id).map(c=>c.id));
-    const majorIds=new Set(catalogue.majors.filter(m=>collegeIds.has(m.college_id)).map(m=>m.id));
-    return catalogue.doctors.filter(d=>majorIds.has(d.major_id));
-  },
-  onReview:(id,course,plan)=>reviewForm(id,false,{course,plan}),
-  onRequestDoctor:(course,plan,name)=>requestDoctorForm({course,plan,name}),
-  onAdvisor:(course,plan)=>{courseAdvisor.select(plan.id,course.id);setPage('advisor');render();window.scrollTo({top:0});},
-  closeModal,toast,
 });
 const courseAdvisor=createCourseAdvisor({api,modal,icon:ic,plans:studyPlanner.available,currentPlan:studyPlanner.current,onReviewLikes:root=>reviewLikes.mount(root),onRequestDoctor:(course,plan)=>requestDoctorForm({course,plan}),onDoctor:(id)=>cloudDoctorDetail(id),scopeKey:()=>[googleSession?.user.id||guestProfile?.id||'',currentUniversityId(),selectedStudentMajor()?.id].join(':'),onCompare:(plan,course)=>{courseAdvisor.select(plan.id,course.id);setPage('advisor');render();window.scrollTo({top:0});}});
 let fileManager, studyImport, studyEditor, publishedReviews, reviewLinker, doctorScopeRemoval, reviewRejectionMail, adminWorkspace, adminToolsPending = null, adminToolsError = '';
@@ -252,7 +240,7 @@ let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
 const timetable = createTimetable({ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest:'+(guestProfile?.id||'local'),extract:extractStudentTimetable,plan:()=>studyPlanner.current()});
-const pageNames = ["timetable", "home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "plan", "advisor", "universities"];
+const pageNames = ["timetable", "home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "advisor", "universities"];
 let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
 const persist = () => {
@@ -298,14 +286,14 @@ function appearanceSettings() {
 }
 function nav() {
   return `<nav>${
-    [["home", "home", "الرئيسية"], ["ratings", "star", "التقييمات"], ["plan", "cap", "خطتي إلى التخرج"], ["saved", "bookmark", "المحفوظات"], ["timetable", "calendar", "جدولي الدراسي"], [
+    [["home", "home", "الرئيسية"], ["ratings", "star", "التقييمات"], ["saved", "bookmark", "المحفوظات"], ["timetable", "calendar", "جدولي الدراسي"], [
       "developer",
       "users",
       "من نحن",
     ]].map(([p, i, t]) =>
       `<button data-page="${p}" class="nav-item ${
         page === p ? "active" : ""
-      }" aria-label="${t}">${ic(i)}${p==='plan'?'<span class="nav-label-long">خطتي إلى التخرج</span><span class="nav-label-short" aria-hidden="true">خطتي</span>':p==='timetable'?'<span class="nav-label-long">جدولي الدراسي</span><span class="nav-label-short" aria-hidden="true">جدولي</span>':`<span>${t}</span>`}${page === p ? "<i></i>" : ""}</button>`
+      }" aria-label="${t}">${ic(i)}${p==='timetable'?'<span class="nav-label-long">جدولي الدراسي</span><span class="nav-label-short" aria-hidden="true">جدولي</span>':`<span>${t}</span>`}${page === p ? "<i></i>" : ""}</button>`
     ).join("")
   }${
     (configured ? cloudMe?.isAdmin : demoAdmin)
@@ -383,7 +371,6 @@ function renderPage() {
         ambassador: "مساحة الفريق",
         assistant: "مساعد مِعيار",
         timetable: "جدولي الدراسي",
-        plan: "خطتي إلى التخرج",
         advisor: "دكاترة المادة",
       })[page]
     }</b></div>${configured?`<button type="button" class="secondary header-change-university" id="header-change-university" title="${escapeHtml(selectedUniversity()?.name||'اختر جامعتك')}">${ic("cap")}<span>تغيير الجامعة</span></button>`:''}<div class="header-actions">${roleBadge(cloudMe,cloudCatalogue)?`<span class="header-member-role"><b>${escapeHtml(displayName().trim().split(/\s+/)[0])}</b>${roleBadge(cloudMe,cloudCatalogue)}</span>`:''}${
@@ -403,7 +390,7 @@ function renderPage() {
         } رجوع</button>`
         : ""
     }${
-      configured&&cloudStatus==='loading'&&['plan','advisor'].includes(page)
+      configured&&cloudStatus==='loading'&&page==='advisor'
         ? connectionBanner()
         : page === "home"
         ? home()
@@ -421,8 +408,6 @@ function renderPage() {
         ? studyContent()
         : page === "timetable"
         ? timetable.page()
-        : page === "plan"
-        ? studyContent()
         : page === "assistant"
         ? miyarAssistant.page()
         : developer()
@@ -431,7 +416,6 @@ function renderPage() {
   stopStatCounters = animateStats(document.querySelector('.stats'));
   if (page === 'assistant') miyarAssistant.bind();
   if (page === 'timetable') timetable.bind();
-  if (page === 'plan') studyPlanner.bind();
   if (page === 'advisor') courseAdvisor.bind();
   if (page === 'home') bindHomeCourseCard();
   if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();
@@ -439,9 +423,9 @@ function renderPage() {
   if(needsStudentMajor())queueMicrotask(()=>{if(needsStudentMajor()&&!document.querySelector('.modal-backdrop'))openStudentMajor();});
 }
 function studyContent() {
-  if (!configured || cloudPlansReady) return page==='advisor'?courseAdvisor.page():studyPlanner.page();
+  if (!configured || cloudPlansReady) return courseAdvisor.page();
   if (!cloudPlansPending && !cloudPlansError) void refreshCloudStudyPlans().catch(()=>{});
-  return `<section class="${page==='advisor'?'course-advisor':'study-page'} study-loading"><div class="study-intro"><h1>${page==='advisor'?'دكاترة المادة':'خطتي إلى التخرج'}</h1></div>${cloudPlansError?'<section class="panel"><p role="alert">تعذّر تحميل الخطط. أعد المحاولة.</p><button type="button" class="secondary" id="retry-study-plans">إعادة المحاولة</button></section>':'<div role="status" aria-busy="true"><p>جارٍ تحميل خطتك…</p><div class="study-loading-blocks" aria-hidden="true"><span class="startup-block"></span><span class="startup-block"></span><span class="startup-block"></span></div></div>'}</section>`;
+  return `<section class="course-advisor study-loading"><div class="study-intro"><h1>دكاترة المادة</h1></div>${cloudPlansError?'<section class="panel"><p role="alert">تعذّر تحميل الخطط. أعد المحاولة.</p><button type="button" class="secondary" id="retry-study-plans">إعادة المحاولة</button></section>':'<div role="status" aria-busy="true"><p>جارٍ تحميل خطتك…</p><div class="study-loading-blocks" aria-hidden="true"><span class="startup-block"></span><span class="startup-block"></span><span class="startup-block"></span></div></div>'}</section>`;
 }
 
 function homeCourseCard(){return courseAdvisor.card({pending:configured&&!cloudPlansReady&&!cloudPlansError,error:configured&&!cloudPlansReady?cloudPlansError:''});}
@@ -476,7 +460,7 @@ function home() {
     ic("arrow")
   }</span></button><button class="action-card new-review add-new-doctor" id="new-review">${actionCardSurface(actionDecoration)}${homeIcon("add")}<div><h2>إضافة دكتور</h2><p>دكتور غير مضاف في الأقسام</p></div><span class="action-arrow">${
     ic("arrow")
-  }</span></button><button type="button" class="action-card browse study-action" data-page="plan">${actionCardSurface()}${homeIcon("plan")}<div><h2>خطتي إلى التخرج</h2><p>موادك المكتملة والمتبقية، ومتطلباتها ودكاترتها في مكان واحد</p></div><span class="action-arrow">${ic("arrow")}</span></button><button type="button" class="action-card browse study-action" data-page="timetable">${actionCardSurface()}${homeIcon("plan")}<div><h2>جدولي الدراسي</h2><p>ارفع ملفك، رتّب مواعيدك، وشارك جدولك أو احفظه صورة وPDF</p></div><span class="action-arrow">${ic("arrow")}</span></button></section>${homeCourseCard()}<section class="stats"><div><span class="stat-icon">${ic('cap')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.doctors ?? cloudCatalogue?.doctors.length ?? 0) : doctors.length === 4 ? 48 : doctors.length, '+')}<span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${ic('star')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length, '+')}<span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${ic('users')}</span><div>${statNumber(configured ? (cloudCatalogue?.colleges.length || 0) : 850, configured ? '' : '+')}<span>${configured ? 'كلية في مِعيار' : 'طالب يصنعون الأثر'}</span></div></div><span class="demo-data">${configured ? 'إحصائيات جميع الجامعات · تقييمات منشورة فقط' : 'إحصاءات توضيحية'}</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
+  }</span></button><button type="button" class="action-card browse study-action" data-page="timetable">${actionCardSurface()}${homeIcon("plan")}<div><h2>جدولي الدراسي</h2><p>ارفع ملفك، رتّب مواعيدك، وشارك جدولك أو احفظه صورة وPDF</p></div><span class="action-arrow">${ic("arrow")}</span></button></section>${homeCourseCard()}<section class="stats"><div><span class="stat-icon">${ic('cap')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.doctors ?? cloudCatalogue?.doctors.length ?? 0) : doctors.length === 4 ? 48 : doctors.length, '+')}<span>دكتور في انتظار اكتشافك</span></div></div><div><span class="stat-icon">${ic('star')}</span><div>${statNumber(configured ? (cloudCatalogue?.stats?.reviews || 0) : 1240 + reviews.length, '+')}<span>تجربة طلابية ملهمة</span></div></div><div><span class="stat-icon">${ic('users')}</span><div>${statNumber(configured ? (cloudCatalogue?.colleges.length || 0) : 850, configured ? '' : '+')}<span>${configured ? 'كلية في مِعيار' : 'طالب يصنعون الأثر'}</span></div></div><span class="demo-data">${configured ? 'إحصائيات جميع الجامعات · تقييمات منشورة فقط' : 'إحصاءات توضيحية'}</span></section><div id="home-doctors-slot">${topDoctorsSection()}</div>${universityRequestSection()}<section class="bottom-banner"><div class="banner-symbol">${
     ic("shield")
   }</div><div><h3>مساحة آمنة. آراء صادقة. أثر حقيقي.</h3><p>نحترم خصوصيتك، ونؤمن أن النقد البنّاء هو بداية التطوير.</p></div><button id="privacy">تعرّف على معاييرنا ${
     ic("arrow")
@@ -1444,7 +1428,7 @@ function openSettings() {
     };
   modal(
     "إعداداتك في مِعيار",
-    `<form id="settings-form"><div class="settings-shortcuts" role="group" aria-label="اختصارات حسابك"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="study-settings-link">${ic("cap")} خطتي إلى التخرج</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button></div>${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
+    `<form id="settings-form"><div class="settings-shortcuts" role="group" aria-label="اختصارات حسابك"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button></div>${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
       ic("users")
     }</span><div><h3>مساحتك، على طريقتك</h3><p>خصّص بياناتك وتجربة القراءة بما يناسبك.</p></div></div><label>اسم الطالب<input name="name" required maxlength="60" autocomplete="name" placeholder="كيف تحب أن نناديك؟" value="${
       escapeHtml(profile.name)
@@ -1515,7 +1499,6 @@ function openSettings() {
       fallback.querySelector('input').select();
     }
   });
-  document.querySelector('#study-settings-link')?.addEventListener('click',()=>{document.body.classList.remove('modal-open');setPage('plan');render();window.scrollTo({top:0});});
   document.querySelector("#install-app")?.addEventListener("click", () => installPlatform(modal,toast));
   document.querySelector("#my-reviews-settings")?.addEventListener("click", () => myReviews());
   document.querySelector("#change-university")?.addEventListener("click", changeUniversityPage);
@@ -1702,7 +1685,7 @@ function refreshCloudStudyPlans() {
     setUploadedStudyPlans(plans);cloudPlansReady=true;
   }).catch(error=>{cloudPlansError=error.message;throw error;}).finally(()=>{
     if(cloudPlansPending===pending)cloudPlansPending=null;
-    if(!cloudBooting&&['plan','advisor'].includes(page)&&!document.querySelector('.modal-backdrop'))render();
+    if(!cloudBooting&&page==='advisor'&&!document.querySelector('.modal-backdrop'))render();
     else if(!cloudBooting&&page==='home')refreshHomeCourseCard();
   });
   cloudPlansPending=pending;
@@ -1730,7 +1713,7 @@ async function loadCloud() {
     cloudError = '';
     const guestSession = ensureGuestSession().then(guest => { guestProfile = guest; return guest; }).catch(() => null);
     let catalogueError = null;
-    const catalogue = refreshCloudCatalogue({includePlans:['plan','advisor','admin'].includes(page)}).catch(error => { catalogueError = error; });
+    const catalogue = refreshCloudCatalogue({includePlans:['advisor','admin'].includes(page)}).catch(error => { catalogueError = error; });
     let loadedGeneration = -1;
     const restoreAccount = async () => {
       while (googleSession) {
