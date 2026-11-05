@@ -4,6 +4,7 @@ import {reviewLikes} from './review-likes.js';
 import {createInstitutionMailer,institutionMailStatus,institutionInbox} from './institution-mail.js';
 import {uploadPlatformFile,adminFiles} from './files.js';
 import {extractStudyPlan,publishStudyPlan} from './plan-import.js';
+import {createTimetableShare,readTimetableShare} from './timetable-share.js';
 import {extractTimetable} from './timetable-import.js';
 import {loadEditablePlan,updateStudyPlan,deleteStudyPlan} from './plan-editor.js';
 import {publishedReviewAdmin} from './published-reviews.js';
@@ -61,9 +62,9 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       const query=new URL(request.url).searchParams,studyOperation=query.get('study'),fileOperation=query.get('files'),scheduleOperation=query.get('schedule');
       let scheduleGuest=null;
       if(scheduleOperation!==null){
-        if(scheduleOperation!=='extract'||studyOperation!==null||fileOperation!==null)throw new ApiError(400,'عملية جدول غير صالحة.');
+        if(!['extract','share'].includes(scheduleOperation)||studyOperation!==null||fileOperation!==null)throw new ApiError(400,'عملية جدول غير صالحة.');
         scheduleGuest=await verifiedGuest(request,db);
-        if(scheduleGuest.status!=='active')throw new ApiError(403,'جلسة الطالب غير متاحة لقراءة الملفات.');
+        if(scheduleGuest.status!=='active')throw new ApiError(403,'جلسة الطالب غير متاحة لهذه العملية.');
       }
       if(fileOperation!==null&&fileOperation!=='upload')throw new ApiError(400,'عملية ملف غير معروفة.');
       if(fileOperation!==null&&studyOperation!==null)throw new ApiError(400,'اختر عملية واحدة للرفع.');
@@ -77,7 +78,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         if(rows[0]?.status!=='active')throw new ApiError(403,'حساب الإدارة غير متاح للاستيراد.');
         studyAdmin=identity.id;
       }
-      const limit=fileOperation==='upload'?21*1024*1024:(studyOperation==='extract'||scheduleOperation==='extract')?8*1024*1024:['publish','update'].includes(studyOperation)?768*1024:16384;
+      const limit=scheduleOperation==='share'?512*1024:fileOperation==='upload'?21*1024*1024:(studyOperation==='extract'||scheduleOperation==='extract')?8*1024*1024:['publish','update'].includes(studyOperation)?768*1024:16384;
       let size = 0;
       const chunks = [];
       const reader = request.body?.getReader();
@@ -120,7 +121,9 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       }
       if(studyOperation==='publish')return respond(await publishStudyPlan(body,studyAdmin,db));
       if(studyOperation==='update')return respond(await updateStudyPlan(body,studyAdmin,db));
+      if(scheduleOperation==='share')return respond(await createTimetableShare(body,scheduleGuest,db),201);
       const action = body.action;
+      if(action==='timetable.get')return respond(await readTimetableShare(body,db));
       const aiResult = await handleAi(request, body, db, env, aiFetch);
       if (aiResult) return respond(aiResult);
       const guestResult = await handleGuest(request, body, db, env.GUEST_PEPPER);
@@ -128,7 +131,7 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
       if(action==='study.plans')return respond(await db('rpc/miyar_uploaded_study_plans',{method:'POST',body:{}}));
       if (action === "catalogue") {
         return respond(
-          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{studentTimetableImport:true,reviewGradeRequired:true,reviewFlexibility:true,doctorScopeRemoval:true,reviewRejectionEmail:true,reviewRejectionEmailReady:rejectionMailer.status().configured}},
+          {...await db("rpc/miyar_catalogue", { method: "POST", body: {} }),features:{shortTimetableLinks:true,studentTimetableImport:true,reviewGradeRequired:true,reviewFlexibility:true,doctorScopeRemoval:true,reviewRejectionEmail:true,reviewRejectionEmailReady:rejectionMailer.status().configured}},
         );
       }
       if (action === "doctor.summary") return respond(await publicSummary(body, db));

@@ -82,7 +82,7 @@ export async function signOutGoogle() {
 export async function api(action, data = {}) {
   if (!configured) throw new Error("لم يتم ربط قاعدة البيانات بعد.");
   const isGuest = action.startsWith("guest.");
-  const isPublic = isGuest || action === "catalogue" || action === "reviews" || action === "doctor.summary" || action === "course.doctors" || action === "course.reviews" || action === "study.plans" || action === "ai.status";
+  const isPublic = action === "timetable.get" || isGuest || action === "catalogue" || action === "reviews" || action === "doctor.summary" || action === "course.doctors" || action === "course.reviews" || action === "study.plans" || action === "ai.status";
   const session = isPublic ? cachedSession : await getGoogleSession();
   if (!isPublic && !session) {
     throw new Error("سجّل الدخول باستخدام Google لإكمال العملية.");
@@ -169,4 +169,12 @@ export async function extractStudentTimetable(file){
  const result=await response.json().catch(()=>{throw new Error('استجابة غير متوقعة من قارئ الجدول.');});
  if(!response.ok)throw new Error(result.error||'تعذّر قراءة الملف.');
  return result;
+}
+
+export async function shareStudentTimetable(schedule){
+ await ensureGuestSession();
+ let response;
+ try{response=await fetch(`${projectUrl}/functions/v1/miyar?schedule=share`,{method:'POST',headers:{'Content-Type':'application/json',apikey:publishableKey,'x-miyar-guest':readGuestToken()},body:JSON.stringify({schedule}),signal:AbortSignal.timeout(20000)});}
+ catch{throw new Error('تعذّر إنشاء رابط المعاينة. تحقق من اتصالك وأعد المحاولة.');}
+ const result=await response.json();if(!response.ok)throw new Error(result.error||'تعذّر إنشاء رابط المعاينة.');return result;
 }

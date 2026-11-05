@@ -63,11 +63,12 @@ import {
   signInApple,
   signOutGoogle,
   clearGuestSession,
+  shareStudentTimetable,
 } from "./cloud.js";
 let googleSession = null;
 let guestProfile = null, presenceCount = null, presenceBusy = false;
 const presenceTabId = crypto.randomUUID();
-const readSharedTimetable = () => location.hash.startsWith('#timetable/') ? location.hash.slice('#timetable/'.length) : null;
+const readSharedTimetable = () => location.hash.startsWith('#s/') ? 'short:'+location.hash.slice(3) : location.hash.startsWith('#timetable/') ? location.hash.slice('#timetable/'.length) : null;
 let sharedTimetablePayload = readSharedTimetable();
 // Browser reloads use the page preview; new entries retain the animated gate.
 const useEntryGate = performance.getEntriesByType('navigation')[0]?.type !== 'reload';
@@ -239,7 +240,7 @@ function displayName() {
 let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
-const timetable = createTimetable({ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest:'+(guestProfile?.id||'local'),extract:extractStudentTimetable,plan:()=>studyPlanner.current()});
+const timetable = createTimetable({ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest:'+(guestProfile?.id||'local'),extract:extractStudentTimetable,createShare:shareStudentTimetable,loadShare:token=>api('timetable.get',{token}),plan:()=>studyPlanner.current()});
 const pageNames = ["timetable", "home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "advisor", "universities"];
 let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
@@ -1211,19 +1212,37 @@ function bind() {
     "click",
     () => reviewForm(),
   );
-  document.querySelector("#search")?.addEventListener("input", (e) => {
-    query = e.target.value.trim();
-    const clear = document.querySelector("#clear-search");
-    if (clear) clear.hidden = !e.target.value;
-    syncHomeSearch();
-    if(page==='ratings')document.querySelectorAll('.college-tab[data-college]').forEach(button=>{
-      const selected=!searchKey(query)&&button.dataset.college===activeCollege;
-      button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));
-    });
-    document.querySelector("#doctor-grid").innerHTML = page === "ratings" ? directoryRows() : cards();
-    bindCards();
-    bindCarousel();
-  });
+  const searchInput=document.querySelector('#search');
+  if(searchInput){
+    let timer,composing=false;
+    const applySearch=()=>{
+      clearTimeout(timer);
+      if(!searchInput.isConnected||composing)return;
+      query=searchInput.value.trim();
+      document.querySelector('#doctor-grid')?.removeAttribute('aria-busy');
+      syncHomeSearch();
+      if(page==='ratings')document.querySelectorAll('.college-tab[data-college]').forEach(button=>{
+        const selected=!searchKey(query)&&button.dataset.college===activeCollege;
+        button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));
+      });
+      document.querySelector("#doctor-grid").innerHTML = page === "ratings" ? directoryRows() : cards();
+      bindCards();
+      bindCarousel();
+    };
+    const scheduleSearch=()=>{
+      clearTimeout(timer);
+      const clear=document.querySelector('#clear-search');if(clear)clear.hidden=!searchInput.value;
+      if(!searchInput.value.trim()&&!composing){applySearch();return;}
+      const grid=document.querySelector('#doctor-grid');
+      if(grid&&!grid.hasAttribute('aria-busy')){grid.setAttribute('aria-busy','true');grid.innerHTML='<p class="muted" role="status">أكمل كتابة الاسم…</p>';}
+      if(!composing)timer=setTimeout(applySearch,550);
+    };
+    searchInput.addEventListener('input',scheduleSearch);
+    searchInput.addEventListener('compositionstart',()=>{composing=true;scheduleSearch();});
+    searchInput.addEventListener('compositionend',()=>{composing=false;scheduleSearch();});
+    searchInput.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.isComposing&&!composing){event.preventDefault();applySearch();}});
+    searchInput.addEventListener('search',()=>{if(!searchInput.value)applySearch();});
+  }
   document.querySelector("#clear-search")?.addEventListener("click", () => {
     const input = document.querySelector("#search");
     input.value = "";

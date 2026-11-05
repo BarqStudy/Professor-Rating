@@ -83,15 +83,23 @@ jobs:
       - name: Verify public catalogue endpoint
         run: |
           python3 - <<'PY'
-          import json, os, urllib.request
+          import json, os, urllib.request, urllib.error
           url = 'https://' + os.environ['SUPABASE_PROJECT_REF'] + '.supabase.co/functions/v1/miyar'
           request = urllib.request.Request(url, data=b'{"action":"catalogue"}', headers={'Content-Type': 'application/json', 'Origin': 'https://miyar.website'})
           with urllib.request.urlopen(request, timeout=30) as response:
               data = json.load(response)
           if not all(isinstance(data.get(key), list) for key in ['universities', 'colleges', 'majors', 'doctors']):
               raise SystemExit('Unexpected catalogue response.')
-          if not all(data.get('features', {}).get(key) is True for key in ['reviewFlexibility', 'doctorScopeRemoval', 'reviewRejectionEmail', 'reviewGradeRequired', 'studentTimetableImport']):
+          if not all(data.get('features', {}).get(key) is True for key in ['reviewFlexibility', 'doctorScopeRemoval', 'reviewRejectionEmail', 'reviewGradeRequired', 'studentTimetableImport', 'shortTimetableLinks']):
               raise SystemExit('The deployed API has not enabled the review and doctor-management updates.')
+          probe = urllib.request.Request(url, data=b'{"action":"timetable.get","token":"000000000000"}', headers={'Content-Type': 'application/json', 'Origin': 'https://miyar.website'})
+          try:
+              with urllib.request.urlopen(probe, timeout=30) as response:
+                  if 'schedule' not in json.load(response):
+                      raise SystemExit('Unexpected timetable preview response.')
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise SystemExit('Timetable preview storage or endpoint is unavailable.')
           if not any(u.get('name') == 'جامعة نجران' for u in data['universities']):
               raise SystemExit('University catalogue migration is missing.')
           if any(not c.get('university_id') for c in data['colleges']):

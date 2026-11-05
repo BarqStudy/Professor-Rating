@@ -1,6 +1,6 @@
 # Personal weekly timetables
 
-Open `#timetable` from the home card, desktop navigation, or the graduation-plan link.
+Open `#timetable` from the home card, mobile or desktop navigation.
 Students can add courses manually, select courses from their existing scoped plan,
 or extract a PDF/PNG/JPEG of up to 6 MiB using the configured Gemini/OpenAI service.
 
@@ -13,10 +13,8 @@ precedes body reading. It shares the existing atomic guest/network/global AI quo
 Administrative plan publishing remains separately protected.
 
 Timetables are saved locally per member or guest identity, not synchronized to a
-server. A share link contains a validated static snapshot in `#timetable/v1.…`,
-not in a query string. The public viewer requires no account or API calls, cannot
-edit the owner's schedule, and can export its snapshot. Changing a saved timetable
-does not change an older shared link. Maximum encoded payload is 20,000 characters.
+server until the student creates a preview link. New links use `#s/<12-character random token>` and store an immutable normalized snapshot in `miyar_timetable_shares`. Creation requires an active guest session and is limited atomically to 30 new snapshots per 24 hours; unchanged snapshots reuse their token. Public lookup returns only the schedule, never the guest identity. Legacy `#timetable/v1.…` links remain readable.
+The public viewer requires no account and makes one snapshot lookup for short links; legacy links stay local. It cannot edit the owner's schedule and can export its snapshot. Changing a saved timetable does not change an older shared link. The legacy encoded payload limit remains 20,000 characters; new share requests accept up to 512 KiB.
 
 PNG and one-page landscape PDF exports render Arabic using the locally loaded font.
 Both include “مِعيار · miyar.website”; the PDF footer has a clickable link. The PDF

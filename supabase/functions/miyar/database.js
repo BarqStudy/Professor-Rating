@@ -34,6 +34,7 @@ export function createDatabase(url, key, fetcher = fetch) {
         );
       }
       const reasons = {
+        TIMETABLE_SHARE_LIMIT:[429,'وصلت للحد اليومي لإنشاء روابط جديدة. جرّب غدًا.'],
         REVIEW_GRADE_REQUIRED:[400,'أدخل درجتك في المادة من 0 إلى 100 قبل إرسال التقييم.'],
         REVIEW_ALREADY_DECIDED:[409,'تمت مراجعة هذا التقييم بالفعل. حدّث قائمة الطلبات.'],
         INVALID_DOCTOR_SCOPE:[400,'اختر كلية أو تخصصًا موجودًا لحذف دكاترته.'],
