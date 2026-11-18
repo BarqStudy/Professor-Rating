@@ -97,7 +97,7 @@ export function createStudyPlanDownload({timetable,currentPlan,loadPlans,needsMa
       <input name="color" type="color" value="#df302f">
      </label>
      <label class="study-control-row">
-      ${badge('cap','blue')}<span>شعار الجامعة<small>اختياري عند عدم توفره تلقائيًا</small></span>
+      ${badge('cap','blue')}<span>ارفع الصورة الي ببالك<small>اختياري</small></span>
       <input name="logo" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
      </label>
      <label class="study-control-row">
@@ -138,17 +138,17 @@ export function createStudyPlanDownload({timetable,currentPlan,loadPlans,needsMa
    try{
     if(file&&(!['image/png','image/jpeg'].includes(file.type)||file.size>2*1024*1024)){
      fields.logo.value='';
-     message.textContent='اختر شعار PNG أو JPG بحجم لا يتجاوز ٢ ميجابايت.';
+     message.textContent='اختر صورة PNG أو JPG بحجم لا يتجاوز ٢ ميجابايت.';
     }else if(file)url=URL.createObjectURL(file);
     const result=await loadPlanLogo(plan.university,url);
     if(revision===logoRevision&&content.isConnected){
-     if(url&&!result)message.textContent='تعذّرت قراءة صورة الشعار.';
+     if(url&&!result)message.textContent='تعذّرت قراءة الصورة.';
      logo=result;update();
     }
    }finally{if(url)URL.revokeObjectURL(url);}
   }
   let logoPending;
-  const setLogo=()=>{logoPending=refreshLogo().catch(()=>{message.textContent='تعذّرت قراءة صورة الشعار.';});};
+  const setLogo=()=>{logoPending=refreshLogo().catch(()=>{message.textContent='تعذّرت قراءة الصورة.';});};
   fields.logo.onchange=()=>{message.textContent='';setLogo();};
   fields.color.oninput=update;
   fields.note.oninput=update;
