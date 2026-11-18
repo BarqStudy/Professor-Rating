@@ -37,7 +37,10 @@
 .study-control-row input:not([type=color]){grid-column:2;width:100%;min-width:0;max-width:100%;margin:0}
 .study-control-row input[type=file]::file-selector-button{border:1px solid var(--line);border-radius:7px;background:var(--soft);color:var(--ink);font:inherit;padding:4px 8px;margin-inline-end:8px;cursor:pointer}
 #study-pdf-customize .study-download-color{grid-template-columns:auto minmax(0,1fr) auto}
-.study-download-color input[type=color]{width:52px;height:38px;padding:4px;cursor:pointer;margin:0}
+#study-pdf-customize input[type=color]{appearance:none;display:block;width:52px;height:38px;padding:0;cursor:pointer;margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+#study-pdf-customize input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+#study-pdf-customize input[type=color]::-webkit-color-swatch{border:0;border-radius:11px}
+#study-pdf-customize input[type=color]::-moz-color-swatch{border:0;border-radius:11px}
 .study-control-icon{
  --tile-light:#bce5d5;--tile-dark:#61b19a;--tile-depth:#377a69;
  display:inline-grid;place-items:center;width:38px;height:36px;border-radius:11px;color:#153e34;
