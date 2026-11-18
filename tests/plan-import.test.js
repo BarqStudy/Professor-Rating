@@ -111,6 +111,21 @@ test('Gemini plan reads retry schema refusals and diagnose rejected keys without
  assert.equal(invalidKey.modelCalls.length,1);
 });
 
+test('plan reads retry temporary provider errors once with the same PDF',async()=>{
+ const recovered=fixture(draft(),body=>body.generationConfig.responseSchema
+  ?Response.json({error:{message:'Internal error'}},{status:500}):null);
+ assert.equal((await recovered.handle(recovered.upload())).status,200);
+ assert.equal(recovered.modelCalls.length,2);
+ assert.deepEqual(JSON.parse(recovered.modelCalls[0].body).contents,JSON.parse(recovered.modelCalls[1].body).contents);
+ const unavailable=fixture();
+ unavailable.setStatus(503);
+ const failure=await unavailable.handle(unavailable.upload());
+ assert.equal(failure.status,503);
+ assert.match(await failure.text(),/Gemini.*HTTP 503/);
+ assert.equal(unavailable.modelCalls.length,2);
+ assert.equal(unavailable.calls.filter(call=>call.path==='rpc/miyar_reserve_plan_import').length,1);
+});
+
 test('admin publication validates editable Arabic rows, binds the verified admin and exposes uploaded curricula to visitors',async()=>{
  const f=fixture();const request=d=>new Request('https://test?study=publish',{method:'POST',headers:{authorization:'Bearer verified','Content-Type':'application/json'},body:JSON.stringify({majorId:1,draft:d,adminId:student})});
  const response=await f.handle(request(draft()));assert.equal(response.status,200);

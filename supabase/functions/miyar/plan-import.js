@@ -28,6 +28,7 @@ const schema={type:'object',properties:{title:str,scopeNote:str,warnings:{type:'
 function geminiSchema(value){if(Array.isArray(value))return value.map(geminiSchema);if(!value||typeof value!=='object')return value;const out={};for(const [key,v]of Object.entries(value)){if(key==='additionalProperties')continue;if(key==='type'){out.type=(Array.isArray(v)?v.find(t=>t!=='null'):v).toUpperCase();if(Array.isArray(v)&&v.includes('null'))out.nullable=true;}else if(key==='enum')out.enum=v.filter(item=>item!==null);else out[key]=geminiSchema(v);}return out;}
 const base64=bytes=>{let text='';for(let i=0;i<bytes.length;i+=32768)text+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(text);};
 async function fileData(file){const data=await readPlatformFile(file,MAX_FILE);return {...data,data:base64(data.bytes)};}
+const temporaryProviderError=status=>[500,502,503,504,529].includes(status);
 async function readWithAi(config,file,target,requirementLists,fetcher){
  const deadline=AbortSignal.timeout(90000);let response;
  const info=JSON.stringify({university:target.university,college:target.college,major:target.major,requirementLists});
@@ -51,20 +52,26 @@ async function readWithAi(config,file,target,requirementLists,fetcher){
     const fallback=await discoverGeminiFallback(config,fetcher,model,deadline);
     if(fallback.model){model=fallback.model;response=await send(model);}
    }
-   if(response.status===400){
+   if(temporaryProviderError(response.status)){
+    response=await send(model,true);
+   }else if(response.status===400){
     const {error}=await response.clone().json().catch(()=>({}));
     if(/response\s*_?\s*schema|schema.*(?:complex|states)|thinking\s*_?\s*(?:config|level|budget)/i.test(JSON.stringify(error??{})))response=await send(model,true);
    }
   }else{
    const part=file.mime==='application/pdf'?{type:'input_file',filename:'study-plan.pdf',file_data:`data:${file.mime};base64,${file.data}`}:{type:'input_image',image_url:`data:${file.mime};base64,${file.data}`};
-   response=await fetcher('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${config.key}`},signal:deadline,body:JSON.stringify({model:config.model,store:false,max_output_tokens:32768,instructions,input:[{role:'user',content:[{type:'input_text',text:'بيانات التخصص المختار للتوضيح فقط: '+info},part]}],text:{format:{type:'json_schema',name:'miyar_study_plan',strict:true,schema}}})});
+   const send=()=>fetcher('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${config.key}`},signal:deadline,body:JSON.stringify({model:config.model,store:false,max_output_tokens:32768,instructions,input:[{role:'user',content:[{type:'input_text',text:'بيانات التخصص المختار للتوضيح فقط: '+info},part]}],text:{format:{type:'json_schema',name:'miyar_study_plan',strict:true,schema}}})});
+   response=await send();
+   if(temporaryProviderError(response.status))response=await send();
   }
  }catch{throw new ApiError(503,deadline.aborted?'لم تكتمل قراءة الخطة خلال المهلة. جرّب ملفًا أوضح أو أصغر وأعد المحاولة.':'تعذّر الاتصال بمزوّد الذكاء الاصطناعي أثناء قراءة الخطة. أعد المحاولة.');}
  if(!response?.ok){
-  const failure=providerFailure(config.provider,response?.status,await response?.json().catch(()=>({})));
+  const status=response?.status;
+  if(temporaryProviderError(status))throw new ApiError(503,`تعذّرت قراءة الخطة بسبب عطل مؤقت لدى ${config.provider==='gemini'?'Gemini':'OpenAI'} بعد إعادة المحاولة (HTTP ${status}). حاول لاحقًا.`);
+  const failure=providerFailure(config.provider,status,await response?.json().catch(()=>({})));
   throw new ApiError(response?.status===429?429:503,failure.status==='provider_error'&&response?.status===400
    ?'رفض مزوّد الذكاء الاصطناعي طلب قراءة الخطة. تأكد من أن الملف يفتح دون كلمة مرور وأن النموذج يدعم قراءة PDF أو الصور.'
-   :failure.message);
+   :failure.status==='provider_error'&&status?`${failure.message} (HTTP ${status})`:failure.message);
  }
  try{
   const result=await response.json();
