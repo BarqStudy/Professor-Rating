@@ -2,7 +2,7 @@ import {readPlatformFile} from './file-format.js';
 import {storePlatformFile} from './files.js';
 import {r2Configuration} from './r2.js';
 import {ApiError,integer,text,uuid} from './security.js';
-import {aiConfiguration} from './ai.js';
+import {aiConfiguration,providerFailure} from './ai.js';
 import {cachedGeminiModel,discoverGeminiFallback} from './ai-models.js';
 import {repairPlanDraft} from './plan-repair.js';
 import {normalizePublishedPlan,PLAN_COURSE_LIMIT} from './plan-format.js';
@@ -15,7 +15,8 @@ const instructions=`أنت قارئ خطط دراسية جامعية. استخر
 level هو رقم المستوى، و0 لبديل اختياري ليس خانة مطلوبة. kind هو course للمقرر أو البديل، وslot للخانة الاختيارية المطلوبة. pool اسم المجموعة بالعربية متطابق للخانات وبدائلها، أو null للمادة الأساسية. إذا لم تُذكر بدائل خانة اختيارية، لا تخترعها؛ ضع ملاحظة واضحة للمراجعة. prerequisites كل ما يجب اجتيازه معًا، corequisites ما يمكن تسجيله بالتزامن، anyPrerequisites بدائل يكفي أحدها فقط عندما يذكر ذلك صراحة. completedLevel شرط اجتياز مستوى كامل، minimumCredits شرط ساعات مكتملة، allPrevious شرط إكمال المقررات السابقة كلها. لا تخمن أي شرط مفقود.
 في الخطط المصوّرة افحص الصورة في كل صفحة حتى لو كانت طبقة النص فارغة. إذا وجدت شبكة عربية بعناوين المستويات في العمود الأيمن مثل «الأول» إلى «الثامن»، اقرأ كل صف أفقي من اليمين إلى اليسار. حوّل عنوان الصف إلى رقم المستوى لكل خلية مقرر فيه. أكمل الصف حتى آخر خلية مأهولة ولو اختلف عرضه أو لون خلاياه عن الصفوف الأخرى. ادمج أسطر الاسم داخل الخلية نفسها بالترتيب، وتجاوز الخلايا الفارغة وعناوين الصفوف. لا تستنتج من لون الخلية أنها اختيارية أو أنها لا تُحسب. احتفظ برقم الصفحة الفعلي لكل مقرر.
 إذا تكرر نمط الساعات ورمز المقرر داخل الخلايا، فافصل الرقم القصير الدال على الساعات عن الرمز. مثال بصري في شبكة من اليمين إلى اليسار: «2-طفل-101» يعني ساعتين ورمز «طفل-101» بهذا التنسيق. الرقم 101 جزء من الرمز، والصفر المنفصل فوق السطر ليس الساعات ولا المستوى ولا متطلبًا برمز 0. طبّق المثال فقط عندما يتأكد النمط من الخلايا المجاورة ولا تحذف جزءًا من رمز مقرر حقيقي في تنسيق آخر. عند الالتباس اترك الساعات null واكتب ملاحظة مراجعة بدل التخمين.
-قبل إخراج JSON، طابق عدد المقررات مع عدد الخلايا المأهولة في كل صف عبر كل الصفحات. ضع ملاحظة بالصفحة والمستوى إذا تعذر قراءة خلية أو ظهر أن الجدول مقطوع. لا تستبدل المقرر غير المقروء بمقرر مخمّن.
+في الشبكة المصوّرة ارسم حدود الخلايا ذهنيًا أولًا بتتبّع خطوط الجدول الرأسية والأفقية حتى لو كانت رفيعة أو كان لون خليتين متجاورتين متماثلًا. اقرأ كل خلية بمعزل عن جاراتها من أعلاها إلى أسفلها، وأخرج عنصرًا مستقلًا لكل خلية مقرر. لا تجمع الكلمات المتحاذية أفقيًا من خليتين في اسم واحد. مثال: خليتا «أخلاقيات المهنة» و«أدب وثقافة الطفل (2)» تنتجان عنصرين، لكل منهما اسمه ورمزه وساعاته. ظهور رمز آخر في خلية مجاورة يعني بدء مقرر آخر. إذا امتد نص أحد الاسمين إلى حافة الخلية، اربطه برمز الخلية التي ينتمي إليها واذكر أي التباس في review.
+قبل إخراج JSON، عدّ خلايا المقررات في كل مستوى ثم قارِن عددها بعدد العناصر المستخرجة لذلك المستوى في الصفحة. إذا قل العدد، أعد فحص الحدود والرموز في ذلك المستوى بحثًا عن خلية أُغفلت أو مقررين دُمجا. ضع ملاحظة بالصفحة والمستوى إذا بقي العدد غير متطابق أو تعذر قراءة خلية أو ظهر أن الجدول مقطوع. لا تستبدل المقرر غير المقروء بمقرر مخمّن.
 اسم pool ربط تنظيمي تستخرجه أنت من عنوان القائمة، وليس مادة تختارها الإدارة. لا تترك pool فارغًا للخانة أو مواد قائمتها. لا تختَر بديلًا فعليًا للطالب؛ الاختيار يتم من قائمة في المنصة بعد النشر. إذا كانت الخطة تتضمن «اختياري تخصص ١» في مستوى و«اختياري تخصص ٢» في مستوى آخر، وقائمة بخمس مواد بديلة في آخر الملف، أعد خانتين فقط kind=slot في مستوييهما وبنفس pool، وخمس مواد kind=course وlevel=0 وpool المطابق. لا تعد المواد الخمس مواد أساسية ولا تمنح كل بديل مستوى الخانة. طبّق الفصل نفسه على قوائم متطلبات الجامعة والإجبارية عند تفعيل requirementLists، مع إبقاء كل قائمة مستقلة. ميّز المقررات الإلزامية الحقيقية ذات الأسماء والرموز المحددة عن الخانة العامة التي تشير إلى قائمة.
 إذا ذُكر رقم مجموعة صراحة، حافظ عليه في pool ولا تخلط المجموعة الأولى بالثانية حتى لو تساوت الساعات. مثال: «اختياري ٣ — المجموعة الثانية» يتبع المجموعة ٢، وليس المجموعة ٣؛ الرقم ٣ ترتيب الخانة فقط. اقرأ الساعات المعتمدة للخانة ومواد قائمتها من عمود الساعات في الملف، ولا تستنتجها من رقم المجموعة أو المستوى أو ساعات الاتصال.
 إذا خالف عنوان قائمة الاختيار عمود ساعات موادها أو خالف ساعات الخانة، احتفظ بالقيم المكتوبة وسجّل التعارض بالأرقام والصفحات في warnings وreview. لا تغيّر ساعات المواد لتجعلها مساوية للخانة، ولا تعتبر ساعات الاتصال ساعات معتمدة.
@@ -32,15 +33,39 @@ async function readWithAi(config,file,target,requirementLists,fetcher){
  const info=JSON.stringify({university:target.university,college:target.college,major:target.major,requirementLists});
  try{
   if(config.provider==='gemini'){
-   const send=model=>fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':config.key},signal:deadline,body:JSON.stringify({systemInstruction:{parts:[{text:instructions}]},contents:[{role:'user',parts:[{text:'بيانات التخصص المختار للتوضيح فقط: '+info},{inlineData:{mimeType:file.mime,data:file.data}}]}],generationConfig:{temperature:0,responseMimeType:'application/json',responseSchema:geminiSchema(schema),maxOutputTokens:/^gemini-(?:1\.|2\.0)/.test(model)?8192:32768,...(/^gemini-2\.5-flash/.test(model)?{thinkingConfig:{thinkingBudget:0}}:/^gemini-3(?:\.\d+)?-flash/.test(model)?{thinkingConfig:{thinkingLevel:'minimal'}}:{})}})});
-   const model=await cachedGeminiModel(config,fetcher);response=await send(model);
-   if(response.status===404){const fallback=await discoverGeminiFallback(config,fetcher,model,deadline);if(fallback.model)response=await send(fallback.model);}
+   const send=(model,compatible=false)=>{
+    const generationConfig={temperature:0,responseMimeType:'application/json',maxOutputTokens:/^gemini-(?:1\.|2\.0)/.test(model)?8192:32768};
+    if(!compatible){
+     generationConfig.responseSchema=geminiSchema(schema);
+     if(/^gemini-2\.5-flash/.test(model))generationConfig.thinkingConfig={thinkingBudget:0};
+     else if(/^gemini-3(?:\.\d+)?-flash/.test(model))generationConfig.thinkingConfig={thinkingLevel:'minimal'};
+    }
+    return fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':config.key},signal:deadline,body:JSON.stringify({
+     systemInstruction:{parts:[{text:compatible?instructions+'\nمخطط الإجابة: '+JSON.stringify(schema):instructions}]},
+     contents:[{role:'user',parts:[{text:'بيانات التخصص المختار للتوضيح فقط: '+info},{inlineData:{mimeType:file.mime,data:file.data}}]}],
+     generationConfig
+    })});
+   };
+   let model=await cachedGeminiModel(config,fetcher);response=await send(model);
+   if(response.status===404){
+    const fallback=await discoverGeminiFallback(config,fetcher,model,deadline);
+    if(fallback.model){model=fallback.model;response=await send(model);}
+   }
+   if(response.status===400){
+    const {error}=await response.clone().json().catch(()=>({}));
+    if(/response\s*_?\s*schema|schema.*(?:complex|states)|thinking\s*_?\s*(?:config|level|budget)/i.test(JSON.stringify(error??{})))response=await send(model,true);
+   }
   }else{
    const part=file.mime==='application/pdf'?{type:'input_file',filename:'study-plan.pdf',file_data:`data:${file.mime};base64,${file.data}`}:{type:'input_image',image_url:`data:${file.mime};base64,${file.data}`};
    response=await fetcher('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${config.key}`},signal:deadline,body:JSON.stringify({model:config.model,store:false,max_output_tokens:32768,instructions,input:[{role:'user',content:[{type:'input_text',text:'بيانات التخصص المختار للتوضيح فقط: '+info},part]}],text:{format:{type:'json_schema',name:'miyar_study_plan',strict:true,schema}}})});
   }
- }catch{throw new ApiError(503,'لم تكتمل قراءة الخطة خلال المهلة. جرّب ملفًا أوضح أو أصغر وأعد المحاولة.');}
- if(!response?.ok){const status=response?.status;throw new ApiError(status===429?429:503,status===429?'حصة قارئ الخطط غير متاحة حاليًا. أعد المحاولة لاحقًا.':'تعذّر قراءة الملف. تأكد أنه واضح وغير محمي، وراجع ربط خدمة الذكاء الاصطناعي إذا استمرت المشكلة.');}
+ }catch{throw new ApiError(503,deadline.aborted?'لم تكتمل قراءة الخطة خلال المهلة. جرّب ملفًا أوضح أو أصغر وأعد المحاولة.':'تعذّر الاتصال بمزوّد الذكاء الاصطناعي أثناء قراءة الخطة. أعد المحاولة.');}
+ if(!response?.ok){
+  const failure=providerFailure(config.provider,response?.status,await response?.json().catch(()=>({})));
+  throw new ApiError(response?.status===429?429:503,failure.status==='provider_error'&&response?.status===400
+   ?'رفض مزوّد الذكاء الاصطناعي طلب قراءة الخطة. تأكد من أن الملف يفتح دون كلمة مرور وأن النموذج يدعم قراءة PDF أو الصور.'
+   :failure.message);
+ }
  try{
   const result=await response.json();
   if(config.provider==='gemini'&&result.candidates?.[0]?.finishReason!=='STOP')throw new Error('Incomplete extraction');
@@ -63,7 +88,18 @@ export async function extractStudyPlan(form,admin,db,env,fetcher=fetch,storageFe
  if(!config.enabled)throw new ApiError(503,'قارئ الخطط يحتاج ربط خدمة Gemini أو OpenAI من إعدادات الخادم.');
  await db('rpc/miyar_reserve_plan_import',{method:'POST',body:{p_admin:admin}});
  const parsed=await readWithAi(config,file,target,requirementLists,fetcher);
- const repaired=repairPlanDraft({...parsed,requirementLists,sha256:file.sha256}),draft={...repaired.draft,warnings:[...(repaired.draft.warnings||[]),...repaired.corrections]};
+ const repaired=repairPlanDraft({...parsed,requirementLists,sha256:file.sha256});
+ const mergedRows=[];
+ const courses=repaired.draft.courses.map((row,index)=>{
+  if(row.kind!=='course'||typeof row.code!=='string')return row;
+  const codes=row.code.match(/(?:^|[\s,،؛;/])[\p{L}]+[\s._-]*\d{3,}[A-Z]?(?=$|[\s,،؛;/])/gu);
+  if(!codes||codes.length<2)return row;
+  mergedRows.push(index+1);
+  const review='يحتوي الرمز على أكثر من رمز مقرر. راجع الخلايا الأصلية وأضف كل مقرر في بند مستقل.';
+  return {...row,review:[review,row.review].filter(Boolean).join(' ').slice(0,300)};
+ });
+ const mergeWarning=mergedRows.length?[('تحقق من احتمال دمج مقررات في البنود: '+mergedRows.join('، ')).slice(0,300)]:[];
+ const draft={...repaired.draft,courses,warnings:[...mergeWarning,...(repaired.draft.warnings||[]),...repaired.corrections]};
  const source=r2Configuration(env).enabled?await storePlatformFile(file,admin,db,env,storageFetcher,{purpose:'study'}):null;
  return {draft:{...draft,id:'plan-'+crypto.randomUUID(),fileLabel,sha256:file.sha256,majorId,requirementLists,...(source?{sourceFileId:source.id}:{})},target,storage:{stored:!!source,provider:source?'r2':null}};
 }

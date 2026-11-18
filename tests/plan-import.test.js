@@ -43,9 +43,9 @@ test('uploaded plans publish atomically under the selected major, remain idempot
  }finally{await db.close();}
 });
 
-function fixture(modelDraft=draft()){let actor=admin,finish='STOP',providerStatus=200;const calls=[],modelCalls=[];
+function fixture(modelDraft=draft(),rejectRequest){let actor=admin,finish='STOP',providerStatus=200;const calls=[],modelCalls=[];
  const db=async(path,options={})=>{calls.push({path,...options});if(path.startsWith('miyar_accounts?'))return[{auth_id:actor,status:'active',university_id:3}];if(path==='rpc/miyar_study_import_target')return{majorId:1,major:'الهندسة المدنية',college:'كلية الهندسة',university:'جامعة نجران'};if(path==='rpc/miyar_uploaded_study_plans')return[];return{ok:true};};
- const aiFetch=async(url,options)=>{modelCalls.push({url,...options});if(providerStatus!==200)return new Response(JSON.stringify({error:{message:'secret-provider-error'}}),{status:providerStatus});return new Response(JSON.stringify({candidates:[{finishReason:finish,content:{parts:[{text:JSON.stringify(modelDraft)}]}}]}),{status:200});};
+ const aiFetch=async(url,options)=>{modelCalls.push({url,...options});const rejection=rejectRequest?.(JSON.parse(options.body));if(rejection)return rejection;if(providerStatus!==200)return new Response(JSON.stringify({error:{message:'secret-provider-error'}}),{status:providerStatus});return new Response(JSON.stringify({candidates:[{finishReason:finish,content:{parts:[{text:JSON.stringify(modelDraft)}]}}]}),{status:200});};
  const handle=createHandler({db,env:{ADMIN_AUTH_IDS:admin,AI_PROVIDER:'gemini',GEMINI_API_KEY:'private-test-key'},authenticate:async request=>{if(!request.headers.has('authorization'))throw new ApiError(401,'unauthorized');return{id:actor};},aiFetch});
  const upload=(bytes='%PDF-1.7\nfixture',auth=true)=>{const form=new FormData();form.set('file',new Blob([bytes],{type:'application/pdf'}),'mixed-plan.pdf');form.set('majorId','1');form.set('fileLabel','خطة ١٤٤٨');return new Request('https://test?study=extract',{method:'POST',headers:auth?{authorization:'Bearer verified'}:{},body:form});};
  return {handle,calls,modelCalls,upload,setActor:value=>actor=value,setFinish:value=>finish=value,setStatus:value=>providerStatus=value};
@@ -69,10 +69,46 @@ test('native PDF extraction uses the existing private Gemini configuration, retu
  assert.ok(request.systemInstruction.parts[0].text.includes('لا تترجم'));assert.equal(request.tools,undefined);
  assert.match(request.systemInstruction.parts[0].text,/طبقة النص فارغة.*من اليمين إلى اليسار/);
  assert.match(request.systemInstruction.parts[0].text,/«2-طفل-101» يعني ساعتين ورمز «طفل-101»/);
- assert.match(request.systemInstruction.parts[0].text,/طابق عدد المقررات مع عدد الخلايا المأهولة/);
+ assert.match(request.systemInstruction.parts[0].text,/أخرج عنصرًا مستقلًا لكل خلية مقرر/);
  assert.ok(!JSON.stringify(result).includes('private-test-key'));assert.equal(f.calls.some(c=>c.path==='rpc/miyar_publish_study_plan'),false);
  assert.equal(f.calls.filter(c=>c.path==='rpc/miyar_reserve_plan_import').length,1);
  f.setFinish('MAX_TOKENS');assert.equal((await f.handle(f.upload())).status,503);f.setFinish('STOP');f.setStatus(429);assert.equal((await f.handle(f.upload())).status,429);
+});
+
+test('a scanned-plan draft flags two course codes in one row for review',async()=>{
+ const parsed=draft();
+ parsed.courses=[
+  course('عمل-١٠١ / طفل-٣٢٦','أخلاقيات المهنة أدب وثقافة الطفل',5),
+  course('طفل-407','التدريب التعاوني',8),
+ ];
+ const f=fixture(parsed);
+ const response=await f.handle(f.upload());
+ assert.equal(response.status,200);
+ const {draft:preview}=await response.json();
+ assert.match(preview.warnings[0],/احتمال دمج مقررات في البنود: 1/);
+ assert.match(preview.courses[0].review,/كل مقرر في بند مستقل/);
+ assert.equal(preview.courses[1].review,null);
+});
+
+test('Gemini plan reads retry schema refusals and diagnose rejected keys without exposing provider details',async()=>{
+ const schemaRefusal=fixture(draft(),body=>body.generationConfig.responseSchema
+  ?Response.json({error:{message:'The response schema is too complex'}},{status:400}):null);
+ assert.equal((await schemaRefusal.handle(schemaRefusal.upload())).status,200);
+ assert.equal(schemaRefusal.modelCalls.length,2);
+ const first=JSON.parse(schemaRefusal.modelCalls[0].body),retry=JSON.parse(schemaRefusal.modelCalls[1].body);
+ assert.deepEqual(retry.contents,first.contents);
+ assert.equal(retry.generationConfig.responseMimeType,'application/json');
+ assert.equal(retry.generationConfig.responseSchema,undefined);
+ assert.match(retry.systemInstruction.parts[0].text,/"prerequisites"/);
+ assert.equal(schemaRefusal.calls.filter(call=>call.path==='rpc/miyar_reserve_plan_import').length,1);
+
+ const invalidKey=fixture(draft(),()=>Response.json({error:{message:'private provider details',details:[{reason:'API_KEY_INVALID'}]}},{status:400}));
+ const response=await invalidKey.handle(invalidKey.upload());
+ assert.equal(response.status,503);
+ const message=await response.text();
+ assert.match(message,/رفضت Google مفتاح الخدمة/);
+ assert.doesNotMatch(message,/private provider details/);
+ assert.equal(invalidKey.modelCalls.length,1);
 });
 
 test('admin publication validates editable Arabic rows, binds the verified admin and exposes uploaded curricula to visitors',async()=>{

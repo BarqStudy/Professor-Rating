@@ -22,7 +22,7 @@ export function aiConfiguration(env) {
  const reason=!['openai','gemini'].includes(provider)?'invalid_provider':!key?'missing_key':!validModel?'invalid_model':null;
  return { provider, key, model, enabled: reason===null, reason };
 }
-function providerFailure(provider,status,data){
+export function providerFailure(provider,status,data){
  const details=JSON.stringify(data?.error||{}).toUpperCase();
  if(details.includes('SERVICE_DISABLED'))return {status:'service_disabled',message:'خدمة Gemini API غير مفعّلة لمشروع Google المرتبط بالمفتاح. فعّل Generative Language API في المشروع نفسه.'};
  if(details.includes('API_KEY_SERVICE_BLOCKED')||details.includes('API_KEY_HTTP_REFERRER_BLOCKED')||details.includes('API_KEY_IP_ADDRESS_BLOCKED'))return {status:'key_restricted',message:'قيود مفتاح Google تمنع استخدامه من الخادم. راجع قيود الخدمة والتطبيق على المفتاح.'};
