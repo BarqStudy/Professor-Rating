@@ -85,17 +85,30 @@ export function createStudyPlanDownload({timetable,currentPlan,loadPlans,needsMa
    content.innerHTML='<p role="status">لا توجد خطة معتمدة لتخصصك حاليًا.</p>';
    return;
   }
+  const badge=(name,tone)=>`<span class="study-control-icon study-control-icon-${tone}" aria-hidden="true">${icon(name)}</span>`;
   content.innerHTML=`<div class="study-download-layout">
     <form id="study-pdf-customize" class="study-download-controls">
-     <h2>${esc(plan.title||plan.major)}</h2>
-     <label class="study-download-color">لون القالب<input name="color" type="color" value="#df302f"></label>
-     <label>شعار الجامعة <small>اختياري عند عدم توفره تلقائيًا</small><input name="logo" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg"></label>
-     <label>اسم أو نص على الخطة <small>اختياري</small><input name="note" maxlength="80" placeholder="مثال: خطة سارة الدراسية" dir="auto"></label>
-     <button type="submit" class="primary">تحميل الخطة PDF</button>
+     <div class="study-control-heading">
+      ${badge('book','green')}
+      <div><h2>${esc(plan.title||plan.major)}</h2>${plan.university?`<small>${esc(plan.university)}</small>`:''}</div>
+     </div>
+     <label class="study-control-row study-download-color">
+      ${badge('sun','rose')}<span>لون القالب</span>
+      <input name="color" type="color" value="#df302f">
+     </label>
+     <label class="study-control-row">
+      ${badge('cap','blue')}<span>شعار الجامعة<small>اختياري عند عدم توفره تلقائيًا</small></span>
+      <input name="logo" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
+     </label>
+     <label class="study-control-row">
+      ${badge('profile','violet')}<span>اسم أو نص على الخطة<small>اختياري</small></span>
+      <input name="note" maxlength="80" placeholder="مثال: خطة سارة الدراسية" dir="auto">
+     </label>
+     <button type="submit" class="primary study-download-submit"><span aria-hidden="true">${icon('arrow')}</span> تحميل الخطة PDF</button>
      <p class="form-error" role="alert"></p>
     </form>
    <figure class="study-download-preview" hidden>
-    <figcaption>معاينة الخطة <span data-study-page-count dir="ltr"></span></figcaption>
+    <figcaption><span class="study-preview-title">${badge('book','blue')} معاينة الخطة</span><span data-study-page-count dir="ltr"></span></figcaption>
     <canvas role="img" aria-label="معاينة صفحة من الخطة الدراسية"></canvas>
     <div class="study-preview-navigation">
      <button type="button" class="secondary" data-plan-preview="-1">الصفحة السابقة</button>
