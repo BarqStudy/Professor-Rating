@@ -1,5 +1,6 @@
 import {storage} from './storage.js';
 import {cancelHero} from './hero.js';
+import {prefersLessMotion} from './display-preferences.js';
 
 let active = null;
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -30,7 +31,7 @@ export function setAppearance(theme, source) {
   cancelHero();
   stop(false);
   const current = root.dataset.theme === 'dark' ? 'dark' : 'light';
-  if (current === theme || motion.matches || document.hidden || typeof document.startViewTransition !== 'function') { apply(theme); return; }
+  if (current === theme || prefersLessMotion() || document.hidden || typeof document.startViewTransition !== 'function') { apply(theme); return; }
   const box = source?.getBoundingClientRect();
   const x = Math.max(0, Math.min(innerWidth, box ? box.left + box.width / 2 : innerWidth / 2));
   const y = Math.max(0, Math.min(innerHeight, box ? box.top + box.height / 2 : innerHeight / 2));

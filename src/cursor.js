@@ -1,5 +1,6 @@
 export function setupCursor() {
   const supported = matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)');
+  const enabled = () => supported.matches && document.documentElement.dataset.cursor !== 'native' && document.documentElement.dataset.motion !== 'reduced';
   let cursor, ring, dot, frame = 0, visible = false, x = 0, y = 0, targetX = 0, targetY = 0, previousTime = 0;
   const hide = () => {
     visible = false;
@@ -10,7 +11,7 @@ export function setupCursor() {
   };
   const paint = time => {
     frame = 0;
-    if (!visible || !supported.matches) return hide();
+    if (!visible || !enabled()) return hide();
     const elapsed = previousTime ? Math.min(time - previousTime, 64) : 16;
     previousTime = time;
     const blend = 1 - Math.exp(-elapsed / 65);
@@ -24,7 +25,7 @@ export function setupCursor() {
   };
   document.addEventListener('pointermove', event => {
     const editable = event.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable=false]),[role=textbox],:disabled,[aria-disabled=true],[inert],iframe');
-    if (!supported.matches || event.pointerType !== 'mouse' || editable || event.clientX < 4 || event.clientX > document.documentElement.clientWidth - 4) return hide();
+    if (!enabled() || event.pointerType !== 'mouse' || editable || event.clientX < 4 || event.clientX > document.documentElement.clientWidth - 4) return hide();
     if (!cursor) {
       cursor = document.createElement('div'); cursor.className = 'custom-cursor'; cursor.setAttribute('aria-hidden', 'true');
       cursor.innerHTML = '<span class="custom-cursor-ring"></span><span class="custom-cursor-dot"></span>';

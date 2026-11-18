@@ -1,4 +1,4 @@
-/* One palette for text, controls and surfaces across all four accent choices. */
+/* One palette for text, controls and surfaces across the accent choices. */
 :root {
   color-scheme: light;
   --bg: #f4f6fa;
@@ -47,6 +47,18 @@
   --accent-soft: #eaf0da;
   --soft: #f1f5e8;
 }
+:root[data-color=violet] {
+  --green: #65419b;
+  --accent-solid: #65419b;
+  --accent-soft: #eee5fa;
+  --soft: #f5effb;
+}
+:root[data-color=amber] {
+  --green: #885412;
+  --accent-solid: #885412;
+  --accent-soft: #faecd5;
+  --soft: #fbf4e8;
+}
 
 /* Keep reading surfaces neutral; the chosen color belongs to accents. */
 :root[data-theme=dark] {
@@ -91,6 +103,16 @@
   --green: #c6df8c;
   --accent-solid: #b4cf6f;
   --accent-soft: #30382a;
+}
+:root[data-theme=dark][data-color=violet] {
+  --green: #dac5ff;
+  --accent-solid: #c7a7f2;
+  --accent-soft: #392b50;
+}
+:root[data-theme=dark][data-color=amber] {
+  --green: #f6ce91;
+  --accent-solid: #efbb6d;
+  --accent-soft: #413323;
 }
 
 body { color: var(--ink); }
@@ -176,6 +198,8 @@ select option { color: var(--ink); background: var(--field); }
 .color-option[data-color-option=green] .color-swatch { background: #16664b; }
 .color-option[data-color-option=pink] .color-swatch { background: #963b69; }
 .color-option[data-color-option=apple] .color-swatch { background: #50671d; }
+.color-option[data-color-option=violet] .color-swatch { background: #65419b; }
+.color-option[data-color-option=amber] .color-swatch { background: #885412; }
 .college-tabs, .doctor-carousel, .admin-record-list { scrollbar-color: var(--control-border) transparent; }
 
 [data-theme=dark] body { background: var(--bg); background-image: none; }

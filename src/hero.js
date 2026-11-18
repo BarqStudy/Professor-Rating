@@ -1,3 +1,4 @@
+import {prefersLessMotion} from './display-preferences.js';
 let current = null, intent = null;
 const intentLifetime = 5000;
 
@@ -40,7 +41,7 @@ export function heroUpdate(update, destination) {
 export function setupHero() {
   document.addEventListener('click', event => {
     cancelHero();
-    if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || document.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || document.hidden || prefersLessMotion()) return;
     const control = event.target.closest?.('button,a[href^="#"],[role="button"]');
     if (!control || !control.closest('#app') || control.matches(':disabled,[aria-disabled="true"],.close-modal,.theme-toggle,.mobile-theme,.carousel-control,[data-review-dot],[data-review-like],[data-compare],[data-save],#save-detail,#entry-theme') || control.closest('[inert]')) return;
     if (control.matches('button') && control.type === 'submit' && control.form) return;
@@ -132,7 +133,7 @@ function beginHero(origin) {
   if (current) cancelHero(true);
   const {source} = origin;
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
-  if (motion.matches || document.hidden || typeof source.animate !== 'function') return null;
+  if (prefersLessMotion() || document.hidden || typeof source.animate !== 'function') return null;
   const request = {origin, source, motion, animations: [], layer: null, cancelled: false, onMotion: () => { if (motion.matches) cancelHero(); }};
   current = request; motion.addEventListener('change', request.onMotion);
   source.setAttribute('aria-busy', 'true');

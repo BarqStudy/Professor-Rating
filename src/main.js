@@ -16,6 +16,8 @@ import {openMajorRemoval} from './major-removal.js';
 import {startupSkeleton,startupConnection} from './startup.js';
 import {statNumber,animateStats} from './stats.js';
 import {setupCursor} from './cursor.js';
+import {setDisplayPreference} from './display-preferences.js';
+import './settings.css';
 import {setupReveals} from './reveal.js';
 import {setupHero,heroUpdate,rememberHero,cancelHero} from './hero.js';
 import {setAppearance,toggleAppearance} from './appearance.js';
@@ -280,6 +282,8 @@ const platformColors = [
   { id: "green", name: "أخضر", hue: 155 },
   { id: "pink", name: "وردي", hue: 330 },
   { id: "apple", name: "تفاحي", hue: 90 },
+  { id: "violet", name: "بنفسجي", hue: 270 },
+  { id: "amber", name: "عنبر", hue: 34 },
 ];
 function applyPlatformColor(id) {
   const color = platformColors.find((item) => item.id === id) || platformColors[0];
@@ -290,6 +294,14 @@ function applyPlatformColor(id) {
 applyPlatformColor(storage.getItem("miyar-color"));
 function appearanceSettings() {
   return `<section class="appearance-settings"><h3>ألوان المنصة</h3><p>اختر لونك المفضل؛ يُحفظ تلقائيًا ويعمل بالنهار والليل.</p><div class="color-options" role="group" aria-label="لون المنصة">${platformColors.map((color) => `<button type="button" class="color-option" data-color-option="${color.id}" aria-pressed="${document.documentElement.dataset.color === color.id}" style="--swatch-hue:${color.hue}"><span class="color-swatch" aria-hidden="true">${ic("check")}</span>${color.name}</button>`).join("")}</div><h3>المظهر</h3><div class="appearance-modes" role="group" aria-label="مظهر المنصة"><button type="button" data-appearance="light" aria-pressed="${document.documentElement.dataset.theme !== 'dark'}">${ic("sun")} نهاري</button><button type="button" data-appearance="dark" aria-pressed="${document.documentElement.dataset.theme === 'dark'}">${ic("moon")} ليلي</button></div></section>`;
+}
+function displaySettings(){
+  const select=(key,label,options)=>`<label>${label}<select data-display-setting="${key}">${options.map(([value,name])=>`<option value="${value}" ${document.documentElement.dataset[key]===value?'selected':''}>${name}</option>`).join('')}</select></label>`;
+  return `<div class="settings-display-options">
+    ${select('density','تباعد البطاقات',[['comfortable','مريح'],['compact','مضغوط']])}
+    ${select('motion','الحركة والمؤثرات',[['system','حسب الجهاز'],['reduced','حركة أقل']])}
+    ${select('cursor','مؤشر الماوس',[['enhanced','مؤشر مِعيار'],['native','مؤشر الجهاز']])}
+  </div>`;
 }
 function nav() {
   return `<nav>${
@@ -1455,9 +1467,19 @@ function openSettings() {
     };
   modal(
     "إعداداتك في مِعيار",
-    `<form id="settings-form"><div class="settings-shortcuts" role="group" aria-label="اختصارات حسابك"><button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic("star")} تقييماتي وطلبات التعديل</button><button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic("bell")} متابعة طلباتي وقرارات الإدارة</button><button type="button" class="secondary my-reviews-settings" id="install-app">${ic("plus")} تثبيت مِعيار على الجهاز</button></div>${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length ? `<section class="university-settings"><h3>جامعتك</h3><p>${escapeHtml(selectedUniversity()?.name || "لم تحدد جامعتك")}</p><button type="button" class="secondary" id="change-university">${ic("cap")} تغيير الجامعة</button></section>` : ""}<div class="settings-intro"><span class="settings-avatar">${
-      ic("users")
-    }</span><div><h3>مساحتك، على طريقتك</h3><p>خصّص بياناتك وتجربة القراءة بما يناسبك.</p></div></div><label>اسم الطالب<input name="name" required maxlength="60" autocomplete="name" placeholder="كيف تحب أن نناديك؟" value="${
+    `<form id="settings-form">
+     <nav class="settings-section-nav" aria-label="أقسام الإعدادات">
+      <button type="button" data-settings-section="profile">${ic('profile')} بياناتي</button>
+      <button type="button" data-settings-section="display">${ic('sun')} التخصيص</button>
+      <button type="button" data-settings-section="activity">${ic('bell')} نشاطي</button>
+      <button type="button" data-settings-section="account">${ic('shield')} الحساب</button>
+     </nav>
+     <section id="settings-profile" class="settings-section" aria-labelledby="settings-profile-title">
+      <h3 id="settings-profile-title" tabindex="-1">الملف الدراسي</h3>
+      ${configured && (cloudMe || guestProfile) && cloudCatalogue?.universities?.length
+       ? `<div class="settings-university"><div><small>الجامعة</small><strong>${escapeHtml(selectedUniversity()?.name || 'لم تحدد جامعتك')}</strong></div><button type="button" class="secondary" id="change-university">${ic('cap')} تغيير الجامعة</button></div>`
+       : ''}
+      <label>اسم الطالب<input name="name" required maxlength="60" autocomplete="name" placeholder="كيف تحب أن نناديك؟" value="${
       escapeHtml(profile.name)
     }"></label><div class="form-grid"><label>التخصص<select name="major" ${!configured || studentMajors().length ? "required" : ""}>${
       configured
@@ -1482,9 +1504,30 @@ function openSettings() {
           +profile.level === l ? "selected" : ""
         }>المستوى ${l.toLocaleString("en-US")}</option>`
       ).join("")
-    }</select></label></div>${appearanceSettings()}<section class="font-settings"><div><h3>حجم الخط</h3><p>اختر الحجم الأريح لك. يُحفظ اختيارك تلقائيًا.</p></div><div class="font-stepper"><button type="button" id="font-smaller" aria-label="تصغير الخط">−</button><output id="font-size-value" aria-live="polite">${
+    }</select></label></div>
+      <div class="form-error" role="alert"></div>
+      <button class="primary settings-save">${ic('check')} حفظ البيانات</button>
+      <p class="local-note">لا يظهر اسمك مع التقييمات.</p>
+     </section>
+     <section id="settings-display" class="settings-section" aria-labelledby="settings-display-title">
+      <h3 id="settings-display-title" tabindex="-1">تخصيص العرض</h3>
+      <p class="settings-section-note">تُحفظ تفضيلات العرض على هذا الجهاز تلقائيًا.</p>
+      ${appearanceSettings()}<section class="font-settings"><div><h3>حجم الخط</h3><p>اختر الحجم الأريح لك. يُحفظ اختيارك تلقائيًا.</p></div><div class="font-stepper"><button type="button" id="font-smaller" aria-label="تصغير الخط">−</button><output id="font-size-value" aria-live="polite">${
       Math.round(fontScale * 100).toLocaleString("en-US")
-    }٪</output><button type="button" id="font-larger" aria-label="تكبير الخط">+</button></div><div class="font-preview">مِعيار… لاختيارٍ أوضح وتجربةٍ أفضل.</div><button type="button" id="font-reset" class="text-button">استعادة الحجم الافتراضي</button></section><div class="form-error" role="alert"></div>${
+    }٪</output><button type="button" id="font-larger" aria-label="تكبير الخط">+</button></div><div class="font-preview">مِعيار… لاختيارٍ أوضح وتجربةٍ أفضل.</div><button type="button" id="font-reset" class="text-button">استعادة الحجم الافتراضي</button></section>
+      ${displaySettings()}
+     </section>
+     <section id="settings-activity" class="settings-section" aria-labelledby="settings-activity-title">
+      <h3 id="settings-activity-title" tabindex="-1">نشاطك على مِعيار</h3>
+      <div class="settings-shortcuts">
+       <button type="button" class="secondary my-reviews-settings" id="my-reviews-settings">${ic('star')} تقييماتي وطلبات التعديل</button>
+       <button type="button" class="secondary my-reviews-settings" id="my-requests-settings">${ic('bell')} متابعة طلباتي وقرارات الإدارة</button>
+       <button type="button" class="secondary my-reviews-settings" id="install-app">${ic('plus')} تثبيت مِعيار على الجهاز</button>
+      </div>
+     </section>
+     <section id="settings-account" class="settings-section" aria-labelledby="settings-account-title">
+      <h3 id="settings-account-title" tabindex="-1">الحساب والجهاز</h3>
+      ${
       configured
         ? `<div class="cloud-identity">${
           cloudMe
@@ -1492,13 +1535,7 @@ function openSettings() {
             : "تسجيل الدخول اختياري لحفظ ملفك ومتابعة طلباتك."
         }</div>`
         : ""
-    }<button class="primary settings-save">${
-      ic("check")
-    } حفظ الإعدادات</button><p class="local-note">${
-      configured
-        ? (googleSession?"يُحفظ اسمك وتخصصك ومستواك في حسابك؛ المظهر وحجم الخط محفوظان على جهازك. لا يظهر اسمك مع التقييمات.":"يُحفظ تخصصك في جلسة الزائر؛ الاسم والمستوى والمظهر محفوظة على جهازك. لا يظهر اسمك مع التقييمات.")
-        : "تُحفظ إعداداتك على هذا الجهاز. لا يظهر اسمك مع التقييمات."
-    }</p>${
+    }${
       signedOut
         ? ""
         : `<div class="logout-section"><button type="button" id="logout" class="logout-button">${
@@ -1508,8 +1545,22 @@ function openSettings() {
             ? "إنهاء جلسة مِعيار على هذا الجهاز."
             : "الخروج من ملفك المحلي في مِعيار."
         }</small></div>`
-    }${googleSession?'<button type="button" class="text-button danger" id="delete-my-account">حذف حسابي</button>':''}</form>`,
+    }${googleSession?'<button type="button" class="text-button danger" id="delete-my-account">حذف حسابي</button>':''}</section></form>`,
   );
+  const settings=document.querySelector('#settings-form');
+  settings.querySelectorAll('[data-settings-section]').forEach(button=>{
+    button.onclick=()=>{
+      const heading=settings.querySelector('#settings-'+button.dataset.settingsSection+'-title');
+      heading.focus({preventScroll:true});
+      heading.scrollIntoView({block:'start',behavior:'instant'});
+    };
+  });
+  settings.querySelectorAll('[data-display-setting]').forEach(control=>{
+    control.onchange=()=>{
+      cancelHero();
+      setDisplayPreference(control.dataset.displaySetting,control.value);
+    };
+  });
   document.querySelector("#delete-my-account")?.addEventListener("click",openAccountDeletion);
   document.querySelector("#my-requests-settings")?.addEventListener("click", openRequests);
   const accountId = cloudMe?.id;

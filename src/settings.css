@@ -1,0 +1,59 @@
+.modal:has(#settings-form){
+ width:min(100%,780px);
+ padding:clamp(16px,3vw,30px);
+ overscroll-behavior:contain;
+ scrollbar-width:thin;
+ scrollbar-color:var(--line) transparent;
+}
+.modal:has(#settings-form) .modal-heading{margin-bottom:16px;gap:12px}
+.modal:has(#settings-form) .modal-heading h2{margin:0}
+#settings-form{display:grid;gap:14px}
+.settings-section-nav{
+ position:sticky;top:0;z-index:2;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:6px;padding:7px;border:1px solid var(--line);border-radius:16px;background:var(--surface);
+ box-shadow:0 4px 12px #1725230d;
+}
+.settings-section-nav button{
+ display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:6px 4px;
+ background:var(--soft);color:var(--ink);border:1px solid transparent;border-radius:10px;font:inherit;cursor:pointer;
+}
+.settings-section-nav button:hover,.settings-section-nav button:focus-visible{border-color:var(--green);color:var(--green)}
+.settings-section-nav .icon{width:17px;height:17px;flex:none;color:var(--green)}
+#settings-form .settings-section{
+ min-width:0;padding:clamp(14px,3vw,22px);border:1px solid var(--line);
+ border-radius:18px;background:var(--surface);
+}
+#settings-form .settings-section>h3{margin:0 0 12px;scroll-margin-top:66px}
+.settings-section-note{margin:0 0 12px;color:var(--muted)}
+.settings-university{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px;border-radius:12px;background:var(--soft)}
+.settings-university small{display:block;color:var(--muted)}
+.settings-university button{display:flex;align-items:center;gap:7px}
+.settings-university .icon{width:17px;height:17px}
+#settings-form .appearance-settings{margin:14px 0;padding:14px 0;border-block:1px solid var(--line)}
+#settings-form .appearance-settings h3{margin:0 0 8px}
+#settings-form .color-options{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
+#settings-form .color-option{min-width:0}
+#settings-form .font-settings{margin:0 0 14px}
+.settings-display-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#settings-form .settings-display-options label{margin:0;min-width:0}
+.settings-display-options select{display:block;width:100%;margin-top:6px}
+#settings-form .settings-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#settings-form .my-reviews-settings{margin:0;min-height:54px;padding:9px}
+#settings-form .my-reviews-settings .icon{width:18px;height:18px;flex:none}
+#settings-form .cloud-identity{margin:0 0 12px}
+#settings-form .logout-section{margin-top:12px}
+#settings-form .form-error:empty{display:none}
+@media(max-width:580px){
+ .settings-section-nav button{flex-direction:column;font-size:12px;gap:4px}
+ #settings-form .settings-section>h3{scroll-margin-top:75px}
+ #settings-form .settings-shortcuts,.settings-display-options{grid-template-columns:1fr}
+}
+
+:root[data-density=compact] .doctor-card{padding:12px 12px 0}
+:root[data-density=compact] .tt-course-card{min-height:52px;padding:6px 10px}
+:root[data-density=compact] .tt-meeting{padding:8px;gap:4px;margin-bottom:6px}
+:root[data-density=compact] .directory-rows{gap:10px}
+:root[data-cursor=native] .custom-cursor,:root[data-motion=reduced] .custom-cursor{display:none}
+:root[data-motion=reduced] *,
+:root[data-motion=reduced] *::before,
+:root[data-motion=reduced] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
