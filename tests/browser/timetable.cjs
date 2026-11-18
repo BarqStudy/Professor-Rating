@@ -42,6 +42,10 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  assert.notEqual(await planPreview.evaluate(canvas=>canvas.toDataURL()),beforeColor);
  await page.getByRole('button',{name:'الصفحة السابقة'}).click();
  await page.evaluate(()=>document.fonts.ready);
+ const beforeTitle=await planPreview.evaluate(canvas=>canvas.toDataURL());
+ await page.locator('input[name=coverTitle]').fill('خطتي الدراسية');
+ assert.notEqual(await planPreview.evaluate(canvas=>canvas.toDataURL()),beforeTitle);
+ assert.equal(await page.locator('input[name=note]').evaluate(field=>getComputedStyle(field).textAlign),'right');
  const beforeNote=await planPreview.evaluate(canvas=>canvas.toDataURL());
  await page.locator('input[name=note]').fill('خطة سارة الدراسية');
  assert.notEqual(await planPreview.evaluate(canvas=>canvas.toDataURL()),beforeNote);

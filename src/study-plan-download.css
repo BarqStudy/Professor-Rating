@@ -35,6 +35,7 @@
 .study-control-heading small,.study-control-row small{display:block;color:var(--muted);font-size:12px;font-weight:400}
 #study-pdf-customize .study-control-row{display:grid;margin:0;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);min-width:0;text-align:start}
 .study-control-row input:not([type=color]){grid-column:2;width:100%;min-width:0;max-width:100%;margin:0}
+#study-pdf-customize input[name=note]{text-align:right}
 .study-control-row input[type=file]::file-selector-button{border:1px solid var(--line);border-radius:7px;background:var(--soft);color:var(--ink);font:inherit;padding:4px 8px;margin-inline-end:8px;cursor:pointer}
 #study-pdf-customize .study-download-color{grid-template-columns:auto minmax(0,1fr) auto}
 #study-pdf-customize input[type=color]{appearance:none;display:block;width:52px;height:38px;padding:0;cursor:pointer;margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}

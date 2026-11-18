@@ -92,6 +92,10 @@ export function createStudyPlanDownload({timetable,currentPlan,loadPlans,needsMa
       ${badge('book','green')}
       <div><h2>${esc(plan.title||plan.major)}</h2>${plan.university?`<small>${esc(plan.university)}</small>`:''}</div>
      </div>
+     <label class="study-control-row">
+      ${badge('book','green')}<span>عنوان الخطة على الغلاف</span>
+      <input name="coverTitle" maxlength="100" value="${esc(plan.title||plan.major||'')}" dir="auto">
+     </label>
      <label class="study-control-row study-download-color">
       ${badge('sun','rose')}<span>لون القالب</span>
       <input name="color" type="color" value="#df302f">
@@ -119,7 +123,7 @@ export function createStudyPlanDownload({timetable,currentPlan,loadPlans,needsMa
   const form=content.querySelector('#study-pdf-customize'),preview=content.querySelector('canvas');
   const fields=form.elements,button=form.querySelector('button'),message=form.querySelector('[role=alert]');
   let previewIndex=0,logo=null,logoRevision=0,exporting=false;
-  const options=()=>({color:fields.color.value,note:fields.note.value.trim(),logo});
+  const options=()=>({color:fields.color.value,title:fields.coverTitle.value.trim(),note:fields.note.value.trim(),logo});
   function update(){
    button.disabled=exporting;
    preview.closest('figure').hidden=false;
@@ -151,6 +155,7 @@ export function createStudyPlanDownload({timetable,currentPlan,loadPlans,needsMa
   const setLogo=()=>{logoPending=refreshLogo().catch(()=>{message.textContent='تعذّرت قراءة الصورة.';});};
   fields.logo.onchange=()=>{message.textContent='';setLogo();};
   fields.color.oninput=update;
+  fields.coverTitle.oninput=()=>{previewIndex=0;update();};
   fields.note.oninput=update;
   content.querySelectorAll('[data-plan-preview]').forEach(control=>control.onclick=()=>{
    previewIndex+=Number(control.dataset.planPreview);update();

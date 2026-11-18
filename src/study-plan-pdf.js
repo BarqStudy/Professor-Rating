@@ -34,7 +34,7 @@ export function studyPlanPages(plan){
  return pages;
 }
 
-export function drawStudyPlanPage(canvas,plan,pages,index,{color,note,logo}){
+export function drawStudyPlanPage(canvas,plan,pages,index,{color,title:coverTitle,note,logo}){
  const width=1400,height=990;
  canvas.width=width;canvas.height=height;
  const ctx=canvas.getContext('2d');
@@ -63,7 +63,7 @@ export function drawStudyPlanPage(canvas,plan,pages,index,{color,note,logo}){
   box(907,92,304,110,soft,55);
   box(1015,177,88,6,accent,3);
   text('الخطة الدراسية',1059,161,260,39,accentOnWhite,true);
-  const title=plan.title||plan.major||'الخطة الدراسية';
+  const title=coverTitle||plan.title||plan.major||'الخطة الدراسية';
   const words=title.split(/\s+/),lines=[];
   let line='';
   for(const word of words){
