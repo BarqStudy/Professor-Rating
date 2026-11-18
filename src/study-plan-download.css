@@ -35,8 +35,8 @@
 .study-download-controls legend{margin-bottom:10px;font-weight:700}
 .study-download-controls small{color:var(--muted)}
 .study-download-controls .form-error:empty{display:none}
-#study-pdf-upload{display:grid;gap:11px;padding-bottom:16px;border-bottom:1px solid var(--line)}
-#study-pdf-upload input[type=file],#study-pdf-customize input[type=file]{min-width:0;max-width:100%}
+#study-pdf-customize input[type=file]{min-width:0;max-width:100%}
+.study-download-controls h2{margin:0}
 .study-preview-navigation{display:flex;gap:8px;justify-content:space-between;margin-top:12px;flex-wrap:wrap}
 .study-preview-navigation button{font-size:13px}
 .study-download-color{display:flex;flex-direction:row;align-items:center;justify-content:space-between}

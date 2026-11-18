@@ -9,7 +9,7 @@ const fontsReady=()=>Promise.all([
  document.fonts.load('700 43px Thmanyah','الخطة الدراسية'),
 ]);
 
-export function createStudyPlanDownload({timetable,plans,currentPlan,loadPlans,university,extractPlan,icon}){
+export function createStudyPlanDownload({timetable,currentPlan,loadPlans,needsMajor,chooseMajor,icon}){
  let active=null,showSection;
  function page(){
   if(!document.querySelector('.study-desk'))active=null;
@@ -66,33 +66,34 @@ export function createStudyPlanDownload({timetable,plans,currentPlan,loadPlans,u
  }
 
  async function prepare(content){
-  content.innerHTML='<p role="status">جارٍ تحميل الخطط الدراسية…</p>';
-  let catalogueFailed=false;
+  if(needsMajor()){
+   content.innerHTML='<p>اختر تخصصك لعرض خطتك الدراسية.</p><button type="button" class="primary">اختيار التخصص</button>';
+   content.querySelector('button').onclick=chooseMajor;
+   return;
+  }
+  content.innerHTML='<p role="status">جارٍ تحميل الخطة الدراسية…</p>';
   try{await loadPlans();}
-  catch{catalogueFailed=true;}
+  catch{
+   if(!content.isConnected)return;
+   content.innerHTML='<p role="alert">تعذّر تحميل الخطة الدراسية.</p><button type="button" class="secondary">إعادة المحاولة</button>';
+   content.querySelector('button').onclick=()=>prepare(content);
+   return;
+  }
   if(!content.isConnected)return;
-  const available=plans();
-  const selected=currentPlan()?.id;
+  const plan=currentPlan();
+  if(!plan){
+   content.innerHTML='<p role="status">لا توجد خطة معتمدة لتخصصك حاليًا.</p>';
+   return;
+  }
   content.innerHTML=`<div class="study-download-layout">
-   <div class="study-download-controls">
-    <form id="study-pdf-upload">
-     <label>رفع خطة دراسية<input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" required></label>
-     <small>PDF أو صورة حتى ٦ ميجابايت. استخدم ملفًا خاليًا من البيانات الشخصية.</small>
-     <label class="tt-consent"><input type="checkbox" required><span>أوافق على إرسال الملف إلى خدمة الذكاء الاصطناعي لقراءة المقررات.</span></label>
-     <button type="submit" class="secondary">قراءة الخطة المرفوعة</button>
-     <p class="form-error" role="alert"></p>
-    </form>
     <form id="study-pdf-customize" class="study-download-controls">
-     ${catalogueFailed?'<p role="status">تعذّر تحميل خطط المنصة. يمكنك رفع خطتك من هذا القسم.</p>':''}
-     <label>الخطة الدراسية<select name="plan">${available.length?'':'<option value="">ارفع ملف خطة للبدء</option>'}${available.map(plan=>`<option value="${esc(plan.id)}" ${plan.id===selected?'selected':''}>${esc([plan.title||plan.major,plan.fileLabel||plan.version].filter(Boolean).join(' · '))}</option>`).join('')}</select></label>
+     <h2>${esc(plan.title||plan.major)}</h2>
      <label class="study-download-color">لون القالب<input name="color" type="color" value="#df302f"></label>
      <label>شعار الجامعة <small>اختياري عند عدم توفره تلقائيًا</small><input name="logo" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg"></label>
      <label>اسم أو نص على الخطة <small>اختياري</small><input name="note" maxlength="80" placeholder="مثال: خطة سارة الدراسية" dir="auto"></label>
      <button type="submit" class="primary">تحميل الخطة PDF</button>
      <p class="form-error" role="alert"></p>
     </form>
-    <div data-plan-read-notes role="status"></div>
-   </div>
    <figure class="study-download-preview" hidden>
     <figcaption>معاينة الخطة <span data-study-page-count dir="ltr"></span></figcaption>
     <canvas role="img" aria-label="معاينة صفحة من الخطة الدراسية"></canvas>
@@ -104,15 +105,11 @@ export function createStudyPlanDownload({timetable,plans,currentPlan,loadPlans,u
   </div>`;
   const form=content.querySelector('#study-pdf-customize'),preview=content.querySelector('canvas');
   const fields=form.elements,button=form.querySelector('button'),message=form.querySelector('[role=alert]');
-  const upload=content.querySelector('#study-pdf-upload'),uploadButton=upload.querySelector('button');
-  let uploaded=null,previewIndex=0,logo=null,logoRevision=0;
-  const getPlan=()=>fields.plan.value==='uploaded'?uploaded:available.find(plan=>plan.id===fields.plan.value);
+  let previewIndex=0,logo=null,logoRevision=0,exporting=false;
   const options=()=>({color:fields.color.value,note:fields.note.value.trim(),logo});
   function update(){
-   const plan=getPlan();
-   button.disabled=!plan;
-   preview.closest('figure').hidden=!plan;
-   if(!plan)return;
+   button.disabled=exporting;
+   preview.closest('figure').hidden=false;
    const pages=studyPlanPages(plan);
    previewIndex=Math.min(previewIndex,pages.length-1);
    drawStudyPlanPage(preview,plan,pages,previewIndex,options());
@@ -121,7 +118,7 @@ export function createStudyPlanDownload({timetable,plans,currentPlan,loadPlans,u
    content.querySelector('[data-plan-preview="1"]').disabled=previewIndex===pages.length-1;
   }
   async function refreshLogo(){
-   const revision=++logoRevision,plan=getPlan();
+   const revision=++logoRevision;
    const file=fields.logo.files[0];
    let url;
    logo=null;update();
@@ -130,7 +127,7 @@ export function createStudyPlanDownload({timetable,plans,currentPlan,loadPlans,u
      fields.logo.value='';
      message.textContent='اختر شعار PNG أو JPG بحجم لا يتجاوز ٢ ميجابايت.';
     }else if(file)url=URL.createObjectURL(file);
-    const result=plan?await loadPlanLogo(plan.university,url):null;
+    const result=await loadPlanLogo(plan.university,url);
     if(revision===logoRevision&&content.isConnected){
      if(url&&!result)message.textContent='تعذّرت قراءة صورة الشعار.';
      logo=result;update();
@@ -139,43 +136,19 @@ export function createStudyPlanDownload({timetable,plans,currentPlan,loadPlans,u
   }
   let logoPending;
   const setLogo=()=>{logoPending=refreshLogo().catch(()=>{message.textContent='تعذّرت قراءة صورة الشعار.';});};
-  fields.plan.onchange=()=>{previewIndex=0;setLogo();};
   fields.logo.onchange=()=>{message.textContent='';setLogo();};
   fields.color.oninput=update;
   fields.note.oninput=update;
   content.querySelectorAll('[data-plan-preview]').forEach(control=>control.onclick=()=>{
    previewIndex+=Number(control.dataset.planPreview);update();
   });
-  upload.onsubmit=async event=>{
-   event.preventDefault();
-   if(uploadButton.disabled)return;
-   const file=upload.elements.file.files[0],error=upload.querySelector('[role=alert]');
-   error.textContent='';
-   if(!file||file.size>6*1024*1024){error.textContent='ارفع ملفًا بحجم لا يتجاوز ٦ ميجابايت.';return;}
-   uploadButton.disabled=true;uploadButton.textContent='جارٍ قراءة الخطة…';
-   try{
-    const {draft,notes}=await extractPlan(file);
-    if(!content.isConnected)return;
-    if(!draft?.courses?.length)throw new Error('لم تُستخرج مقررات من الملف.');
-    uploaded={...draft,university:university()||currentPlan()?.university};
-    let option=fields.plan.querySelector('[value=uploaded]');
-    if(!option){option=new Option('', 'uploaded');fields.plan.prepend(option);}
-    option.textContent=draft.title||'الخطة المرفوعة';
-    fields.plan.value='uploaded';
-    content.querySelector('[data-plan-read-notes]').textContent=(notes||[]).join(' · ');
-    previewIndex=0;setLogo();
-   }catch(errorResult){error.textContent=errorResult.message||'تعذّرت قراءة الخطة.';}
-   finally{uploadButton.disabled=false;uploadButton.textContent='قراءة الخطة المرفوعة';}
-  };
-  let exporting=false;
   form.onsubmit=async event=>{
    event.preventDefault();
-   const plan=getPlan();
-   if(!plan||exporting)return;
+   if(exporting)return;
    exporting=true;button.disabled=true;message.textContent='';
    try{
     await Promise.all([fontsReady(),logoPending]);
-    if(!content.isConnected||plan!==getPlan())return;
+    if(!content.isConnected)return;
     const pages=studyPlanPages(plan),settings=options();
     const canvases=pages.map((_,index)=>{
      const canvas=document.createElement('canvas');

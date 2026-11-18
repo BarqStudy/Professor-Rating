@@ -27,22 +27,6 @@ test('AI extraction is private, bounded, charges existing quota and leaves plan 
  await assert.rejects(()=>extractTimetable(form(),{id:'guest'},async()=>({}),env,async()=>Response.json({candidates:[{finishReason:'MAX_TOKENS',content:{parts:[]}}]})),/غير مكتملة/);
  let providerCalled=false;await assert.rejects(()=>extractTimetable(form(),{id:'guest'},async()=>{throw new Error('AI_GUEST_LIMIT');},env,async()=>{providerCalled=true;}),/AI_GUEST_LIMIT/);assert.equal(providerCalled,false);
 });
-
-test('student plan uploads keep academic prerequisites and elective groups without schedule fields',async()=>{
- const upload=form();upload.set('mode','plan');
- const result=await extractTimetable(upload,{id:'guest'},async()=>({remaining:9}),env,async(_url,options)=>{
-  const request=JSON.parse(options.body);
-  assert.match(request.systemInstruction.parts[0].text,/تجاهل صفحات الشهادات الاحترافية/);
-  assert.equal(request.generationConfig.responseSchema.properties.courses.items.properties.sessions,undefined);
-  const courses=[{name:'الديناميكا',code:'همك 205',level:4,credits:3,group:null,prerequisites:[' همك 101 ']},
-   {name:'تقنية النانو',code:'همك 382',level:0,credits:2,group:'القسم الأول',prerequisites:[]}];
-  return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({title:'الهندسة الميكانيكية',courses,notes:[]})}]}}]});
- });
- assert.deepEqual(result.draft.courses[0].prerequisites,['همك 101']);
- assert.equal(result.draft.courses[0].sessions,undefined);
- assert.deepEqual(result.draft.groups,[{id:'elective-0',name:'القسم الأول'}]);
- assert.equal(result.draft.courses[1].pool,'elective-0');
-});
 test('student multipart extraction authenticates before reading, retains ordinary body limits and never needs admin privileges',async()=>{
  const token='ab'.repeat(32),guest={id:'33333333-3333-4333-8333-333333333333',status:'active'};let aiCalls=0;
  const handler=createHandler({env,authenticate:async()=>{throw new Error('Should use verified guest');},db:async(name)=>{if(name.startsWith('miyar_guest_sessions?'))return [guest];if(name==='rpc/miyar_reserve_ai')return {remaining:9};throw new Error(name);},aiFetch:async()=>{aiCalls++;return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({...draft,notes:[]})}]}}]});}});

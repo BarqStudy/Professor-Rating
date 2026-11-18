@@ -160,10 +160,9 @@ export async function uploadPlatformFile(file,id){
  const result=await response.json().catch(()=>{throw new Error('تعذّرت قراءة نتيجة الرفع.');});if(!response.ok)throw new Error(result.error||'تعذّر حفظ الملف في R2.');return result;
 }
 
-export async function extractStudentTimetable(file,{plan=false}={}){
+export async function extractStudentTimetable(file){
  await ensureGuestSession();
  const form=new FormData();form.set('file',file);
- if(plan)form.set('mode','plan');
  let response;
  try{response=await fetch(`${projectUrl}/functions/v1/miyar?schedule=extract`,{method:'POST',headers:{apikey:publishableKey,'x-miyar-guest':readGuestToken()},body:form,signal:AbortSignal.timeout(100000)});}
  catch{throw new Error('تعذّر إكمال قراءة الجدول. تحقق من اتصالك أو أعد المحاولة بملف أصغر.');}
