@@ -1,11 +1,30 @@
 .study-desk{max-width:1400px;margin:auto;min-width:0}
-.study-desk-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:26px}
-.study-desk-nav button{display:flex;align-items:center;gap:14px;text-align:start;min-height:92px;padding:16px 20px;border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
-.study-desk-nav button[aria-pressed=true]{background:var(--soft);border-color:var(--green)}
-.study-desk-nav button .icon{width:28px;height:28px;flex:none;color:var(--green)}
-.study-desk-nav strong,.study-desk-nav small{display:block}
-.study-desk-nav strong{font-size:18px}
-.study-desk-nav small{color:var(--muted);line-height:1.55;margin-top:4px}
+.study-desk [hidden]{display:none}
+.study-desk-landing{max-width:800px;margin:clamp(20px,5vw,70px) auto 52px}
+.study-desk-landing h1{margin:0 0 clamp(16px,4vw,32px);font-size:clamp(30px,6vw,58px)}
+.study-desk-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(10px,3vw,24px)}
+.study-desk-choices button{
+ position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:12px;
+ aspect-ratio:1;width:100%;min-width:0;padding:clamp(11px,3vw,26px);text-align:start;font:inherit;
+ border:1px solid var(--line);border-radius:clamp(15px,3vw,28px);background:var(--surface);color:var(--ink);
+ box-shadow:0 12px 28px #152a3910;cursor:pointer;transition:border-color .2s,box-shadow .2s;
+}
+.study-desk-choices button:hover,.study-desk-choices button:focus-visible{border-color:var(--green);box-shadow:0 12px 32px #152a3920}
+.study-desk-card-copy{display:grid;gap:5px;padding-inline-end:32px}
+.study-desk-card-copy strong{font-size:clamp(15px,3.2vw,32px);line-height:1.2}
+.study-desk-card-copy small{color:var(--muted);font-size:clamp(10px,1.65vw,16px);line-height:1.4}
+.study-desk-arrow{position:absolute;inset-inline-end:clamp(8px,2.5vw,24px);bottom:clamp(10px,3vw,25px);display:grid;place-items:center;width:clamp(23px,4vw,44px);aspect-ratio:1;border:1px solid var(--line);border-radius:50%;color:var(--green)}
+.study-desk-arrow .icon{width:55%;height:55%;transform:rotate(180deg)}
+.study-desk-art{position:relative;display:grid;place-content:center;align-content:center;row-gap:7%;width:100%;flex:1;min-height:0;overflow:hidden;border-radius:clamp(10px,2vw,18px)}
+.study-desk-art-plan{background:#deefe7;grid-template-columns:38%}
+.study-desk-art-plan::before{content:'';position:absolute;inset:10% 26%;border-radius:9px;background:#fafffc;box-shadow:7px 7px #a7cdbb}
+.study-desk-art-plan i{z-index:1;display:block;height:5px;border-radius:8px;background:#9ccab6}
+.study-desk-art-plan i:first-child{width:65%;height:9px;background:#478773}
+.study-desk-art-schedule{background:#e1eaf8}
+.study-desk-art-schedule::before{content:'';position:absolute;inset:16% 14%;border-radius:10px;border-top:12px solid #7c98c3;background:repeating-linear-gradient(to right,#0000 0 calc(25% - 1px),#dae4f3 calc(25% - 1px) 25%),repeating-linear-gradient(to bottom,#f8fbff 0 calc(33% - 1px),#dae4f3 calc(33% - 1px) 33%);box-shadow:0 6px 14px #344e7820}
+.study-desk-art-schedule i{position:absolute;width:16%;height:9%;border-radius:4px;background:#93a9d3;top:42%;inset-inline-start:20%}
+.study-desk-art-schedule i:nth-child(2){top:61%;inset-inline-start:39%;background:#83b5a6}
+.study-desk-art-schedule i:nth-child(3){top:42%;inset-inline-start:63%;background:#d5a979}
 .study-desk-download{padding:clamp(16px,3vw,30px);border-radius:20px}
 .study-desk-download h1{margin:0 0 20px}
 .study-download-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,4vw,42px);align-items:start}
@@ -33,10 +52,8 @@
 .study-download-preview figcaption{display:flex;justify-content:space-between;color:var(--muted);margin-bottom:10px}
 .study-download-preview canvas{display:block;max-width:370px;width:100%;height:auto;margin:auto;background:#fff;box-shadow:0 7px 20px #17252322}
 @media(max-width:680px){
- .study-desk-nav{gap:8px;margin-bottom:16px}
- .study-desk-nav button{min-height:72px;padding:10px;gap:8px}
- .study-desk-nav button .icon{width:20px;height:20px}
- .study-desk-nav strong{font-size:14px}
- .study-desk-nav small{display:none}
+ .study-desk-choices button{min-height:150px}
+ .study-desk-card-copy{padding-inline-end:0}
+ .study-desk-arrow{top:17px;bottom:auto;background:var(--surface)}
  .study-download-layout{grid-template-columns:1fr}
 }

@@ -9,17 +9,25 @@ const fontsReady=()=>Promise.all([
 ]);
 
 export function createStudyPlanDownload({timetable,plans,currentPlan,loadPlans,icon}){
- let active='schedule';
+ let active=null,showSection;
  function page(){
+  if(!document.querySelector('.study-desk'))active=null;
   return `<div class="study-desk">
-   <nav class="study-desk-nav" aria-label="أقسام جدولي">
-    <button type="button" data-study-desk="schedule" aria-pressed="${active==='schedule'}" aria-controls="study-desk-schedule">
-     ${icon('calendar')}<span><strong>الجدول الدراسي</strong><small>رتّب موادك ومواعيدك الأسبوعية</small></span>
-    </button>
-    <button type="button" data-study-desk="download" aria-pressed="${active==='download'}" aria-controls="study-desk-download">
-     ${icon('book')}<span><strong>تحميل الخطة الدراسية</strong><small>خصّص قالب خطتك ونزّلها PDF</small></span>
-    </button>
-   </nav>
+   <section class="study-desk-landing" aria-labelledby="study-desk-title" ${active?'hidden':''}>
+    <h1 id="study-desk-title" tabindex="-1">جدولي</h1>
+    <div class="study-desk-choices">
+     <button type="button" data-study-desk="download" aria-controls="study-desk-download">
+      <span class="study-desk-art study-desk-art-plan" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="study-desk-card-copy"><strong>الخطة الدراسية</strong><small>خصّص قالب خطتك ونزّلها PDF</small></span>
+      <span class="study-desk-arrow" aria-hidden="true">${icon('arrow')}</span>
+     </button>
+     <button type="button" data-study-desk="schedule" aria-controls="study-desk-schedule">
+      <span class="study-desk-art study-desk-art-schedule" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="study-desk-card-copy"><strong>الجدول الدراسي</strong><small>رتّب موادك ومواعيدك الأسبوعية</small></span>
+      <span class="study-desk-arrow" aria-hidden="true">${icon('arrow')}</span>
+     </button>
+    </div>
+   </section>
    <div id="study-desk-schedule" ${active==='schedule'?'':'hidden'}>${timetable.page()}</div>
    <section id="study-desk-download" class="panel study-desk-download" aria-labelledby="study-download-title" ${active==='download'?'':'hidden'}>
     <h1 id="study-download-title">تحميل الخطة الدراسية</h1>
@@ -29,18 +37,31 @@ export function createStudyPlanDownload({timetable,plans,currentPlan,loadPlans,i
  }
  function bind(){
   timetable.bind();
-  const root=document.querySelector('.study-desk');
+  const root=document.querySelector('.study-desk'),landing=root.querySelector('.study-desk-landing');
   const schedule=root.querySelector('#study-desk-schedule'),download=root.querySelector('#study-desk-download');
   let loaded=false;
-  function show(section){
+  showSection=(section,moveFocus=false)=>{
+   const previous=active;
    active=section;
-   root.querySelectorAll('[data-study-desk]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.studyDesk===section)));
+   landing.hidden=Boolean(section);
    schedule.hidden=section!=='schedule';
    download.hidden=section!=='download';
+   const backButton=document.querySelector('#page-close');
+   backButton?.setAttribute('aria-label',section?'رجوع إلى أقسام جدولي':'رجوع');
    if(section==='download'&&!loaded){loaded=true;void prepare(download.querySelector('[data-study-download-content]'));}
-  }
-  root.querySelectorAll('[data-study-desk]').forEach(button=>button.onclick=()=>show(button.dataset.studyDesk));
-  show(active);
+   if(moveFocus){
+    const heading=section?(section==='schedule'?schedule:download).querySelector('h1'):landing.querySelector(`[data-study-desk="${previous}"]`);
+    if(heading){if(section)heading.tabIndex=-1;heading.focus();}
+    window.scrollTo({top:0});
+   }
+  };
+  root.querySelectorAll('[data-study-desk]').forEach(button=>button.onclick=()=>showSection(button.dataset.studyDesk,true));
+  showSection(active);
+ }
+ function back(){
+  if(!active)return false;
+  showSection(null,true);
+  return true;
  }
 
  async function prepare(content){
@@ -107,5 +128,5 @@ export function createStudyPlanDownload({timetable,plans,currentPlan,loadPlans,i
   void fontsReady().then(()=>{if(content.isConnected)update();}).catch(()=>{});
  }
 
- return {page,bind};
+ return {page,bind,back};
 }

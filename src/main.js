@@ -1194,7 +1194,9 @@ function bind() {
     "click",
     openSettings,
   );
-  document.querySelector("#page-close")?.addEventListener("click",previousPage);
+  document.querySelector("#page-close")?.addEventListener("click",()=>{
+    if (page !== "timetable" || !studyDesk.back()) previousPage();
+  });
   document.querySelector(".brand").onclick = (e) => {
     e.preventDefault();
     setPage("home");
