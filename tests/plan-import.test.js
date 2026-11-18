@@ -67,6 +67,9 @@ test('native PDF extraction uses the existing private Gemini configuration, retu
  assert.equal(f.modelCalls.length,1);const request=JSON.parse(f.modelCalls[0].body);assert.equal(request.contents[0].parts[1].inlineData.mimeType,'application/pdf');
  assert.equal(request.contents[0].parts[1].inlineData.data,bytes.toString('base64'));
  assert.ok(request.systemInstruction.parts[0].text.includes('لا تترجم'));assert.equal(request.tools,undefined);
+ assert.match(request.systemInstruction.parts[0].text,/طبقة النص فارغة.*من اليمين إلى اليسار/);
+ assert.match(request.systemInstruction.parts[0].text,/«2-طفل-101» يعني ساعتين ورمز «طفل-101»/);
+ assert.match(request.systemInstruction.parts[0].text,/طابق عدد المقررات مع عدد الخلايا المأهولة/);
  assert.ok(!JSON.stringify(result).includes('private-test-key'));assert.equal(f.calls.some(c=>c.path==='rpc/miyar_publish_study_plan'),false);
  assert.equal(f.calls.filter(c=>c.path==='rpc/miyar_reserve_plan_import').length,1);
  f.setFinish('MAX_TOKENS');assert.equal((await f.handle(f.upload())).status,503);f.setFinish('STOP');f.setStatus(429);assert.equal((await f.handle(f.upload())).status,429);
@@ -93,6 +96,7 @@ test('OpenAI receives native image/PDF data privately and incomplete responses a
   const form=new FormData();form.set('majorId','1');form.set('fileLabel','خطة جديدة');form.set('file',new Blob([bytes],{type:mime}),'plan');
   const result=await extractStudyPlan(form,admin,db,env,fetcher);assert.equal(result.draft.courses.length,2);
   const body=JSON.parse(calls.at(-1).body);assert.equal(body.store,false);assert.equal(body.text.format.strict,true);assert.equal(body.tools,undefined);
+  assert.match(body.instructions,/الصفر المنفصل فوق السطر ليس الساعات/);
   const file=body.input[0].content[1];assert.equal(file.type,mime==='application/pdf'?'input_file':'input_image');assert.ok((file.file_data||file.image_url).startsWith('data:'+mime+';base64,'));
   status='incomplete';await assert.rejects(extractStudyPlan(form,admin,db,env,fetcher),/لم تكتمل/);status='completed';
  }
