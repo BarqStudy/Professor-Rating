@@ -244,6 +244,7 @@ let activeCollege = "كلية الهندسة";
 const timetable = createTimetable({ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest:'+(guestProfile?.id||'local'),extract:extractStudentTimetable,createShare:shareStudentTimetable,loadShare:token=>api('timetable.get',{token}),plan:()=>studyPlanner.current()});
 const studyDesk=createStudyPlanDownload({
   timetable,plans:studyPlanner.available,currentPlan:studyPlanner.current,icon:ic,
+  university:()=>selectedUniversity()?.name,extractPlan:file=>extractStudentTimetable(file,{plan:true}),
   loadPlans:()=>configured&&!cloudPlansReady?refreshCloudStudyPlans():Promise.resolve(),
 });
 const pageNames = ["timetable", "home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "advisor", "universities"];

@@ -1,94 +1,125 @@
-const pageCapacity=16;
-export const planThemes=[
- {id:'classic',name:'أكاديمي'},
- {id:'cards',name:'بطاقات'},
- {id:'minimal',name:'بسيط'},
-];
+const rowsPerPage=9;
 
 export function studyPlanPages(plan){
- const groups=new Map();
+ const levels=new Map(),electives=new Map();
  for(const course of plan.courses){
-  const heading=course.level>0?`المستوى ${course.level}`:
-   plan.groups?.find(group=>group.id===course.pool)?.name||'المقررات الاختيارية';
-  const key=course.level>0?course.level:heading;
-  if(!groups.has(key))groups.set(key,{heading,courses:[]});
-  groups.get(key).courses.push(course);
+  const grouped=course.level===0;
+  const key=grouped
+   ? course.pool||'electives'
+   : Number.isInteger(course.level)?course.level:null;
+  const sections=grouped?electives:levels;
+  if(!sections.has(key))sections.set(key,[]);
+  sections.get(key).push(course);
  }
- const pages=[];
- let sections=[],remaining=pageCapacity;
- const ordered=[...groups].sort(([a],[b])=>(typeof a==='number'?a:Infinity)-(typeof b==='number'?b:Infinity));
- for(const [,group] of ordered){
-  for(let offset=0;offset<group.courses.length;){
-   if(remaining<2){pages.push(sections);sections=[];remaining=pageCapacity;}
-   const courses=group.courses.slice(offset,offset+remaining-1);
-   sections.push({heading:offset?group.heading+' · تابع':group.heading,courses});
-   offset+=courses.length;
-   remaining-=courses.length+1;
+ const pages=[{type:'cover'}];
+ const add=(heading,courses)=>{
+  const credits=courses.every(course=>Number.isFinite(course.credits))
+   ?courses.reduce((sum,course)=>sum+course.credits,0):null;
+  const contactHours=courses.every(course=>Number.isFinite(course.contactHours))
+   ?courses.reduce((sum,course)=>sum+course.contactHours,0):null;
+  for(let offset=0;offset<courses.length;offset+=rowsPerPage){
+   pages.push({type:'table',heading:offset?heading+' · تابع':heading,credits,contactHours,total:courses.length,courses:courses.slice(offset,offset+rowsPerPage)});
+  }
+ };
+ for(const [level,courses] of [...levels].sort(([a],[b])=>(a??Infinity)-(b??Infinity))){
+  add(level==null?'مقررات دون مستوى محدد':`المستوى ${level}`,courses);
+ }
+ if(electives.size){
+  pages.push({type:'divider'});
+  for(const [pool,courses] of electives){
+   add(plan.groups?.find(group=>group.id===pool)?.name||'المقررات الاختيارية',courses);
   }
  }
- if(sections.length)pages.push(sections);
  return pages;
 }
 
-export function drawStudyPlanPage(canvas,plan,pages,index,{theme,color,note}){
- const width=1000,height=1414,right=932,left=68;
+export function drawStudyPlanPage(canvas,plan,pages,index,{color,note,logo}){
+ const width=1400,height=990;
  canvas.width=width;canvas.height=height;
  const ctx=canvas.getContext('2d');
- const darkColor='#'+color.slice(1).match(/../g).map(value=>Math.round(parseInt(value,16)*.45).toString(16).padStart(2,'0')).join('');
- const ink='#182432',muted='#445466',light=color+'16';
+ const accent=color;
+ const rgb=color.slice(1).match(/../g).map(value=>parseInt(value,16)/255);
+ const luminance=rgb.map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4)
+  .reduce((sum,value,index)=>sum+value*[.2126,.7152,.0722][index],0);
+ const accentText=luminance>.179?'#000':'#fff';
+ const accentOnWhite=luminance>.179?'#202020':accent;
+ const ink='#202020',muted='#4c535e',soft='#f2f4f6';
  function box(x,y,w,h,fill,radius=0){
-  ctx.fillStyle=fill;
-  ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.fill();
+  ctx.fillStyle=fill;ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.fill();
  }
- function text(value,x,y,maxWidth,size,fill=ink,bold=false,direction='rtl',align='right'){
+ function text(value,x,y,maxWidth,size,fill=ink,bold=false,direction='rtl'){
   ctx.font=`${bold?'700':'400'} ${size}px Thmanyah, Arial, sans-serif`;
-  ctx.fillStyle=fill;ctx.direction=direction;ctx.textAlign=align;
+  ctx.fillStyle=fill;ctx.direction=direction;ctx.textAlign='center';
   ctx.fillText(String(value),x,y,maxWidth);
  }
- box(0,0,width,height,'#ffffff');
- const classic=theme==='classic',cards=theme==='cards';
- box(0,0,width,12,color);
- if(classic)box(left,42,right-left,173,darkColor,12);
- if(cards)box(left,42,right-left,173,light,26);
- const titleColor=classic?'#ffffff':ink,subColor=classic?'#ffffff':muted;
- text(plan.title||plan.major,right-24,105,810,43,titleColor,true);
- text([plan.university,plan.college,plan.fileLabel||plan.version].filter(Boolean).join(' · '),right-24,150,810,22,subColor);
- if(note){
-  box(left+20,166,right-left-40,36,classic?'#ffffff20':light,6);
-  text(note,right-32,191,790,25,titleColor,true);
+ box(0,0,width,height,'#edf0f5');
+ ctx.save();ctx.shadowColor='#1f427127';ctx.shadowBlur=26;
+ box(30,29,1340,932,'#fff',54);ctx.restore();
+ const page=pages[index];
+ if(page.type==='cover'){
+  box(76,150,690,690,soft,78);
+  box(796,150,526,690,ink,78);
+  box(907,92,304,110,soft,55);
+  box(1015,177,88,6,accent,3);
+  text('الخطة الدراسية',1059,161,260,39,accentOnWhite,true);
+  const title=plan.title||plan.major||'الخطة الدراسية';
+  const words=title.split(/\s+/),lines=[];
+  let line='';
+  for(const word of words){
+   if(line&&line.length+word.length>22){lines.push(line);line=word;}
+   else line+=(line?' ':'')+word;
+  }
+  if(line)lines.push(line);
+  const titleLines=lines.length>4?[...lines.slice(0,3),lines.slice(3).join(' ')]:lines;
+  titleLines.forEach((part,i)=>text(part,1059,414+(i-(titleLines.length-1)/2)*62,444,58,'#fff',true));
+  const version=plan.fileLabel||plan.version||plan.year;
+  if(version){box(901,600,316,65,accent,32);text(version,1059,644,285,31,accentText,true);}
+  if(note){box(831,710,456,60,'#ffffff20',18);text(note,1059,749,413,28,'#fff');}
+  if(logo){
+   const scale=Math.min(440/logo.width,420/logo.height);
+   const w=logo.width*scale,h=logo.height*scale;
+   ctx.drawImage(logo,421-w/2,460-h/2,w,h);
+  }
+  text(plan.university||'الجامعة',421,739,615,47,ink,true);
+  if(plan.college)text(plan.college,421,790,605,28,muted);
+  return;
  }
- if(!classic&&!cards)box(left,213,right-left,3,color);
-
- text('المقرر',right-18,258,480,19,muted,true);
- text('الرمز',left+288,258,130,19,muted,true);
- text('الساعات',left+97,258,90,19,muted,true);
- let y=282;
- for(const section of pages[index]){
-  if(classic)box(left,y,right-left,47,darkColor,5);
-  else if(cards)box(left,y,right-left,47,light,14);
-  else box(right-5,y,5,42,color);
-  text(section.heading,right-18,y+31,800,24,classic?'#ffffff':darkColor,true);
-  y+=61;
-  section.courses.forEach((course,row)=>{
-   if(cards)box(left,y-3,right-left,51,'#f5f7fa',12);
-   else if(classic&&row%2===0)box(left,y-3,right-left,51,'#f5f7fa',4);
-   else box(left,y+50,right-left,1,'#e3e8ed');
+ if(page.type==='divider'){
+  box(472,372,456,8,accent,4);
+  text('المقررات الاختيارية',700,512,1060,76,ink,true);
+  text('Elective courses',700,587,900,52,accentOnWhite,true,'ltr');
+ }else{
+  const columns=[
+   {x:1076,w:241,label:'رمز المقرر'},
+   {x:612,w:450,label:'اسم المقرر'},
+   {x:466,w:132,label:'الساعات'},
+   {x:82,w:370,label:'المتطلبات السابقة'},
+  ];
+  [
+   {x:921,w:396,label:page.heading,fill:accent},
+   {x:501,w:396,label:`الساعات المعتمدة: ${page.credits??'—'}`,fill:ink},
+   {x:82,w:395,label:page.contactHours==null?`عدد المقررات: ${page.total}`:`الساعات الفعلية: ${page.contactHours}`,fill:ink},
+  ].forEach(({x,w,label,fill})=>{box(x,87,w,79,fill,22);text(label,x+w/2,136,w-26,34,x===921?accentText:'#fff',true);});
+  for(const {x,w,label} of columns){
+   box(x,193,w,66,label==='الساعات'?accent:ink,20);
+   text(label,x+w/2,236,w-20,29,label==='الساعات'?accentText:'#fff',true);
+  }
+  page.courses.forEach((course,row)=>{
+   const y=279+row*69;
    const requirements=[
-    course.prerequisites?.length?'سابق: '+course.prerequisites.join('، '):'',
-    course.corequisites?.length?'متزامن: '+course.corequisites.join('، '):'',
-    course.anyPrerequisites?.length?'أحد المتطلبات: '+course.anyPrerequisites.join('، '):'',
+    course.prerequisites?.join(' + '),
+    course.corequisites?.length?'متزامن: '+course.corequisites.join(' + '):'',
+    course.anyPrerequisites?.length?'أحدها: '+course.anyPrerequisites.join(' / '):'',
     course.minimumCredits?'بعد إكمال '+course.minimumCredits+' ساعة':'',
-    course.completedLevel?'بعد اجتياز المستوى '+course.completedLevel:'',
-    course.allPrevious?'بعد إكمال المقررات السابقة':'',
+    course.completedLevel?'بعد المستوى '+course.completedLevel:'',
+    course.allPrevious?'جميع المقررات السابقة':'',
    ].filter(Boolean).join(' · ');
-   text(course.name,right-18,y+(requirements?21:30),535,24,ink,true);
-   if(requirements)text(requirements,right-18,y+43,535,14,muted);
-   text(course.code||'—',left+288,y+30,156,20,muted);
-   text(course.credits??'—',left+97,y+30,80,20,ink);
-   y+=61;
+   const values=[course.code||'—',course.name,course.credits??'—',requirements||'—'];
+   columns.forEach(({x,w},i)=>{
+    box(x,y,w,59,soft,18);text(values[i],x+w/2,y+39,w-22,i===3?23:29,ink,true);
+   });
   });
  }
- box(left,height-72,right-left,1,'#dce3e9');
- text('مِعيار · miyar.website',right,height-40,450,19,muted);
- text(`${index+1} / ${pages.length}`,left,height-40,180,19,muted,false,'ltr','left');
+ box(78,918,57,49,ink,9);
+ text(index,107,952,45,27,'#fff',true);
 }

@@ -6,7 +6,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  await context.addInitScript(id=>{const expires=Math.floor(Date.now()/1000)+3600;localStorage.setItem('sb-bbnsorjxgehvoddluvyo-auth-token',JSON.stringify({access_token:'header.'+btoa(JSON.stringify({sub:id,exp:expires}))+'.mock',refresh_token:'mock',expires_at:expires,expires_in:3600,token_type:'bearer',user:{id,aud:'authenticated',role:'authenticated',email:'test@example.test',app_metadata:{provider:'google',providers:['google']},user_metadata:{full_name:'طالب'},identities:[]}}));},id);
  page.on('pageerror',e=>errors.push(e.message));
  const courses=[{name:'استاتيكا',code:'CE 211',level:3,credits:3,sessions:[{day:0,start:'08:00',end:'09:00',room:'A1',teacher:'أحمد'}]},{name:'رياضيات',code:'MATH 1',level:3,credits:3,sessions:[{day:0,start:'08:30',end:'10:00',room:'B2',teacher:''}]},{name:'<img src=x onerror=alert(1)>',code:'NEW',level:4,credits:2,sessions:[]}];
- await page.route('https://bbnsorjxgehvoddluvyo.supabase.co/**',async route=>{const req=route.request();if(req.url().includes('?schedule=share')){if(failShare){failShare=false;return route.fulfill({status:503,json:{error:'تعذّر إنشاء رابط المعاينة. أعد المحاولة.'}});}const token=String(sharedSnapshots.size+1).padStart(12,'a');sharedSnapshots.set(token,req.postDataJSON().schedule);return route.fulfill({json:{token}});}if(req.url().includes('?schedule=extract')){extractions++;assert.match(req.headers()['content-type'],/multipart/);assert.equal(req.headers()['x-miyar-guest'],'ab'.repeat(32));return route.fulfill({json:{draft:{title:'جدول الفصل',courses},notes:['الخطة لا تتضمن موعد المادة الثالثة.']}});}const body=req.postDataJSON()||{};let result={ok:true};if(body.action==='catalogue')result={universities:[{id:3,name:'جامعة نجران',enabled:true}],colleges:[{id:1,name:'كلية الهندسة',university_id:3}],majors:[{id:1,name:'الهندسة المدنية',college_id:1}],doctors:[],stats:{doctors:0,reviews:0}};if(body.action==='me')result={id,name:'طالب',status:'active',university_id:3,major_id:1,level:3,isAdmin:false};if(['guest.start','guest.me'].includes(body.action))result={id:'33333333-3333-4333-8333-333333333333',status:'active',university_id:3,...(body.action==='guest.start'?{token:'ab'.repeat(32)}:{})};if(['study.plans','request.updates','requests','notifications'].includes(body.action))result=[];if(body.action==='ai.status')result={enabled:true};if(body.action==='guest.presence')result={online:1};await route.fulfill({json:result});});
+ await page.route('https://bbnsorjxgehvoddluvyo.supabase.co/**',async route=>{const req=route.request();if(req.url().includes('?schedule=share')){if(failShare){failShare=false;return route.fulfill({status:503,json:{error:'تعذّر إنشاء رابط المعاينة. أعد المحاولة.'}});}const token=String(sharedSnapshots.size+1).padStart(12,'a');sharedSnapshots.set(token,req.postDataJSON().schedule);return route.fulfill({json:{token}});}if(req.url().includes('?schedule=extract')){if(req.postDataBuffer().includes(Buffer.from('name="mode"')))return route.fulfill({json:{draft:{title:'الهندسة الميكانيكية',courses:[{name:'الديناميكا',code:'همك 205',level:4,credits:3,prerequisites:['همك 101']},{name:'تقنية النانو',code:'همك 382',level:0,credits:2,pool:'elective-0',prerequisites:[]}],groups:[{id:'elective-0',name:'القسم الأول'}]},notes:[]}});extractions++;assert.match(req.headers()['content-type'],/multipart/);assert.equal(req.headers()['x-miyar-guest'],'ab'.repeat(32));return route.fulfill({json:{draft:{title:'جدول الفصل',courses},notes:['الخطة لا تتضمن موعد المادة الثالثة.']}});}const body=req.postDataJSON()||{};let result={ok:true};if(body.action==='catalogue')result={universities:[{id:3,name:'جامعة نجران',enabled:true}],colleges:[{id:1,name:'كلية الهندسة',university_id:3}],majors:[{id:1,name:'الهندسة المدنية',college_id:1}],doctors:[],stats:{doctors:0,reviews:0}};if(body.action==='me')result={id,name:'طالب',status:'active',university_id:3,major_id:1,level:3,isAdmin:false};if(['guest.start','guest.me'].includes(body.action))result={id:'33333333-3333-4333-8333-333333333333',status:'active',university_id:3,...(body.action==='guest.start'?{token:'ab'.repeat(32)}:{})};if(['study.plans','request.updates','requests','notifications'].includes(body.action))result=[];if(body.action==='ai.status')result={enabled:true};if(body.action==='guest.presence')result={online:1};await route.fulfill({json:result});});
  const url=`http://127.0.0.1:${server.address().port}/Professor-Rating/`;
  await page.goto(url+'#plan');await page.locator('.action-card[data-page="timetable"]').waitFor();
  assert.equal(await page.locator('[data-page="plan"],a[href="#plan"],.study-page').count(),0,'retired plan route opens home without plan links');
@@ -33,9 +33,17 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  await page.locator('[data-study-desk="download"]').click();
  const planPreview=page.locator('.study-download-preview canvas');
  await planPreview.waitFor();
- await page.getByText('بطاقات',{exact:true}).click();
+ const planUpload=page.locator('#study-pdf-upload');
+ await planUpload.locator('input[type=file]').setInputFiles(process.env.MIYAR_TEST_PLAN_PDF||{name:'mechanical.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.7 test')});
+ await planUpload.locator('input[type=checkbox]').check();
+ await planUpload.getByRole('button',{name:'قراءة الخطة المرفوعة'}).click();
+ await page.locator('select[name=plan] option[value=uploaded]').waitFor({state:'attached'});
+ await page.waitForFunction(()=>document.querySelector('select[name=plan]').value==='uploaded');
+ await page.getByRole('button',{name:'الصفحة التالية'}).click();
+ const beforeColor=await planPreview.evaluate(canvas=>canvas.toDataURL());
  await page.locator('input[name=color]').fill('#a81c58');
- assert.deepEqual(await planPreview.evaluate(canvas=>Array.from(canvas.getContext('2d').getImageData(5,5,1,1).data)),[168,28,88,255]);
+ assert.notEqual(await planPreview.evaluate(canvas=>canvas.toDataURL()),beforeColor);
+ await page.getByRole('button',{name:'الصفحة السابقة'}).click();
  await page.evaluate(()=>document.fonts.ready);
  const beforeNote=await planPreview.evaluate(canvas=>canvas.toDataURL());
  await page.locator('input[name=note]').fill('خطة سارة الدراسية');
@@ -44,7 +52,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  assert.equal(planFile.suggestedFilename(),'miyar-study-plan.pdf');
  const planPdf=fs.readFileSync(await planFile.path()).toString('latin1');
  assert.match(planPdf,/\/Count [2-9]/);
- assert.match(planPdf,/MediaBox \[0 0 595 842\]/);
+ assert.match(planPdf,/MediaBox \[0 0 842 595\]/);
  await page.getByRole('button',{name:'رجوع إلى أقسام جدولي'}).click();
  await page.locator('[data-study-desk="schedule"]').click();
  assert.equal(await page.locator('.tt-meeting').count(),3);
