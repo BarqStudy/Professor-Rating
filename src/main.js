@@ -1,4 +1,5 @@
 import {createTimetable} from './timetable.js';
+import {createStudyPlanDownload} from './study-plan-download.js';
 import {extractStudentTimetable} from './cloud.js';
 import {isNative,nativePlatform,setupNative,shareNativeLink,shareNativeCard,publicDoctorUrl} from './native.js';
 import {reviewDate} from './review-date.js';
@@ -241,6 +242,10 @@ let majorColleges = configured ? {} : readJSON("athar-major-colleges", {});
 for (const m of majors) majorColleges[m] ??= "كلية الهندسة";
 let activeCollege = "كلية الهندسة";
 const timetable = createTimetable({ownerKey:()=>googleSession?'member:'+googleSession.user.id:'guest:'+(guestProfile?.id||'local'),extract:extractStudentTimetable,createShare:shareStudentTimetable,loadShare:token=>api('timetable.get',{token}),plan:()=>studyPlanner.current()});
+const studyDesk=createStudyPlanDownload({
+  timetable,plans:studyPlanner.available,currentPlan:studyPlanner.current,icon:ic,
+  loadPlans:()=>configured&&!cloudPlansReady?refreshCloudStudyPlans():Promise.resolve(),
+});
 const pageNames = ["timetable", "home", "ratings", "review", "saved", "requests", "developer", "admin", "ambassador", "assistant", "advisor", "universities"];
 let page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home", query = "", activeMajor = "الكل", savedOnly = false;
 let collegeSelected = false;
@@ -408,7 +413,7 @@ function renderPage() {
         : page === "advisor"
         ? studyContent()
         : page === "timetable"
-        ? timetable.page()
+        ? studyDesk.page()
         : page === "assistant"
         ? miyarAssistant.page()
         : developer()
@@ -416,7 +421,7 @@ function renderPage() {
   bind();
   stopStatCounters = animateStats(document.querySelector('.stats'));
   if (page === 'assistant') miyarAssistant.bind();
-  if (page === 'timetable') timetable.bind();
+  if (page === 'timetable') studyDesk.bind();
   if (page === 'advisor') courseAdvisor.bind();
   if (page === 'home') bindHomeCourseCard();
   if (page === 'admin' && cloudMe?.isAdmin && !cloudQueue && !cloudQueueLoading) loadCloudQueue();

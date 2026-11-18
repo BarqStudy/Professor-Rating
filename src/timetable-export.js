@@ -47,16 +47,40 @@ export async function timetableCanvas(input){
  return canvas;
 }
 export function timetablePdf(canvas){
- const raw=atob(canvas.toDataURL('image/jpeg',.94).split(',')[1]),jpeg=Uint8Array.from(raw,c=>c.charCodeAt(0));
- const W=842,H=595,scale=Math.min((W-24)/canvas.width,(H-24)/canvas.height),w=canvas.width*scale,h=canvas.height*scale,x=(W-w)/2,y=(H-h)/2;
- const stream=`q ${w} 0 0 ${h} ${x} ${y} cm /Im0 Do Q`,chunks=[bytes('%PDF-1.4\n')],offsets=[0];let size=chunks[0].length;
- const append=b=>{chunks.push(b);size+=b.length;};
- const obj=(id,body,blob)=>{offsets[id]=size;append(bytes(`${id} 0 obj\n${body}`));if(blob){append(bytes('\nstream\n'));append(blob);append(bytes('\nendstream'));}append(bytes('\nendobj\n'));};
- obj(1,'<< /Type /Catalog /Pages 2 0 R >>');obj(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
- obj(3,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R /Annots [6 0 R] >>`);
- obj(4,`<< /Length ${bytes(stream).length} >>`,bytes(stream));obj(5,`<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>`,jpeg);
- obj(6,`<< /Type /Annot /Subtype /Link /Rect [${x} ${y} ${x+w} ${y+55*scale}] /Border [0 0 0] /A << /S /URI /URI (https://miyar.website/) >> >>`);
- const cross=size;append(bytes('xref\n0 7\n0000000000 65535 f \n'+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n${cross}\n%%EOF`));
+ return canvasPdf([canvas],{width:842,height:595,link:true});
+}
+export function canvasPdf(canvases,{width=595,height=842,link=false}={}){
+ const chunks=[bytes('%PDF-1.4\n')],offsets=[0];
+ let size=chunks[0].length;
+ const append=chunk=>{chunks.push(chunk);size+=chunk.length;};
+ const obj=(id,body,data)=>{
+  offsets[id]=size;
+  append(bytes(`${id} 0 obj\n${body}`));
+  if(data){append(bytes('\nstream\n'));append(data);append(bytes('\nendstream'));}
+  append(bytes('\nendobj\n'));
+ };
+ const stride=link?4:3;
+ const pageIds=canvases.map((_,index)=>3+index*stride);
+ obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+ obj(2,`<< /Type /Pages /Kids [${pageIds.map(id=>id+' 0 R').join(' ')}] /Count ${canvases.length} >>`);
+ canvases.forEach((canvas,index)=>{
+  const id=pageIds[index],raw=atob(canvas.toDataURL('image/jpeg',.94).split(',')[1]);
+  const jpeg=Uint8Array.from(raw,char=>char.charCodeAt(0));
+  const scale=Math.min((width-24)/canvas.width,(height-24)/canvas.height);
+  const w=canvas.width*scale,h=canvas.height*scale,x=(width-w)/2,y=(height-h)/2;
+  const stream=bytes(`q ${w} 0 0 ${h} ${x} ${y} cm /Im0 Do Q`);
+  obj(id,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /XObject << /Im0 ${id+2} 0 R >> >> /Contents ${id+1} 0 R${link?` /Annots [${id+3} 0 R]`:''} >>`);
+  obj(id+1,`<< /Length ${stream.length} >>`,stream);
+  obj(id+2,`<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>`,jpeg);
+  if(link)obj(id+3,`<< /Type /Annot /Subtype /Link /Rect [${x} ${y} ${x+w} ${y+55*scale}] /Border [0 0 0] /A << /S /URI /URI (https://miyar.website/) >> >>`);
+ });
+ const cross=size,count=offsets.length;
+ append(bytes(`xref\n0 ${count}\n0000000000 65535 f \n`+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${cross}\n%%EOF`));
  return new Blob(chunks,{type:'application/pdf'});
 }
-export function downloadTimetable(blob,extension){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='miyar-timetable.'+extension;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+export function downloadFile(blob,filename){
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+export function downloadTimetable(blob,extension){downloadFile(blob,'miyar-timetable.'+extension);}
