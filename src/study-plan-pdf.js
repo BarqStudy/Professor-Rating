@@ -17,8 +17,9 @@ export function studyPlanPages(plan){
    ?courses.reduce((sum,course)=>sum+course.credits,0):null;
   const contactHours=courses.every(course=>Number.isFinite(course.contactHours))
    ?courses.reduce((sum,course)=>sum+course.contactHours,0):null;
+  const slots=courses.filter(course=>course.kind==='slot').length;
   for(let offset=0;offset<courses.length;offset+=rowsPerPage){
-   pages.push({type:'table',heading:offset?heading+' · تابع':heading,credits,contactHours,total:courses.length,courses:courses.slice(offset,offset+rowsPerPage)});
+   pages.push({type:'table',heading:offset?heading+' · تابع':heading,credits,contactHours,total:courses.length,slots,courses:courses.slice(offset,offset+rowsPerPage)});
   }
  };
  for(const [level,courses] of [...levels].sort(([a],[b])=>(a??Infinity)-(b??Infinity))){
@@ -98,7 +99,8 @@ export function drawStudyPlanPage(canvas,plan,pages,index,{color,note,logo}){
   [
    {x:921,w:396,label:page.heading,fill:accent},
    {x:501,w:396,label:`الساعات المعتمدة: ${page.credits??'—'}`,fill:ink},
-   {x:82,w:395,label:page.contactHours==null?`عدد المقررات: ${page.total}`:`الساعات الفعلية: ${page.contactHours}`,fill:ink},
+   {x:82,w:395,label:page.contactHours!=null?`الساعات الفعلية: ${page.contactHours}`:page.slots
+    ?`المقررات: ${page.total-page.slots} · خانات الاختيار: ${page.slots}`:`عدد المقررات: ${page.total}`,fill:ink},
   ].forEach(({x,w,label,fill})=>{box(x,87,w,79,fill,22);text(label,x+w/2,136,w-26,34,x===921?accentText:'#fff',true);});
   for(const {x,w,label} of columns){
    box(x,193,w,66,label==='الساعات'?accent:ink,20);
@@ -106,6 +108,7 @@ export function drawStudyPlanPage(canvas,plan,pages,index,{color,note,logo}){
   }
   page.courses.forEach((course,row)=>{
    const y=279+row*69;
+   const slot=course.kind==='slot';
    const requirements=[
     course.prerequisites?.join(' + '),
     course.corequisites?.length?'متزامن: '+course.corequisites.join(' + '):'',
@@ -114,10 +117,15 @@ export function drawStudyPlanPage(canvas,plan,pages,index,{color,note,logo}){
     course.completedLevel?'بعد المستوى '+course.completedLevel:'',
     course.allPrevious?'جميع المقررات السابقة':'',
    ].filter(Boolean).join(' · ');
-   const values=[course.code||'—',course.name,course.credits??'—',requirements||'—'];
+   const values=[slot?'خانة اختيار':course.code||'—',course.name,course.credits??'—',requirements||'—'];
    columns.forEach(({x,w},i)=>{
-    box(x,y,w,59,soft,18);text(values[i],x+w/2,y+39,w-22,i===3?23:29,ink,true);
+    box(x,y,w,59,slot&&i===0?accent:soft,18);
+    text(values[i],x+w/2,y+(slot&&i===1?26:39),w-22,i===3?23:29,slot&&i===0?accentText:ink,true);
    });
+   if(slot){
+    const group=plan.groups?.find(group=>group.id===course.pool)?.name;
+    text(group?`اختر مقررًا من قائمة «${group}»`:'اختر مقررًا من قائمة الاختيار',837,y+49,428,17,muted);
+   }
   });
  }
  box(78,918,57,49,ink,9);
