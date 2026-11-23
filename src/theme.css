@@ -255,5 +255,5 @@ select option { color: var(--ink); background: var(--field); }
 :root[data-logo-color=selected] :is(.miyar-mark,.home-brand-name){color:var(--green)}
 
 .home-brand-lockup{display:inline-grid;justify-items:center;gap:0}
-.home-brand-name{display:block;width:0;min-width:100%;height:auto;fill:currentColor;font-size:21px;font-weight:700}
+.home-brand-name{display:block;width:0;min-width:100%;height:auto;fill:currentColor;font-size:21.6px;font-weight:700}
 .home-brand-lockup .miyar-mark,.mobile-brand .home-brand-lockup .miyar-mark{height:auto;aspect-ratio:1}

@@ -169,7 +169,7 @@ function ensureAdminTools() {
 }
 
 const logo = `<span class="miyar-mark" aria-hidden="true">${miyarMark}</span>`;
-const homeLogo = `<span class="home-brand-lockup">${logo}<svg class="home-brand-name" viewBox="0 0 64 24" aria-hidden="true" focusable="false"><text x="32" y="18" text-anchor="middle" textLength="58" lengthAdjust="spacingAndGlyphs">مِعيار</text></svg></span>`;
+const homeLogo = `<span class="home-brand-lockup">${logo}<svg class="home-brand-name" viewBox="0 0 64 24" aria-hidden="true" focusable="false"><text x="32" y="18" text-anchor="middle">مِـعـيــار</text></svg></span>`;
 const initial = [{
   id: 1,
   name: "أحمد محمد العتيبي",
