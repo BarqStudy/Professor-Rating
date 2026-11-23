@@ -2060,8 +2060,8 @@ async function cloudAdminAction(operation, data) {
     toast(operation==='review.reject'?'رُفض التقييم وحُفظ السبب. يمكنك متابعة حالة البريد في رسائل أسباب الرفض.':'تم حفظ التغيير في المنصة.');
     return true;
   } catch (error) {
-    const deleteError = document.querySelector('#delete-operation-error,#request-rejection-error');
-    if (deleteError) deleteError.textContent = error.message;
+    const formError = document.querySelector('#delete-operation-error,#request-rejection-error,#doctor-rename-error');
+    if (formError) formError.textContent = error.message;
     toast(error.message);
     return false;
   }
@@ -2134,6 +2134,25 @@ function bindCloudAdmin() {
   });
   bindCloudOperations();
 }
+function openDoctorRename(id) {
+  const doctor = cloudCatalogue?.doctors.find((item) => item.id === id);
+  if (!doctor) return;
+  modal("تعديل اسم الدكتور", `<form id="doctor-rename-form">
+    <label>الاسم الثلاثي<input name="name" value="${escapeHtml(doctor.name)}" minlength="8" maxlength="100" required></label>
+    <p class="form-error" id="doctor-rename-error" role="alert"></p>
+    <button type="submit" class="primary">حفظ الاسم</button>
+  </form>`);
+  const form = document.querySelector("#doctor-rename-form");
+  const button = form.querySelector("button");
+  form.elements.name.select();
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    button.disabled = true;
+    form.querySelector(".form-error").textContent = "";
+    await cloudAdminAction("doctor.rename", { id, name: form.elements.name.value });
+    if (button.isConnected) button.disabled = false;
+  };
+}
 function openDoctorDean(id){
   const doctor=cloudCatalogue?.doctors.find(d=>d.id===id);if(!doctor)return;
   const major=cloudCatalogue.majors.find(m=>m.id===doctor.major_id);
@@ -2161,6 +2180,7 @@ function bindCloudOperations(root = document) {
         const doctor=cloudCatalogue?.doctors.find(d=>d.id===data.id);
         b.disabled=true;cloudAdminAction('doctor.office',{id:data.id,role:doctor?.office_role==='head'?null:'head'}).finally(()=>b.disabled=false);return;
       }
+      if (operation === "doctor.rename") { openDoctorRename(data.id); return; }
       if(operation==='doctor.dean'){openDoctorDean(data.id);return;}
       if (operation === "doctor.verify") {
         data.verified = b.dataset.verified === "true";
@@ -2476,7 +2496,23 @@ function adminDoctorRowsData(){
 function adminDoctorRows(){
  const rows=adminDoctorRowsData();
  adminChosen=new Set([...adminChosen].filter((id)=>rows.some((doctor)=>doctor.id===id)));
- return rows.length?rows.map((doctor)=>`<div class="admin-row"><label class="admin-select-doctor"><input type="checkbox" data-admin-check="${doctor.id}" aria-label="تحديد ${escapeHtml(doctor.name)}" ${adminChosen.has(doctor.id)?'checked':''}><span>${escapeHtml(doctor.name)} ${officeBadge(doctor)}<small>${escapeHtml(doctor.major)}</small></span></label><div class="admin-office-buttons"><button type="button" data-cloud-operation="doctor.head" data-id="${doctor.id}" aria-pressed="${doctor.office_role==='head'}">${doctor.office_role==='head'?'إلغاء رئيس قسم':'رئيس قسم'}</button><button type="button" data-cloud-operation="doctor.dean" data-id="${doctor.id}" aria-pressed="${doctor.office_role==='dean'}">عميد كلية</button><button data-cloud-operation="doctor.verify" data-id="${doctor.id}" data-verified="${!doctor.verified}">${doctor.verified?'إلغاء التوثيق':'توثيق'}</button><button class="danger" data-cloud-operation="doctor.delete" data-id="${doctor.id}">إزالة</button></div></div>`).join(''):'<p class="empty">لا توجد أسماء مطابقة للفلاتر.</p>';
+ if (!rows.length) return '<p class="empty">لا توجد أسماء مطابقة للفلاتر.</p>';
+ return rows.map((doctor) => {
+  const isHead = doctor.office_role === "head";
+  return `<div class="admin-row">
+    <label class="admin-select-doctor">
+      <input type="checkbox" data-admin-check="${doctor.id}" aria-label="تحديد ${escapeHtml(doctor.name)}" ${adminChosen.has(doctor.id) ? "checked" : ""}>
+      <span>${escapeHtml(doctor.name)} ${doctor.verified ? verifiedBadge : ""} ${officeBadge(doctor)}<small>${escapeHtml(doctor.major)}</small></span>
+    </label>
+    <div class="admin-office-buttons">
+      <button type="button" data-cloud-operation="doctor.rename" data-id="${doctor.id}">تعديل الاسم</button>
+      <button type="button" data-cloud-operation="doctor.head" data-id="${doctor.id}" aria-pressed="${isHead}">${isHead ? "إلغاء رئيس قسم" : "رئيس قسم"}</button>
+      <button type="button" data-cloud-operation="doctor.dean" data-id="${doctor.id}" aria-pressed="${doctor.office_role === "dean"}">عميد كلية</button>
+      ${isHead ? "" : `<button type="button" data-cloud-operation="doctor.verify" data-id="${doctor.id}" data-verified="${!doctor.verified}">${doctor.verified ? "إلغاء التوثيق" : "توثيق"}</button>`}
+      <button type="button" class="danger" data-cloud-operation="doctor.delete" data-id="${doctor.id}">إزالة</button>
+    </div>
+  </div>`;
+ }).join("");
 }
 function adminFilterOptions(field){
  const data=cloudCatalogue;
@@ -2520,7 +2556,7 @@ function bindAdminDirectory(){
   const ids=[...adminChosen];if(!ids.length)return;
   const operation=document.querySelector('#admin-bulk-operation').value;
   const labels={verify:'توثيق',unverify:'إلغاء توثيق',archive:'إخفاء'};
-  modal('تأكيد الإجراء الجماعي',`<p>سيتم ${labels[operation]} ${ids.length} دكتورًا محددًا.</p><ul>${adminDoctorRowsData().filter((doctor)=>ids.includes(doctor.id)).slice(0,5).map((doctor)=>`<li>${escapeHtml(doctor.name)}</li>`).join('')}</ul><button class="primary" id="confirm-doctor-bulk">تأكيد التنفيذ</button>`);
+  modal('تأكيد الإجراء الجماعي',`<p>سيتم ${labels[operation]} ${ids.length} دكتورًا محددًا.</p>${operation === "unverify" ? '<p class="muted">تبقى علامة التوثيق لرؤساء الأقسام.</p>' : ""}<ul>${adminDoctorRowsData().filter((doctor)=>ids.includes(doctor.id)).slice(0,5).map((doctor)=>`<li>${escapeHtml(doctor.name)}</li>`).join('')}</ul><button class="primary" id="confirm-doctor-bulk">تأكيد التنفيذ</button>`);
   document.querySelector('#confirm-doctor-bulk').onclick=async(event)=>{event.target.disabled=true;const saved=await cloudAdminAction('doctor.bulk',{ids,operationType:operation});if(saved){adminChosen.clear();refreshAdminDirectory();}else if(event.target.isConnected)event.target.disabled=false;};
  };
  bindAdminChecks();

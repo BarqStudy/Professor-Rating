@@ -5,7 +5,16 @@ import {cleanProgress} from '../src/study-engine.js';
 import {officeLabel,officeBadge} from '../src/doctor-office.js';
 import {createHandler} from '../supabase/functions/miyar/handler.js';import {ApiError} from '../supabase/functions/miyar/security.js';
 const plans=JSON.parse(await readFile(new URL('../data/study-plans.json',import.meta.url),'utf8'));
-async function database(){const db=new PGlite();await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);');const dir=new URL('../supabase/migrations/',import.meta.url);for(const name of (await readdir(dir)).filter(f=>f.endsWith('.sql')).sort())await db.exec(await readFile(new URL(name,dir),'utf8'));return db;}
+async function database(beforeVerificationMigration) {
+ const db = new PGlite();
+ await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);');
+ const dir = new URL('../supabase/migrations/', import.meta.url);
+ for (const name of (await readdir(dir)).filter(file => file.endsWith('.sql')).sort()) {
+  if (name === '202611230001_verify_department_heads.sql') await beforeVerificationMigration?.(db);
+  await db.exec(await readFile(new URL(name, dir), 'utf8'));
+ }
+ return db;
+}
 const rpc=(db,name,args)=>db.query(`select ${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args).then(r=>r.rows[0].result);
 
 test('course search equates article/diacritic/digit variations while preserving distinct materials and personal doctor selections',()=>{
@@ -84,18 +93,29 @@ test('recommendations include shared subjects across university departments and 
  }finally{await db.close();}
 });
 
-test('office titles are admin-controlled presentation data, scoped to the professor university, and preserve verification',async()=>{
- const db=await database();try{
-  const d=(await db.query("insert into miyar_doctors(major_id,name,status,verified) select major_id,'أحمد محمد العتيبي','approved',true from miyar_study_plans where id='najran-ce-2025' returning id")).rows[0].id;
+test('department heads are automatically verified and office changes preserve verification',async()=>{
+ let existingHead;
+ const db=await database(async db=>{
+  const result=await db.query(`insert into miyar_doctors(major_id,name,status,office_role)
+    select major_id,'خالد محمد القحطاني','approved','head' from miyar_study_plans where id='najran-ce-2025' returning id,verified`);
+  existingHead=result.rows[0].id;
+  assert.equal(result.rows[0].verified,false);
+ });try{
+  assert.equal((await rpc(db,'miyar_catalogue',[])).doctors.find(doctor=>doctor.id===existingHead).verified,true);
+  const byId=async id=>(await rpc(db,'miyar_catalogue',[])).doctors.find(doctor=>doctor.id===id);
+  const d=(await db.query("insert into miyar_doctors(major_id,name,status) select major_id,'أحمد محمد العتيبي','approved' from miyar_study_plans where id='najran-ce-2025' returning id")).rows[0].id;
   await rpc(db,'miyar_set_doctor_office',[d,'head',null]);
-  let cat=await rpc(db,'miyar_catalogue',[]);assert.equal(cat.doctors[0].office_role,'head');assert.equal(cat.doctors[0].verified,true);
+  let doctor=await byId(d);assert.equal(doctor.office_role,'head');assert.equal(doctor.verified,true);
+  await db.query('update miyar_doctors set verified=false where id=$1',[d]);
+  await rpc(db,'miyar_bulk_doctors',[[d],'unverify']);
+  assert.equal((await byId(d)).verified,true);
   const college=(await db.query("select id from miyar_colleges where university_id=3 limit 1")).rows[0].id;
-  await rpc(db,'miyar_set_doctor_office',[d,'dean',college]);cat=await rpc(db,'miyar_catalogue',[]);assert.equal(cat.doctors[0].office_college,'كلية الهندسة');
+  await rpc(db,'miyar_set_doctor_office',[d,'dean',college]);doctor=await byId(d);assert.equal(doctor.office_college,'كلية الهندسة');
   const foreign=(await db.query("insert into miyar_colleges(university_id,name) values(1,'كلية العلوم') returning id")).rows[0].id;
   await assert.rejects(rpc(db,'miyar_set_doctor_office',[d,'dean',foreign]),/INVALID_DOCTOR_OFFICE/);
   await assert.rejects(rpc(db,'miyar_set_doctor_office',[d,'head',college]),/INVALID_DOCTOR_OFFICE/);
   await assert.rejects(rpc(db,'miyar_set_doctor_office',[d,'admin',null]),/INVALID_DOCTOR_OFFICE/);
-  await rpc(db,'miyar_set_doctor_office',[d,null,null]);cat=await rpc(db,'miyar_catalogue',[]);assert.equal(cat.doctors[0].office_role,null);assert.equal(cat.doctors[0].verified,true);
+  await rpc(db,'miyar_set_doctor_office',[d,null,null]);doctor=await byId(d);assert.equal(doctor.office_role,null);assert.equal(doctor.verified,true);
   for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(rpc(db,'miyar_set_doctor_office',[d,'head',null]),/permission denied/);await db.exec('reset role');}
  }finally{await db.close();}
 });
@@ -113,4 +133,34 @@ test('public course reviews expose curated fields and only verified administrato
  for(const role of ['admin','verified',undefined])assert.equal((await handle(req({...office,role},true))).status,400);
  assert.equal((await handle(req({...office,role:'dean',collegeId:'1'},true))).status,400);
  assert.equal((await handle(req({...office,role:'dean',collegeId:1},true))).status,200);
+});
+
+test('only active administrators can rename an approved doctor in place',async()=>{
+  const admin='11111111-1111-4111-8111-111111111111';
+  let actor='22222222-2222-4222-8222-222222222222',status='active',rows=[{id:4}];
+  const changes=[];
+  const db=async(path,options)=>{
+    if(path.startsWith('miyar_accounts?'))return [{auth_id:actor,status,university_id:3}];
+    changes.push({path,...options});
+    return rows;
+  };
+  const handle=createHandler({db,env:{ADMIN_AUTH_IDS:admin},authenticate:async()=>({id:actor})});
+  const rename=name=>handle(new Request('https://test',{method:'POST',body:JSON.stringify({
+    action:'admin',operation:'doctor.rename',id:4,name,
+  })}));
+  assert.equal((await rename('أحمد محمد العتيبي')).status,403);
+  actor=admin;
+  status='banned';
+  assert.equal((await rename('أحمد محمد العتيبي')).status,403);
+  status='active';
+  assert.equal((await rename('أحمد العتيبي')).status,400);
+  assert.deepEqual(changes,[]);
+  assert.equal((await rename(' أحمد  محمد العتيبي ')).status,200);
+  assert.deepEqual(changes,[{
+    path:'miyar_doctors?id=eq.4&status=eq.approved&select=id',
+    method:'PATCH',
+    body:{name:'أحمد محمد العتيبي'},
+  }]);
+  rows=[];
+  assert.equal((await rename('أحمد محمد العتيبي')).status,404);
 });
