@@ -42,6 +42,7 @@ import "./startup.css";
 import "./stats.css";
 import "./cursor.css";
 import "./appearance.css";
+import "./navigation.css";
 import "./performance.css";
 import "./interface-polish.css";
 import "./course-finder.css";
@@ -336,9 +337,18 @@ function renderStartup() {
     if (retry) retry.onclick = () => location.reload();
   }
 }
+let renderedRoute;
 function render() {
   renderPage();
   if (!cloudBooting) finishUniversityLoading();
+  const content = document.querySelector('#app main');
+  if (!content || (cloudBooting && sharedTimetablePayload === null)) return;
+  const route = content.matches('.timetable-public') ? 'shared-timetable'
+    : content.matches('.university-entry-main') ? 'universities' : page;
+  if (renderedRoute !== undefined && renderedRoute !== route) {
+    content.classList.add('page-entering');
+  }
+  renderedRoute = route;
 }
 function renderPage() {
   adminWorkspace?.dispose();
@@ -772,9 +782,10 @@ function toast(s) {
 }
 let modalTrigger = null;
 function modal(title, body) {
-  if (!document.querySelector(".modal-backdrop")) modalTrigger = document.activeElement;
+  const opening = !document.querySelector(".modal-backdrop");
+  if (opening) modalTrigger = document.activeElement;
   document.querySelector("#modal-root").innerHTML =
-    `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-label="${title}"><div class="modal-heading"><div><h2>${title}</h2></div><button class="icon-btn close-modal" aria-label="إغلاق">${
+    `<div class="modal-backdrop"><section class="modal${opening ? " dialog-entering" : ""}" role="dialog" aria-modal="true" aria-label="${title}"><div class="modal-heading"><div><h2>${title}</h2></div><button class="icon-btn close-modal" aria-label="إغلاق">${
       ic("close")
     }</button></div>${body}</section></div>`;
   document.body.classList.add("modal-open");
