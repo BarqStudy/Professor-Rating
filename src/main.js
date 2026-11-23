@@ -46,6 +46,7 @@ import "./performance.css";
 import "./interface-polish.css";
 import "./course-finder.css";
 import "./review-presentation.css";
+import "./buttons.css";
 import { setupInteractions } from "./interactions.js";
 import { readJSON, storage } from "./storage.js";
 import {

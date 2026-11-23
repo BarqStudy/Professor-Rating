@@ -51,7 +51,7 @@ footer a { text-underline-offset: .25em; }
 #settings-form .settings-shortcuts > button {
   margin: 0; min-width: 0; width: 100%; min-height: 72px;
   padding: var(--ui-space-sm); gap: var(--ui-space-xs);
-  border-radius: 16px; font-size: calc(14px * var(--font-scale, 1)); line-height: 1.7;
+  border-radius: var(--button-radius); font-size: calc(14px * var(--font-scale, 1)); line-height: 1.7;
 }
 .settings-shortcuts .icon { flex-shrink: 0; width: 19px; height: 19px; }
 #settings-form .university-settings { padding-block: var(--ui-space-lg); border-radius: 0; border-inline: 0; background: transparent; }
