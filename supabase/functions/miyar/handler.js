@@ -375,12 +375,20 @@ export function createHandler({ db, env, authenticate, aiFetch = fetch, storageF
         await db(`miyar_colleges?id=eq.${validId(body.id)}`, {
           method: "DELETE",
         });
-      } else if (operation === "doctor.add") {
+      } else if (operation === "doctor.add" || operation === "doctor.rename") {
         const name = text(body.name, 8, 100, "الاسم الثلاثي");
         if (name.split(/\s+/).length < 3) {
           throw new ApiError(400, "اكتب الاسم الثلاثي.");
         }
         if(user.status!=='active')throw new ApiError(403,'حساب الإدارة مقيّد.');
+        if (operation === "doctor.rename") {
+          const rows = await db(`miyar_doctors?id=eq.${validId(body.id)}&status=eq.approved&select=id`, {
+            method: "PATCH",
+            body: { name },
+          });
+          if (!rows.length) throw new ApiError(404, "الدكتور غير موجود أو تمت إزالته.");
+          return respond({ ok: true });
+        }
         return respond(await db('rpc/miyar_admin_add_doctor',{method:'POST',body:{p_major:validId(body.majorId),p_name:name}}));
       } else if (operation === "doctor.delete") {
         await db(`miyar_doctors?id=eq.${validId(body.id)}`, {
