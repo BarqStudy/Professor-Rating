@@ -1,3 +1,4 @@
+import miyarMark from './miyar-mark.svg?raw';
 import {createTimetable} from './timetable.js';
 import {extractStudentTimetable} from './cloud.js';
 import {isNative,nativePlatform,setupNative,shareNativeLink,shareNativeCard,publicDoctorUrl} from './native.js';
@@ -167,8 +168,7 @@ function ensureAdminTools() {
   return adminToolsPending;
 }
 
-const logo =
-  `<span class="miyar-mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M32 10v43M14 22h36M22 53h20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="m14 22-9 19h18l-9-19Zm36 0-9 19h18l-9-19Z" fill="currentColor" opacity=".22"/><path d="M5 41c3 8 15 8 18 0M41 41c3 8 15 8 18 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="m32 3 5 6-5 6-5-6Z" fill="#bf9354"/></svg></span><span class="logo-type">مِعيار<span>MIYAR</span></span>`;
+const logo = `<span class="miyar-mark" aria-hidden="true">${miyarMark}</span>`;
 const initial = [{
   id: 1,
   name: "أحمد محمد العتيبي",
@@ -281,7 +281,10 @@ function applyPlatformColor(id) {
   const color = platformColors.find((item) => item.id === id) || platformColors[0];
   document.documentElement.dataset.color = color.id;
   document.documentElement.style.setProperty("--brand-hue", color.hue);
-  storage.setItem("miyar-color", color.id);
+  if (id) {
+    document.documentElement.dataset.logoColor = "selected";
+    storage.setItem("miyar-color", color.id);
+  }
 }
 applyPlatformColor(storage.getItem("miyar-color"));
 function appearanceSettings() {

@@ -1,7 +1,7 @@
-const CACHE='miyar-static-v1';
+const CACHE='miyar-static-v2';
 const base=self.registration.scope;
 const offline=new URL('offline.html',base).href;
-self.addEventListener('install',(event)=>{event.waitUntil(caches.open(CACHE).then((cache)=>cache.addAll(['offline.html','favicon.svg','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'].map((path)=>new URL(path,base).href))).then(()=>self.skipWaiting()));});
+self.addEventListener('install',(event)=>{event.waitUntil(caches.open(CACHE).then((cache)=>cache.addAll(['offline.html','favicon.svg','favicon-white.png','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'].map((path)=>new URL(path,base).href))).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',(event)=>{event.waitUntil(caches.keys().then((keys)=>Promise.all(keys.filter((key)=>key.startsWith('miyar-static-')&&key!==CACHE).map((key)=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',(event)=>{
  const request=event.request,url=new URL(request.url);
