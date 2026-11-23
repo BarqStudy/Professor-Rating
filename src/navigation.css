@@ -1,0 +1,15 @@
+.page-entering {
+  animation: miyar-page-enter 240ms cubic-bezier(.2, .75, .3, 1);
+}
+
+.dialog-entering {
+  animation: miyar-dialog-enter 180ms ease-out;
+}
+
+@keyframes miyar-page-enter {
+  from { opacity: .55; translate: 0 8px; }
+}
+
+@keyframes miyar-dialog-enter {
+  from { opacity: .65; translate: 0 6px; }
+}

@@ -6,13 +6,15 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
 (async()=>{await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});try{
  const url=`http://127.0.0.1:${server.address().port}/Professor-Rating/`,errors=[];
  async function setup({expired=false,delayed=false,hash='',storageState}={}){
-  const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'no-preference',...(storageState?{storageState}:{})}),page=await context.newPage(),calls=[],gates={catalogue:deferred(),me:deferred(),guest:deferred()},reached={catalogue:deferred(),me:deferred(),guest:deferred()},ownerGates=new Map();let refreshes=0, detailGate=null;
+  const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'no-preference',...(storageState?{storageState}:{})}),page=await context.newPage(),calls=[],gates={catalogue:deferred(),me:deferred(),guest:deferred()},reached={catalogue:deferred(),me:deferred(),guest:deferred()},ownerGates=new Map();let refreshes=0, detailGate=null, requestsGate=null;
   if(!delayed)Object.values(gates).forEach(gate=>gate.resolve());
   await context.addInitScript(({key,initial})=>{
    if(initial&&!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(initial));
    window.authEvents=[];window.applicationPaints=[];window.authorizeRequests=0;
-   window.heroFlights=[];window.entryAnimations=[];let nextAnimationId=0;const ids=new WeakMap();
-   document.addEventListener('animationstart',event=>{if(['appear','glass-arrive','miyar-reveal'].includes(event.animationName) || (['fade','slide'].includes(event.animationName) && event.target.matches('.modal,.modal-backdrop'))){if(!ids.has(event.target))ids.set(event.target,++nextAnimationId);window.entryAnimations.push({id:ids.get(event.target),name:event.animationName,classes:event.target.className});}},true);
+   window.heroFlights=[];window.entryAnimations=[];
+   document.addEventListener('animationstart',event=>{
+    if(event.target.matches('main,.modal'))window.entryAnimations.push(event.animationName);
+   },true);
    window.addEventListener('miyar-auth',event=>window.authEvents.push({event:event.detail.event,id:event.detail.session?.user.id}));
    new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1&&node.matches('.hero-flight'))window.heroFlights.push({hidden:node.getAttribute('aria-hidden'),pointerEvents:getComputedStyle(node).pointerEvents,uniqueIds:new Set([...document.querySelectorAll('[id]')].map(n=>n.id)).size===document.querySelectorAll('[id]').length});for(const record of records)if(record.target.id==='app')for(const node of record.addedNodes)if(node.nodeType===1&&(node.matches('aside,.university-entry,.signed-out-page')))window.applicationPaints.push({name:document.querySelector('.welcome h1')?.textContent,guest:!!document.querySelector('#google-account'),university:!!document.querySelector('#university-directory')});}).observe(document,{childList:true,subtree:true});
   },{key,initial:storageState?null:session(member,expired)});
@@ -26,33 +28,42 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(body.action==='me'){reached.me.resolve();await gates.me.promise;if(ownerGates.has(owner))await ownerGates.get(owner).promise;result={id:owner,name:owner===member?'أحمد طالب':owner===second?'خالد طالب':'زياد طالب',status:'active',university_id:3,major_id:1,level:2,isAdmin:false};}
    if(['guest.start','guest.me'].includes(body.action)){reached.guest.resolve();await gates.guest.promise;result={id:'55555555-5555-4555-8555-555555555555',status:'active',university_id:3,...(body.action==='guest.start'?{token:'ab'.repeat(32)}:{})};}
    if(['reviews','course.doctors','course.reviews'].includes(body.action)){if(body.action==='reviews'&&detailGate){const gate=detailGate;detailGate=null;await gate.promise;}result=[];}if(body.action==='doctor.summary')result={insufficient:true,totalPublished:0,themes:[]};if(body.action==='doctor.grades')result={available:false,minimum:10,subjects:[]};if(body.action==='review.eligibility')result={eligible:true};
+   if(body.action==='requests'&&requestsGate)await requestsGate.promise;
    if(body.action==='guest.presence')result={online:1};if(body.action==='study.plans')result=[];if(body.action==='ai.status')result={enabled:false};if(['request.updates','notifications','requests'].includes(body.action))result=[];
    await route.fulfill({json:result});
   });
-  await page.goto(url+hash);return{context,page,calls,gates,reached,ownerGates,refreshes:()=>refreshes,pauseDetails(){detailGate=deferred();return detailGate;}};
+  await page.goto(url+hash);return{context,page,calls,gates,reached,ownerGates,refreshes:()=>refreshes,pauseDetails(){detailGate=deferred();return detailGate;},pauseRequests(){requestsGate=deferred();return requestsGate;}};
  }
 
  const test=await setup(),{page}=test;await page.locator('.welcome h1').filter({hasText:'أحمد'}).waitFor();
  assert.equal(await page.evaluate(()=>window.applicationPaints.length),1);
+ const animations=()=>page.evaluate(()=>window.entryAnimations);
  async function clickPage(selector,target){
+  const transitions=(await animations()).filter(name=>name==='miyar-page-enter').length;
   const before=await page.evaluate(()=>window.applicationPaints.length);
   await page.locator(selector).first().click();
   await page.locator(target).first().waitFor();
   assert.equal(await page.locator('main').count(),1);
   assert.equal(await page.evaluate(()=>window.applicationPaints.length),before+1);
+  await page.waitForFunction(count=>window.entryAnimations.filter(name=>name==='miyar-page-enter').length===count,transitions+1);
  }
  async function close(){await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});}
  for(const width of [390,1440]){
   await page.setViewportSize({width,height:1000});
   await clickPage('aside [data-page=ratings]','.directory-section');
+  const animationCount=(await animations()).length;
   const paints=await page.evaluate(()=>window.applicationPaints.length);
   await page.locator('aside [data-page=ratings]').click({clickCount:2});
   assert.equal(await page.evaluate(()=>window.applicationPaints.length),paints,'the active page must stay mounted');
+  assert.equal((await animations()).length,animationCount);
   const details=test.pauseDetails();
   const before=await page.evaluate(()=>window.applicationPaints.length);
   await page.locator('[data-doctor]').first().click();
   await page.locator('[data-detail-loading]').waitFor();
+  await page.waitForFunction(count=>window.entryAnimations.length===count,animationCount+1);
   details.resolve();await page.locator('.detail-person').waitFor();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  assert.deepEqual((await animations()).slice(animationCount),['miyar-dialog-enter'],'asynchronous content must not replay a dialog entrance');
   assert.equal(await page.locator('[role=dialog]').count(),1);
   assert.equal(await page.evaluate(()=>window.applicationPaints.length),before,'loading a dialog must leave its source page mounted');
   await close();
@@ -80,9 +91,27 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  }
  await clickPage('aside [data-page=ratings]','.directory-section');
  await clickPage('aside [data-page=timetable]','.study-desk');
+ const beforeBack=(await animations()).filter(name=>name==='miyar-page-enter').length;
  await page.goBack();await page.locator('.directory-section').waitFor();
+ await page.waitForFunction(count=>window.entryAnimations.filter(name=>name==='miyar-page-enter').length===count,beforeBack+1);
+ const requests=test.pauseRequests();
+ await page.locator('#open-settings').click();
+ await clickPage('#my-requests-settings','#requests-refresh');
+ const beforeData=(await animations()).filter(name=>name==='miyar-page-enter').length;
+ const beforeRequestPaint=await page.evaluate(()=>window.applicationPaints.length);
+ requests.resolve();
+ await page.waitForFunction(count=>window.applicationPaints.length>count,beforeRequestPaint);
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ assert.equal((await animations()).filter(name=>name==='miyar-page-enter').length,beforeData,'a data refresh must not replay the page entrance');
+ await page.emulateMedia({reducedMotion:'reduce'});
+ const reducedCount=(await animations()).length;
+ await page.locator('aside [data-page=home]').click();await page.locator('.welcome').waitFor();
+ await page.locator('#open-settings').click();await page.locator('.modal').waitFor();
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ assert.equal((await animations()).length,reducedCount);
+ await close();
  assert.deepEqual(await page.evaluate(()=>window.heroFlights),[],'navigation and dialogs must never show a cloned surface');
- assert.deepEqual(await page.evaluate(()=>window.entryAnimations),[],'page and dialog loads must never replay an entrance');
+ assert.ok((await animations()).every(name=>['miyar-page-enter','miyar-dialog-enter'].includes(name)));
  assert.deepEqual(errors,[]);await test.context.close();
  // A delayed compositor finish must not hold the captured page after the
  // visible circle has ended. A capture that never becomes ready has a deadline.
@@ -105,5 +134,5 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  await themePage.waitForFunction(()=>document.documentElement.dataset.theme==='dark'&&!document.documentElement.classList.contains('theme-switching'),null,{timeout:1500});
  assert.equal(await themePage.evaluate(()=>localStorage.getItem('athar-theme')),'dark','a late capture cannot undo the newer appearance');
  await appearance.context.close();assert.deepEqual(errors,[]);
- console.log('PASS: single page mounts, repeated clicks on the active page, dialog loading without an entrance replay, history, focus restoration, mobile/desktop, and bounded theme transitions. Auth/API mocked.');
+ console.log('PASS: one entrance per navigation and dialog, no replay on active tab clicks or completed requests, reduced motion, history, focus restoration, mobile/desktop, and bounded theme transitions. Auth/API mocked.');
  }finally{await browser.close();server.close();}})().catch(error=>{console.error(error);process.exitCode=1;server.close();});
