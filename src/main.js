@@ -169,6 +169,7 @@ function ensureAdminTools() {
 }
 
 const logo = `<span class="miyar-mark" aria-hidden="true">${miyarMark}</span>`;
+const homeLogo = `<span class="home-brand-lockup">${logo}<span class="home-brand-name" aria-hidden="true">مِعيار</span></span>`;
 const initial = [{
   id: 1,
   name: "أحمد محمد العتيبي",
@@ -370,7 +371,7 @@ function renderPage() {
     return;
   }
   document.querySelector("#app").innerHTML =
-    `<aside><a class="brand" href="#" aria-label="مِعيار الرئيسية">${logo}</a><div class="nav-label">مساحتك الجامعية</div>${nav()}<div class="sidebar-bottom"><div class="side-note">${
+    `<aside><a class="brand" href="#" aria-label="مِعيار الرئيسية">${page==='home'?homeLogo:logo}</a><div class="nav-label">مساحتك الجامعية</div>${nav()}<div class="sidebar-bottom"><div class="side-note">${
       ic("cap")
     }<strong>رأيك يصنع فرقًا</strong><p>تجربتك اليوم، دليل زميلك بكرة.</p><span>صُنع للطلاب، من أجل الطلاب</span></div><button class="theme-toggle">${
       ic("moon")
@@ -378,7 +379,7 @@ function renderPage() {
       ic("users")
     }</span><div><b>${escapeHtml(displayName())}</b>${roleBadge(cloudMe,cloudCatalogue)}${
       googleSession ? "" : "<small>زائر · تصفّح بحرية</small>"
-    }</div><span class="online"></span></div></div></aside><div class="main-wrap"><header><div class="mobile-brand" aria-label="مِعيار">${logo}</div><div class="breadcrumb">مساحتك الجامعية <span>/</span> <b>${
+    }</div><span class="online"></span></div></div></aside><div class="main-wrap"><header><div class="mobile-brand" aria-label="مِعيار">${page==='home'?homeLogo:logo}</div><div class="breadcrumb">مساحتك الجامعية <span>/</span> <b>${
       ({
         home: "الرئيسية",
         ratings: "التقييمات",

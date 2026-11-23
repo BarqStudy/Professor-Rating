@@ -253,3 +253,8 @@ select option { color: var(--ink); background: var(--field); }
 .miyar-mark{color:#16664b;--miyar-mark-gold:#b68a36}
 :root[data-theme=dark] .miyar-mark{color:#85e2bc;--miyar-mark-gold:#e6bc72}
 :root[data-logo-color=selected] .miyar-mark{color:var(--green)}
+
+.home-brand-lockup{display:inline-grid;justify-items:center;gap:0}
+.home-brand-name{color:var(--ink);font-size:calc(20px * var(--font-scale,1));font-weight:700;line-height:1.18}
+.mobile-brand .home-brand-lockup .miyar-mark{height:32px}
+.mobile-brand .home-brand-name{font-size:calc(14px * var(--font-scale,1))}
