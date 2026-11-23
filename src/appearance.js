@@ -1,5 +1,4 @@
 import {storage} from './storage.js';
-import {cancelHero} from './hero.js';
 import {prefersLessMotion} from './display-preferences.js';
 
 let active = null;
@@ -28,7 +27,6 @@ function stop(commit = true) {
 
 export function setAppearance(theme, source) {
   if (!['light', 'dark'].includes(theme)) return;
-  cancelHero();
   stop(false);
   const current = root.dataset.theme === 'dark' ? 'dark' : 'light';
   if (current === theme || prefersLessMotion() || document.hidden || typeof document.startViewTransition !== 'function') { apply(theme); return; }
