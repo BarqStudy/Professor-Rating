@@ -73,10 +73,9 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);re
   await page.waitForTimeout(150);
   assert.equal(await page.evaluate(()=>window.gateAppearances),0);
   await page.locator('#header-change-university').click();
-  await page.locator('.university-entrance').waitFor();
-  assert.equal(await page.locator('.university-entrance.is-opening').count(),0);
-  await page.locator('.university-entrance').waitFor({state:'detached'});
-  assert.equal(await page.evaluate(()=>window.gateAppearances),1);
+  await page.locator('#university-directory').waitFor();
+  assert.equal(await page.locator('.university-entrance').count(),0);
+  assert.equal(await page.evaluate(()=>window.gateAppearances),0);
   await test.context.close();
 
   // A stalled request reveals an actionable fallback instead of a locked gate.
@@ -98,6 +97,6 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);re
    await failed.context.close();
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS: gate follows new-entry startup, grey skeletons only on reload, no foreground replay, university-change replay, slow/offline fallback, reduced motion and API failures.');
+  console.log('PASS: gate follows new-entry startup, grey skeletons only on reload, no replay on focus or university navigation, slow/offline fallback, reduced motion and API failures.');
  }finally{await browser.close();server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;server.close();});

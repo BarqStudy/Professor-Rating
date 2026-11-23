@@ -18,8 +18,6 @@ import {statNumber,animateStats} from './stats.js';
 import {setupCursor} from './cursor.js';
 import {setDisplayPreference} from './display-preferences.js';
 import './settings.css';
-import {setupReveals} from './reveal.js';
-import {setupHero,heroUpdate,rememberHero,cancelHero} from './hero.js';
 import {setAppearance,toggleAppearance} from './appearance.js';
 import './universities.css';
 import {hasStaffRole,roleBadge,staffAdminPanel,bindStaffAdmin,staffUniversityIds,staffColleges} from './staff.js';
@@ -43,8 +41,6 @@ import "./directory.css";
 import "./startup.css";
 import "./stats.css";
 import "./cursor.css";
-import "./reveal.css";
-import "./hero.css";
 import "./appearance.css";
 import "./performance.css";
 import "./interface-polish.css";
@@ -325,15 +321,13 @@ function nav() {
   }</nav>`;
 }
 const navigation=createNavigation({history,location,scrollY:()=>window.scrollY});
-function setPage(next) {cancelHero(true);navigation.push(next);page=next;}
+function setPage(next) {navigation.push(next);page=next;}
 function previousPage(){
- cancelHero(true);
  document.body.classList.remove('modal-open');
  if(!navigation.back()){page='home';render();window.scrollTo({top:0});}
 }
 
 function renderStartup() {
-  cancelHero();
   stopStatCounters();
   if (useEntryGate) showUniversityEntrance({loading:true});
   if (!document.querySelector('.platform-startup')) {
@@ -343,10 +337,8 @@ function renderStartup() {
   }
 }
 function render() {
-  return heroUpdate(() => {
-    renderPage();
-    if (!cloudBooting) finishUniversityLoading();
-  }, () => document.querySelector('main,.signed-out-page'));
+  renderPage();
+  if (!cloudBooting) finishUniversityLoading();
 }
 function renderPage() {
   adminWorkspace?.dispose();
@@ -552,7 +544,6 @@ function renderUniversityLanding(){
 function changeUniversityPage(){
   document.body.classList.remove('modal-open');
   setPage('universities');render();window.scrollTo({top:0});
-  showUniversityEntrance();
 }
 function openUniversityChoice(required=false,onSelected){
   const selector=universitySelector(onSelected);modal('اختر جامعتك',selector.content());document.querySelector('.modal').classList.add('university-picker-modal');selector.bind();
@@ -781,9 +772,6 @@ function toast(s) {
 }
 let modalTrigger = null;
 function modal(title, body) {
-  return heroUpdate(() => renderModal(title, body), () => document.querySelector('.modal'));
-}
-function renderModal(title, body) {
   if (!document.querySelector(".modal-backdrop")) modalTrigger = document.activeElement;
   document.querySelector("#modal-root").innerHTML =
     `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-label="${title}"><div class="modal-heading"><div><h2>${title}</h2></div><button class="icon-btn close-modal" aria-label="إغلاق">${
@@ -805,19 +793,15 @@ function renderModal(title, body) {
   document.querySelector(".modal input,.modal button")?.focus();
 }
 function closeModal() {
-  cancelHero();
-  if (document.querySelector(".mandatory-university,.mandatory-major")) return;
-  const b = document.querySelector(".modal-backdrop");
-  b?.classList.add("closing");
-  setTimeout(() => {
-    if(document.querySelector('.modal-backdrop')!==b)return;
-    document.querySelector("#modal-root").innerHTML = "";
-    document.body.classList.remove("modal-open");
-    document.querySelectorAll("#app > aside,#app > .main-wrap").forEach((el) => el.inert = false);
-    modalTrigger?.focus();
-    if (page === "review") previousPage();
-    if(needsStudentMajor())openStudentMajor();
-  }, 180);
+  const backdrop = document.querySelector(".modal-backdrop");
+  if (!backdrop || backdrop.querySelector(".mandatory-university,.mandatory-major")) return;
+  backdrop.remove();
+  document.body.classList.remove("modal-open");
+  document.querySelectorAll("#app > aside,#app > .main-wrap").forEach((el) => el.inert = false);
+  modalTrigger?.focus();
+  modalTrigger = null;
+  if (page === "review") previousPage();
+  if (needsStudentMajor()) openStudentMajor();
 }
 function scoreColor(value) {
   return value < 50
@@ -850,17 +834,11 @@ async function reviewForm(id, pledged = false, studySelection = null, reviewedSu
   request.promise=openReviewForm(id,pledged,studySelection,reviewedSubjects,request);
   try{return await request.promise;}finally{if(reviewOpening===request)reviewOpening=null;}
 }
-function reviewDialog(title,body){
-  // A pledge and its form are one flow. Do not replay a copy of the outgoing
-  // dialog through Hero while also mounting its successor.
-  cancelHero();renderModal(title,body);
-  document.querySelector('.modal').classList.add('hero-arrival');
-}
 async function openReviewForm(id, pledged = false, studySelection = null, reviewedSubjects = [], request) {
   if(needsStudentMajor()){openStudentMajor();return;}
   const addingDoctor=id==null;
   const sourcePage=page,sourceDialog=document.querySelector('.modal-backdrop');
-  const stillCurrent=()=>reviewOpening===request&&page===sourcePage&&document.querySelector('.modal-backdrop')===sourceDialog&&!sourceDialog?.classList.contains('closing');
+  const stillCurrent=()=>reviewOpening===request&&page===sourcePage&&document.querySelector('.modal-backdrop')===sourceDialog;
   if(configured&&cloudStatus==='loading'){
     toast('انتظر اكتمال تحميل المنصة، أو أعد المحاولة.');
     return;
@@ -892,7 +870,7 @@ async function openReviewForm(id, pledged = false, studySelection = null, review
   if(!addingDoctor&&!pledged){reviewPledge(()=>reviewForm(id,true,studySelection,reviewedSubjects));return;}
   const selectedDoctor = doctors.find((d) => d.id === id);
   const reviewCollege = selectedDoctor?.college || activeCollege || colleges[0];
-  reviewDialog(
+  modal(
     addingDoctor ? "إضافة دكتور" : "شارك تجربتك",
     `<p class="muted">${addingDoctor?"أضف الدكتور إلى دليل جامعتك. التقييم اختياري، وتُراجع الإضافة قبل نشرها.":"تقييمك يساعد طالبًا آخر على اتخاذ القرار المناسب."}</p><form id="review-form"><div class="form-grid" ${addingDoctor?'':'hidden'}><label>الكلية<select name="college" required>${
       colleges.map((c) =>
@@ -1212,16 +1190,17 @@ function bind() {
   });
   document.querySelector(".brand").onclick = (e) => {
     e.preventDefault();
+    if (page === "home") return;
     setPage("home");
     render();
   };
   document.querySelectorAll("[data-page]").forEach((b) =>
     b.onclick = () => {
+      if (b.dataset.page === page) return;
       setPage(b.dataset.page);
       query = "";
       savedOnly = false;
       render();
-      if (page === "admin" && configured) loadCloudQueue();
       window.scrollTo({ top: 0, behavior: "instant" });
     }
   );
@@ -1557,7 +1536,6 @@ function openSettings() {
   });
   settings.querySelectorAll('[data-display-setting]').forEach(control=>{
     control.onchange=()=>{
-      cancelHero();
       setDisplayPreference(control.dataset.displaySetting,control.value);
     };
   });
@@ -2280,7 +2258,7 @@ async function myReviews(doctorId) {
 function editReview(row, pledged = false) {
   if(!row)return;
   if(!pledged){reviewPledge(()=>editReview(row,true));return;}
-  reviewDialog('طلب تعديل التقييم',`<p>سيبقى التقييم القديم ظاهرًا حتى توافق الإدارة على التعديل الجديد.</p><form id="edit-review-form"><label>المادة<input name="subject" readonly required minlength="2" maxlength="120" value="${escapeHtml(row.subject)}"></label>${['الشرح','التعامل','المساعدة بالدرجات'].map((label,index)=>`<label class="slider-label"><span>${label}<output>${row[['explanation','treatment','grading'][index]]}</output></span><input aria-label="${label}" name="score${index}" type="range" min="0" max="100" value="${row[['explanation','treatment','grading'][index]]}" style="--range-color:${scoreColor(Number(row[['explanation','treatment','grading'][index]]))}"></label>`).join('')}${ratingTagPicker(row.tags)}<label>التعليق الجديد (اختياري)<textarea name="comment" maxlength="600" rows="4">${escapeHtml(row.comment)}</textarea></label><p class="form-error" role="alert"></p><button class="primary" type="submit">إرسال التعديل للمراجعة</button></form>`);
+  modal('طلب تعديل التقييم',`<p>سيبقى التقييم القديم ظاهرًا حتى توافق الإدارة على التعديل الجديد.</p><form id="edit-review-form"><label>المادة<input name="subject" readonly required minlength="2" maxlength="120" value="${escapeHtml(row.subject)}"></label>${['الشرح','التعامل','المساعدة بالدرجات'].map((label,index)=>`<label class="slider-label"><span>${label}<output>${row[['explanation','treatment','grading'][index]]}</output></span><input aria-label="${label}" name="score${index}" type="range" min="0" max="100" value="${row[['explanation','treatment','grading'][index]]}" style="--range-color:${scoreColor(Number(row[['explanation','treatment','grading'][index]]))}"></label>`).join('')}${ratingTagPicker(row.tags)}<label>التعليق الجديد (اختياري)<textarea name="comment" maxlength="600" rows="4">${escapeHtml(row.comment)}</textarea></label><p class="form-error" role="alert"></p><button class="primary" type="submit">إرسال التعديل للمراجعة</button></form>`);
   bindRatingTags(document.querySelector("#edit-review-form"));
   document.querySelectorAll('#edit-review-form input[type=range]').forEach((input)=>input.oninput=()=>{input.closest('label').querySelector('output').textContent=input.value;input.style.setProperty('--range-color',scoreColor(Number(input.value)));});
   document.querySelector('#edit-review-form').onsubmit=(event)=>{
@@ -2563,7 +2541,7 @@ function bindAdminDirectory(){
 }
 
 function reviewPledge(next,cancel){
- reviewDialog('تنبيه!',`<div class="pledge-copy"><p>نرجو مخافة الله في التقييم.</p><p>تتم مراجعة التقييم قبل نشره.</p><p>التقييمات غير الملائمة تعرّض صاحبها للحظر أو التقييد.</p><p class="muted">أتعهد بأن تقييمي يعبّر عن تجربتي بصدق واحترام، دون إساءة أو معلومات شخصية.</p><button class="primary" type="button" id="accept-review-pledge">موافق وأتعهّد</button></div>`);
+ modal('تنبيه!',`<div class="pledge-copy"><p>نرجو مخافة الله في التقييم.</p><p>تتم مراجعة التقييم قبل نشره.</p><p>التقييمات غير الملائمة تعرّض صاحبها للحظر أو التقييد.</p><p class="muted">أتعهد بأن تقييمي يعبّر عن تجربتي بصدق واحترام، دون إساءة أو معلومات شخصية.</p><button class="primary" type="button" id="accept-review-pledge">موافق وأتعهّد</button></div>`);
  document.querySelector('.modal').classList.add('pledge-card');
  const accept=document.querySelector('#accept-review-pledge');
  accept.onclick=async()=>{if(accept.disabled)return;accept.disabled=true;try{await next();}finally{if(accept.isConnected)accept.disabled=false;}};
@@ -2588,7 +2566,7 @@ function bindRatingTags(form){
  });update();
 }
 function reviewSubmitted(){
- reviewDialog('تم إرسال طلبك',`<p>وصل تقييمك إلى الإدارة، وسيظهر بعد المراجعة والاعتماد.</p><div class="detail-actions"><button type="button" class="primary" id="review-success-home">الصفحة الرئيسية</button><button type="button" class="secondary" id="review-success-another">تقييم دكتور آخر</button></div>`);
+ modal('تم إرسال طلبك',`<p>وصل تقييمك إلى الإدارة، وسيظهر بعد المراجعة والاعتماد.</p><div class="detail-actions"><button type="button" class="primary" id="review-success-home">الصفحة الرئيسية</button><button type="button" class="secondary" id="review-success-another">تقييم دكتور آخر</button></div>`);
  document.querySelector('#review-success-home').onclick=()=>{document.body.classList.remove('modal-open');setPage('home');render();window.scrollTo({top:0});};
  // Keep the source page, selected college/course, carousel position and scroll.
  document.querySelector('#review-success-another').onclick=closeModal;
@@ -2643,13 +2621,13 @@ document.addEventListener('click',event=>{
  if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||!link)return;
  const next=link.getAttribute('href').slice(1)||'home';
  if(!pageNames.includes(next))return;
- event.preventDefault();document.body.classList.remove('modal-open');setPage(next);render();window.scrollTo({top:0});
+ event.preventDefault();
+ if(next===page&&!document.querySelector('.modal-backdrop'))return;
+ document.body.classList.remove('modal-open');setPage(next);render();window.scrollTo({top:0});
 });
 window.addEventListener("popstate", () => {
   const wasShared = sharedTimetablePayload !== null;
   sharedTimetablePayload = readSharedTimetable();
-  cancelHero(true);
-  rememberHero(document.querySelector("main"));
   document.body.classList.remove("modal-open");
   page = pageNames.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home";
   render();
@@ -2670,8 +2648,6 @@ void setupNative({back:()=>{if(document.querySelector('.modal-backdrop')){closeM
 setupPwa();
 setupInteractions();
 setupCursor();
-setupHero();
-setupReveals();
 if(new URLSearchParams(location.search).get('action')==='delete-account')storage.setItem('miyar-delete-account-intent','true');
 if (useEntryGate&&sharedTimetablePayload===null) showUniversityEntrance({loading:true});
 render();

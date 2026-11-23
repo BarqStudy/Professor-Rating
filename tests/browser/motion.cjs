@@ -12,7 +12,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(initial&&!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(initial));
    window.authEvents=[];window.applicationPaints=[];window.authorizeRequests=0;
    window.heroFlights=[];window.entryAnimations=[];let nextAnimationId=0;const ids=new WeakMap();
-   document.addEventListener('animationstart',event=>{if(['appear','glass-arrive','miyar-reveal'].includes(event.animationName)){if(!ids.has(event.target))ids.set(event.target,++nextAnimationId);window.entryAnimations.push({id:ids.get(event.target),name:event.animationName,classes:event.target.className});}},true);
+   document.addEventListener('animationstart',event=>{if(['appear','glass-arrive','miyar-reveal'].includes(event.animationName) || (['fade','slide'].includes(event.animationName) && event.target.matches('.modal,.modal-backdrop'))){if(!ids.has(event.target))ids.set(event.target,++nextAnimationId);window.entryAnimations.push({id:ids.get(event.target),name:event.animationName,classes:event.target.className});}},true);
    window.addEventListener('miyar-auth',event=>window.authEvents.push({event:event.detail.event,id:event.detail.session?.user.id}));
    new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1&&node.matches('.hero-flight'))window.heroFlights.push({hidden:node.getAttribute('aria-hidden'),pointerEvents:getComputedStyle(node).pointerEvents,uniqueIds:new Set([...document.querySelectorAll('[id]')].map(n=>n.id)).size===document.querySelectorAll('[id]').length});for(const record of records)if(record.target.id==='app')for(const node of record.addedNodes)if(node.nodeType===1&&(node.matches('aside,.university-entry,.signed-out-page')))window.applicationPaints.push({name:document.querySelector('.welcome h1')?.textContent,guest:!!document.querySelector('#google-account'),university:!!document.querySelector('#university-directory')});}).observe(document,{childList:true,subtree:true});
   },{key,initial:storageState?null:session(member,expired)});
@@ -33,56 +33,56 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  }
 
  const test=await setup(),{page}=test;await page.locator('.welcome h1').filter({hasText:'أحمد'}).waitFor();
- await page.waitForTimeout(1500);
- // The old appear animation used to run on parents and restart on cards after
- // removing the one-by-one classes. Every actual element now enters only once.
- for(const selector of ['.quick-actions','.stats','.doctor-card','.bottom-banner']){await page.locator(selector).first().scrollIntoViewIfNeeded();await page.waitForTimeout(1400);}
- const entries=await page.evaluate(()=>window.entryAnimations);
- assert.ok(entries.some(row=>row.name==='miyar-reveal'));
- assert.deepEqual(entries.filter(row=>row.name!=='miyar-reveal'),[]);
- const counts=new Map();for(const row of entries)counts.set(row.id,(counts.get(row.id)||0)+1);
- assert.ok([...counts.values()].every(value=>value===1),'initial content must not replay');
  assert.equal(await page.evaluate(()=>window.applicationPaints.length),1);
- async function clickHero(selector,target){
-  const count=await page.evaluate(()=>window.heroFlights.length);
+ async function clickPage(selector,target){
+  const before=await page.evaluate(()=>window.applicationPaints.length);
   await page.locator(selector).first().click();
-  await page.waitForFunction(count=>window.heroFlights.length>count,count);
-  assert.deepEqual(await page.evaluate(()=>window.heroFlights.at(-1)),{hidden:'true',pointerEvents:'none',uniqueIds:true});
   await page.locator(target).first().waitFor();
+  assert.equal(await page.locator('main').count(),1);
+  assert.equal(await page.evaluate(()=>window.applicationPaints.length),before+1);
  }
- async function settled(){await page.locator('.hero-flight').waitFor({state:'detached'});assert.equal(await page.locator('html').evaluate(node=>node.classList.contains('hero-transition-active')),false);}
  async function close(){await page.locator('.close-modal').click();await page.locator('.modal-backdrop').waitFor({state:'detached'});}
  for(const width of [390,1440]){
   await page.setViewportSize({width,height:1000});
-  await clickHero('aside [data-page=ratings]','.directory-section');await settled();
-  await page.locator('#search').fill('أحمد');assert.equal(await page.locator('.hero-flight').count(),0);
-  const details=test.pauseDetails();await clickHero('[data-doctor]','.modal');
-  await page.evaluate(()=>window.detailFlight=document.querySelector('.hero-flight'));
+  await clickPage('aside [data-page=ratings]','.directory-section');
+  const paints=await page.evaluate(()=>window.applicationPaints.length);
+  await page.locator('aside [data-page=ratings]').click({clickCount:2});
+  assert.equal(await page.evaluate(()=>window.applicationPaints.length),paints,'the active page must stay mounted');
+  const details=test.pauseDetails();
+  const before=await page.evaluate(()=>window.applicationPaints.length);
+  await page.locator('[data-doctor]').first().click();
+  await page.locator('[data-detail-loading]').waitFor();
   details.resolve();await page.locator('.detail-person').waitFor();
-  assert.equal(await page.evaluate(()=>window.detailFlight===document.querySelector('.hero-flight')),true,'loaded content must continue the original flight');
-  // Fetched details replace the loading dialog during the same animation.
-  await settled();assert.equal(await page.locator('.modal').evaluate(node=>getComputedStyle(node).opacity),'1');
-  await page.screenshot({path:`/tmp/miyar-site-hero-detail-${width}.png`});await close();
-  await clickHero('aside [data-page=plan]','.study-page');await settled();
-  await clickHero('[data-study-doctors]','#study-course-doctors');await settled();await close();
-  await clickHero('aside [data-page=saved]','main');await settled();
-  await clickHero('aside [data-page=home]','.welcome');await settled();
-  await clickHero('#open-settings','.modal');await settled();await close();
-  await clickHero('#header-change-university','#university-directory');await settled();
-  await clickHero('#university-entry-back','.welcome');await settled();
-  await clickHero('.assistant-launcher','.assistant-page');await settled();
-  await clickHero('aside [data-page=home]','.welcome');await settled();
-  await page.locator('#new-review').click();await page.locator('#review-form').waitFor();assert.equal(await page.locator('.hero-flight').count(),0);
-  await page.locator('#review-form [name=doctor]').fill('محمد أحمد');await settled();
+  assert.equal(await page.locator('[role=dialog]').count(),1);
+  assert.equal(await page.evaluate(()=>window.applicationPaints.length),before,'loading a dialog must leave its source page mounted');
+  await close();
+  const cancelledDetails=test.pauseDetails();
+  await page.locator('[data-doctor]').first().click();
+  await page.locator('[data-detail-loading]').waitFor();
+  await close();
+  const response=page.waitForResponse(reply=>reply.request().postDataJSON()?.action==='reviews');
+  cancelledDetails.resolve();await response;
+  assert.equal(await page.locator('[role=dialog]').count(),0,'a closed loading dialog must stay closed');
+  await clickPage('aside [data-page=timetable]','.study-desk');
+  await page.locator('[data-study-desk=schedule]').click();await page.locator('#study-desk-schedule').waitFor();
+  await clickPage('aside [data-page=saved]','main');
+  await clickPage('aside [data-page=home]','.welcome');
+  await page.locator('#open-settings').click();await page.locator('.modal').waitFor();await close();
+  await clickPage('#header-change-university','#university-directory');
+  assert.equal(await page.locator('.university-entrance').count(),0);
+  await clickPage('#university-entry-back','.welcome');
+  await clickPage('.assistant-launcher','.assistant-page');
+  await clickPage('aside [data-page=home]','.welcome');
+  await page.locator('#new-review').click();await page.locator('#review-form').waitFor();
+  await page.locator('#review-form [name=doctor]').fill('محمد أحمد');
   assert.equal(await page.locator('#review-form [name=doctor]').inputValue(),'محمد أحمد');await close();
   assert.equal(await page.locator('#new-review').evaluate(node=>node===document.activeElement),true);
  }
- // An interrupted transition never delays another navigation or leaves layers.
- await clickHero('aside [data-page=ratings]','.directory-section');
- await clickHero('aside [data-page=plan]','.study-page');await settled();
- const back=page.waitForSelector('.hero-flight',{state:'attached'});await page.goBack();await back;await page.locator('.directory-section').waitFor();await settled();
- await page.emulateMedia({reducedMotion:'reduce'});await page.locator('aside [data-page=home]').click();await page.locator('.welcome').waitFor();assert.equal(await page.locator('.hero-flight').count(),0);
- await page.locator('#open-settings').click();await page.locator('.modal').waitFor();assert.equal(await page.locator('.hero-flight').count(),0);await close();
+ await clickPage('aside [data-page=ratings]','.directory-section');
+ await clickPage('aside [data-page=timetable]','.study-desk');
+ await page.goBack();await page.locator('.directory-section').waitFor();
+ assert.deepEqual(await page.evaluate(()=>window.heroFlights),[],'navigation and dialogs must never show a cloned surface');
+ assert.deepEqual(await page.evaluate(()=>window.entryAnimations),[],'page and dialog loads must never replay an entrance');
  assert.deepEqual(errors,[]);await test.context.close();
  // A delayed compositor finish must not hold the captured page after the
  // visible circle has ended. A capture that never becomes ready has a deadline.
@@ -105,5 +105,5 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  await themePage.waitForFunction(()=>document.documentElement.dataset.theme==='dark'&&!document.documentElement.classList.contains('theme-switching'),null,{timeout:1500});
  assert.equal(await themePage.evaluate(()=>localStorage.getItem('athar-theme')),'dark','a late capture cannot undo the newer appearance');
  await appearance.context.close();assert.deepEqual(errors,[]);
- console.log('PASS: a single one-by-one entrance without legacy restarts, site-wide Hero on sidebar/back/university/settings/doctor details/study/assistant/add-doctor, continuous fetched-dialog replacement, editable drafts, restored focus, rapid navigation, unique SVG IDs, reduced motion, mobile/desktop, and bounded appearance transitions despite delayed capture/finish callbacks. Auth/API mocked.');
+ console.log('PASS: single page mounts, repeated clicks on the active page, dialog loading without an entrance replay, history, focus restoration, mobile/desktop, and bounded theme transitions. Auth/API mocked.');
  }finally{await browser.close();server.close();}})().catch(error=>{console.error(error);process.exitCode=1;server.close();});
