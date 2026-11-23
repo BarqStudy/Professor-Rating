@@ -40,6 +40,6 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   assert.equal(await page.locator('aside').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1;}),true);
  }
  await page.locator('aside').screenshot({path:'/tmp/miyar-bottom-nav-timetable.png'});
- await page.locator('aside [data-page=timetable]').click();await page.locator('.study-desk-landing').waitFor();assert.equal(await page.locator('aside [data-page=timetable]').getAttribute('class').then(c=>c.includes('active')),true);await page.goBack();await course().locator('.study-selected-doctor').waitFor();assert.deepEqual(errors,[]);
+ await page.locator('aside [data-page=timetable]').click();await page.locator('#timetable-root').waitFor();assert.equal(await page.locator('aside [data-page=timetable]').getAttribute('class').then(c=>c.includes('active')),true);await page.goBack();await course().locator('.study-selected-doctor').waitFor();assert.deepEqual(errors,[]);
  console.log('PASS: debounced and Enter search, Arabic first/last and compound names, composed college/major filters, duplicate specialty names, university scope, responsive light/dark layout, local selection persistence and timer cleanup. API/auth mocked.');await context.close();
  }finally{await browser.close();server.close();}})().catch(e=>{console.error(e);process.exitCode=1;server.close();});

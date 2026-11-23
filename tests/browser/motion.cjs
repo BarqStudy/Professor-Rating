@@ -74,8 +74,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   const response=page.waitForResponse(reply=>reply.request().postDataJSON()?.action==='reviews');
   cancelledDetails.resolve();await response;
   assert.equal(await page.locator('[role=dialog]').count(),0,'a closed loading dialog must stay closed');
-  await clickPage('aside [data-page=timetable]','.study-desk');
-  await page.locator('[data-study-desk=schedule]').click();await page.locator('#study-desk-schedule').waitFor();
+  await clickPage('aside [data-page=timetable]','#timetable-root');
   await clickPage('aside [data-page=saved]','main');
   await clickPage('aside [data-page=home]','.welcome');
   await page.locator('#open-settings').click();await page.locator('.modal').waitFor();await close();
@@ -90,7 +89,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   assert.equal(await page.locator('#new-review').evaluate(node=>node===document.activeElement),true);
  }
  await clickPage('aside [data-page=ratings]','.directory-section');
- await clickPage('aside [data-page=timetable]','.study-desk');
+ await clickPage('aside [data-page=timetable]','#timetable-root');
  const beforeBack=(await animations()).filter(name=>name==='miyar-page-enter').length;
  await page.goBack();await page.locator('.directory-section').waitFor();
  await page.waitForFunction(count=>window.entryAnimations.filter(name=>name==='miyar-page-enter').length===count,beforeBack+1);
