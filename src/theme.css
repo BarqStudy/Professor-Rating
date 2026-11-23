@@ -250,11 +250,10 @@ select option { color: var(--ink); background: var(--field); }
 .doctor-name .verified { align-self:center; }
 .detail-person h2 .verified { width:22px;height:22px;margin-inline-start:4px; }
 
-.miyar-mark{color:#16664b;--miyar-mark-gold:#b68a36}
-:root[data-theme=dark] .miyar-mark{color:#85e2bc;--miyar-mark-gold:#e6bc72}
-:root[data-logo-color=selected] .miyar-mark{color:var(--green)}
+.miyar-mark,.home-brand-name{color:#16664b;--miyar-mark-gold:#b68a36}
+:root[data-theme=dark] :is(.miyar-mark,.home-brand-name){color:#85e2bc;--miyar-mark-gold:#e6bc72}
+:root[data-logo-color=selected] :is(.miyar-mark,.home-brand-name){color:var(--green)}
 
 .home-brand-lockup{display:inline-grid;justify-items:center;gap:0}
-.home-brand-name{color:var(--ink);font-size:calc(20px * var(--font-scale,1));font-weight:700;line-height:1.18}
-.mobile-brand .home-brand-lockup .miyar-mark{height:32px}
-.mobile-brand .home-brand-name{font-size:calc(14px * var(--font-scale,1))}
+.home-brand-name{display:block;width:0;min-width:100%;height:auto;fill:currentColor;font-size:21px;font-weight:700}
+.home-brand-lockup .miyar-mark,.mobile-brand .home-brand-lockup .miyar-mark{height:auto;aspect-ratio:1}
