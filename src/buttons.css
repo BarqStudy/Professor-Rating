@@ -1,0 +1,35 @@
+:root {
+  --button-radius: 18px;
+  --button-radius-compact: 12px;
+  --button-radius-tile: 24px;
+}
+
+/* Carousel dots and pill controls keep their individual shapes. */
+#app button:not(:where(.rating-tag-choice, .assistant-launcher, .review-carousel-dots button)) {
+  border-radius: var(--button-radius);
+}
+
+#app :is(.admin-row, .settings-section-nav, .connection-banner, .font-stepper) button,
+#app input[type="file"]::file-selector-button {
+  border-radius: var(--button-radius-compact);
+}
+
+#app :is(.university-regions, .admin-subnav) button {
+  border-radius: 15px;
+}
+
+#app button.nav-item {
+  border-radius: 22px;
+}
+
+#app button.filter-button {
+  border-radius: 20px;
+}
+
+#app button:is(.uni-card, .admin-tool-card, .admin-overview-counts > button) {
+  border-radius: var(--button-radius-tile);
+}
+
+#app button.action-card {
+  border-radius: 28px;
+}
